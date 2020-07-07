@@ -16,7 +16,7 @@ import conf.funcs as fs
 from conf.player_updates import PlayerUpdate
 
 # -------------- VARIABLES ------------- #
-timeLoop = 15
+TIME_LOOP = 15
 playerThreadLimit = asyncio.Semaphore( 5 )
 
 # --- OSRS HISCORES PAGE (before username) --- #
@@ -51,7 +51,7 @@ async def safeThreading(bot,disId,rsdata,dataServers):
         return await threadPlayer(bot,disId,rsdata,dataServers)
 
 
-# THREAD A PLAYER SEPARATELY 
+# THREAD A PLAYER SEPARATELY
 async def threadPlayer(bot,disId,rsdata,dataServers):
     logger.debug(f"checking player: {disId} -- {rsdata['rsName']}")
     parseMinigames = False
@@ -218,8 +218,8 @@ class RSLooper(commands.Cog):
                 await runOsrsEL(self.bot)
             except Exception as e:  # catch any error in looper here
                 logger.exception(f'Unknown error running main loop: {e}')
-            logger.debug(f'Now sleeping for {timeLoop} minutes...')
-            await asyncio.sleep(await fs.timeMins( timeLoop ))
+            logger.debug(f'Now sleeping for {TIME_LOOP} minutes...')
+            await asyncio.sleep(await fs.timeMins( TIME_LOOP ))
 
             
             

@@ -143,7 +143,7 @@ async def getPlayerScores(nameRS, page):
     # check if player has no hiscore profile
     logger.debug(f'{nameRS}: contents[1]: '+scores.contents[1].name)
     if scores.contents[1].name != 'table':  # if there's no table, the player has no scores
-        logger.info(f"{rsdata['rsName']} not found! Appended empty playerDict.")
+        logger.info(f"{nameRS} not found! Appended empty playerDict.")
         return playerDict
     # player has hiscore profile
     logger.debug(f"{nameRS}: found player...")
@@ -210,7 +210,7 @@ async def addServerDB(servID,servName):
     relPlay = {}
     try:
         # load existing json file
-        dataP = await openJson(playersPath)
+        await openJson(playersPath)
         # # append server to json file
         # dataP.update(relPlay)
         # # write updated json file

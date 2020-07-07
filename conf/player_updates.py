@@ -370,9 +370,9 @@ class PlayerUpdate:
                 threshold += increment
         # done with loop, check if posting regular update
         if not foundMilestone and clueLvl != 'Total':
-            # set correct usage of plural
-            if countDiff == 1: s = ''
-            else: s = 's'
+            # set correct usage of plural (deprecated)
+            # if countDiff == 1: s = ''
+            # else: s = 's'
             logger.debug("found diff...")
 
             # append total clues to message if total clues rank is on hiscores
