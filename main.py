@@ -6,6 +6,7 @@
 # https://discordapp.com/api/oauth2/authorize?client_id=653740301269073922&permissions=3072&scope=bot
 #
 
+import json
 import discord
 from discord.ext import commands
 import time
@@ -15,10 +16,10 @@ import sys, traceback
 from conf.logger import logger
 import conf.funcs as fs
 
-botInfo = open("_bot_info.txt", "r")
-botToken = botInfo.readline()
+with open('mycreds.json','r') as f:
+    botInfo = json.load(f)
+botToken = botInfo['BOT_TOKEN']# set prefix
 
-# set prefix
 def get_prefix(bot, message):
     prefixes = [';']
     if not message.guild:
@@ -26,7 +27,7 @@ def get_prefix(bot, message):
     return commands.when_mentioned_or(*prefixes)(bot, message)
 
 # create bot object
-bot = commands.Bot( command_prefix = get_prefix, 
+bot = commands.Bot( command_prefix = get_prefix,
                     description = 'OSRS Event Log by Green Donut')
 # gamePlaying = discord.Game(name= ';join <osrs-name>')
 gamePlaying = discord.Streaming(name=';join <osrs-name>',
