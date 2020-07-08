@@ -3,7 +3,6 @@
 #
 # Scrapes and posts players' OSRS events to a specific channel in Discord
 #
-# https://discordapp.com/api/oauth2/authorize?client_id=653740301269073922&permissions=3072&scope=bot
 #
 
 import json
@@ -16,10 +15,26 @@ import sys, traceback
 from conf.logger import logger
 import conf.funcs as fs
 
+# Check if we have players/servers .json files, create them if not
+def checkDataJson(file_name):
+    if os.path.exists(file_name):
+        logger.info(f'Found {file_name}...')
+        pass
+    else:
+        data = {}
+        with open(file_name, 'w') as outfile:  
+            json.dump(data, outfile)
+        logger.info(f'Created new {file_name}...')
+# Our data .jsons
+checkDataJson('data/servers.json')
+checkDataJson('data/players.json')
+
+# Get bot Token
 with open('mycreds.json','r') as f:
     botInfo = json.load(f)
-botToken = botInfo['BOT_TOKEN']# set prefix
+botToken = botInfo['BOT_TOKEN']
 
+# Set prefix
 def get_prefix(bot, message):
     prefixes = [';']
     if not message.guild:
