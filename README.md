@@ -3,6 +3,9 @@
 A simple Discord bot that captures and posts events and milestones for Old School Runescape players into a selected Discord channel.
 - Default command prefix: ;
 
+## Setup
+Make a copy of 'creds.json' and name it 'mycreds.json'
+
 ## Commands
 ```
 join - <OSRS-Name> | Join the event log list
