@@ -1,5 +1,7 @@
+!.gitignore
 *.json
 *.log
 *.code-workspace
 __pycache__/
 _bot_info.txt
+!custom_messages.json
