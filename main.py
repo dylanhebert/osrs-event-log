@@ -34,8 +34,8 @@ gamePlaying = discord.Streaming(name=';join <osrs-name>',
 
 # define extensions
 initial_extensions =    [
-                        'cogs.rel_cmds',
-                        'cogs.rel_looper'
+                        'cogs.cmds',
+                        'cogs.looper'
                         ]
 
 # load extensions
