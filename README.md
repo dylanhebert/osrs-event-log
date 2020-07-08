@@ -14,3 +14,7 @@ remove - <@Discord-Member> | Remove someone from the event log (admins only)
 posthere - Add/Change the text channel where the bot posts (admins only)
 rsrole - <@somerole> | A role to notify for special messages (admins only)
 ```
+
+## Requirements
+- discord.py
+- feedparser
