@@ -17,10 +17,7 @@ from conf.player_updates import PlayerUpdate
 
 # -------------- VARIABLES ------------- #
 TIME_LOOP = 15
-playerThreadLimit = asyncio.Semaphore( 5 )
-
-# --- OSRS HISCORES PAGE (before username) --- #
-hiscoresURL = "https://secure.runescape.com/m=hiscore_oldschool/hiscorepersonal?user1="
+PLAYER_THREAD_LIMIT = asyncio.Semaphore( 5 )
 
 
 # -------------------------------------------------- #
@@ -46,7 +43,7 @@ async def runOsrsEL(bot):
 
 # LIMIT THE NUMBER OF PLAYERS WE PARSE AT THE SAME TIME
 async def safeThreading(bot,disId,rsdata,dataServers):
-    async with playerThreadLimit:
+    async with PLAYER_THREAD_LIMIT:
         #await asyncio.sleep(5)
         return await threadPlayer(bot,disId,rsdata,dataServers)
 
@@ -56,7 +53,7 @@ async def threadPlayer(bot,disId,rsdata,dataServers):
     logger.debug(f"checking player: {disId} -- {rsdata['rsName']}")
     parseMinigames = False
     ### Changed for aiohttp integration ###
-    page = await fs.getPage(hiscoresURL, rsdata['rsName'])
+    page = await fs.getPage(rsdata['rsName'])
     # if page isnt responding, skip player
     if page == None:
         logger.info(f"Unable to get player: {rsdata['rsName']} | Page status: None")
@@ -80,7 +77,7 @@ async def threadPlayer(bot,disId,rsdata,dataServers):
     # player has hiscore profile
     logger.debug(f"{rsdata['rsName']}: found player...")
     overallXpChanged = False
-    Update = PlayerUpdate( rsdata )  # create player-update object
+    Update = PlayerUpdate( rsdata, await fs.openJson(fs.messagesPath) )  # create player-update object
     for tr in scores.find_all('tr')[3:]:
         # find Overall row, skip if weve already found it
         if not overallXpChanged and 'Overall' in tr.get_text():

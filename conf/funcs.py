@@ -7,14 +7,18 @@ import json
 from conf.logger import logger
 import requests
 from bs4 import BeautifulSoup
+import pathlib
 
 # --- VARIABLES ---
 # paths to json files
-serversPath = '/home/pi/code_pi/osrseventlog/data/rel_servers.json'
-playersPath = '/home/pi/code_pi/osrseventlog/data/rel_players.json'
+dir_path = str(pathlib.Path().absolute())
+serversPath = dir_path + "/data/servers.json"
+playersPath = dir_path + "/data/players.json"
+messagesPath = dir_path + "/data/custom_messages.json"
 
 # HISCORES PAGE (before username)
 hiscoresURL = "https://secure.runescape.com/m=hiscore_oldschool/hiscorepersonal?user1="
+
 
 # ------- NON-ASYNC FUNCTIONS -------
 #------------------------------------
@@ -77,7 +81,7 @@ async def isAdmin(mem):
 
 # CHECK IF A RS PLAYER IS ACCEPTABLE
 async def PlayerIsAcceptable(name):
-    page = await getPage(hiscoresURL, name)
+    page = await getPage(name)
     if page != None:
         try:
             logger.info(f"{name} has a valid hiscores page!")
@@ -95,10 +99,10 @@ async def PlayerIsAcceptable(name):
 #------------------------------
 
 # REQUEST WEB PAGE (AIOHTTP)
-async def getPage(url, name):
+async def getPage(name):
     try:
         async with aiohttp.ClientSession() as session:
-            async with session.get(url + name) as p:
+            async with session.get(hiscoresURL + name) as p:
                 if p.status == 200:
                     page = await p.text()
                 else:

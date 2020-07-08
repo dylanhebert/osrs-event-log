@@ -5,32 +5,12 @@ import conf.funcs as fs
 import math
 
 # -------------- VARIABLES ------------- #
+nonMonsterBosses =  [   "Barrows Chests", "Chambers of Xeric", "Theatre of Blood",
+                        "The Gauntlet", "The Corrupted Gauntlet", "Wintertodt",
+                        "Chambers of Xeric: Challenge Mode"
+                    ]
 
-nonMonsterBosses = ["Barrows Chests", "Chambers of Xeric", "Theatre of Blood",
-                    "The Gauntlet", "The Corrupted Gauntlet", "Wintertodt",
-                    "Chambers of Xeric: Challenge Mode"]
-
-levelMessages = {   "99": "Congrats!",
-                    "98": "One. More. Level.",
-                    "97": "So close, but still so far.",
-                    "92": "The real halfway point.",
-                    "69": "Nice.",
-                    "50": "Over halfway to 99!",
-                    "33": "One third of the way. Yay!"
-                }
-
-bossMessages =  {   "TzTok-Jad": "You are now a Jad-slaying Chad.",
-                    "TzKal-Zuk": "Your Neckbeard level is now 99.",
-                    "Chambers of Xeric": "Hope you got a TBow!",
-                    "Theatre of Blood": "Swampletics would be proud.",
-                    "Zulrah": "bad snek.",
-                    "Vorkath": "Ultimate dragon slayer.",
-                    "Giant Mole": "Mole. Bloody mole. We aren't supposed to talk about the bloody mole, but there's a bloody mole winking me in the face. I want to cut it off, chop it off, and make guacamole.",
-                    "The Corrupted Gauntlet": "Not the infinity gauntlet, but still cool.",
-                    "Barrows Chests": "Just chillin with the bros.",
-                    "Nightmare": "At least you didn't have Slepe paralysis."
-                }
-
+# custom_messages = asyncio.ensure_future(fs.openJson(fs.messagesPath))
 
 # -------------------------------------- #
 # ---------- HELPER METHODS ------------ #
@@ -56,7 +36,7 @@ def clueSort(title):
 # ---------- PLAYER UPDATE CLASS ------------#
 # -------------------------------------------#
 class PlayerUpdate:
-    def __init__(self, oldData):
+    def __init__(self, oldData, messages):
         self.oldData = oldData
         self.rsName = fs.NameToDiscord(oldData['rsName'])
         self.mentionMember = None
@@ -67,6 +47,7 @@ class PlayerUpdate:
         self.milestones = []
         self.clueAllTotal = None
         self.duplicateServerPost = False  # fix for duplicate 'Overall' entries & logging when a player is in multiple servers
+        self.custom_messages = messages
 
 
     # ---------- CLASS METHODS ------------ #
@@ -256,8 +237,8 @@ class PlayerUpdate:
             else:  # minigame is new to hiscores
                 logger.debug("new entry...")
                 # check if this was a special boss
-                if title in bossMessages:
-                    messageExtra = bossMessages[title]
+                if title in self.custom_messages['bosses']:
+                    messageExtra = self.custom_messages['bosses'][title]
                     message = f"**{self.rsName} {action1} {title} for the first time! {messageExtra}**\
                                 ```Total {action2} count: {fs.formatIntStr(newData['score'])} | Current rank: {newData['rank']}```"
                     self.milestones.append(message)
@@ -300,9 +281,12 @@ class PlayerUpdate:
     def makeSkillUpdate(self, oldData, newData, title, xpDiff):
         logger.debug(f"assigning {title}...")
         newLvl = newData['level']
+        # special messages for 99
+        if newLvl == '99':
+            messageExtra = f". {self.custom_messages['max_levels'][title]}"
         # check for special messages
-        if newLvl in levelMessages:
-            messageExtra = f'. {levelMessages[newLvl]}'
+        elif newLvl in self.custom_messages['levels']:
+            messageExtra = f". {self.custom_messages['levels'][newLvl]}"
         else: messageExtra = ''
         # make message
         message = f"**{self.rsName} levelled up {title} to {newLvl}{messageExtra}**\
