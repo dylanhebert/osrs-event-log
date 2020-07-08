@@ -5,3 +5,5 @@ __pycache__/
 _bot_info.txt
 !custom_messages.json
 mycreds.json
+OSRS_Discord_Server_Bot.egg-info/
+dist/
