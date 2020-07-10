@@ -43,7 +43,7 @@ def get_prefix(bot, message):
 
 # create bot object
 bot = commands.Bot( command_prefix = get_prefix,
-                    description = 'OSRS Event Log by Green Donut')
+                    description = 'OSRS Activity Log by Green Donut')
 # gamePlaying = discord.Game(name= ';join <osrs-name>')
 gamePlaying = discord.Streaming(name=';join <osrs-name>',
                                 url='https://www.youtube.com/watch?v=FADpdNyXzek')

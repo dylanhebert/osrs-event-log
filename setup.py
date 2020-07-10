@@ -1,8 +1,8 @@
 from setuptools import setup
 
-setup(name='OSRS Discord Server Bot',
+setup(name='OSRS Activity Log - A Discord Bot',
       version='1.0',
-      description='OSRS Discord Server Bot',
+      description='OSRS Activity Log - A Discord Bot',
       author='Dylan Hebert',
       install_requires=[
         'discord>=1.0.1',

@@ -1,6 +1,6 @@
-# Old School Runescape Event Log - A Discord Bot
+# Old School Runescape Activity Log - A Discord Bot
 
-A simple Discord bot that captures and posts events and milestones for Old School Runescape players into a selected Discord channel.
+A simple Discord bot that captures and posts activity, events, and milestones for Old School Runescape players into a selected Discord channel.
 - Default command prefix: **;**
 
 ## Setup
