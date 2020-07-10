@@ -1,8 +1,7 @@
-# OSRS Event Log Bot: Main File
+# OSRS Activity Log Bot: main.py
 # - A Discord Bot by Dylan Hebert (The Green Donut)
-#
-# Scrapes and posts players' OSRS events to a specific channel in Discord
-#
+# - Scrapes and posts players' OSRS events to a specific channel in Discord
+# - See README.md for setup instructions
 #
 
 import json
@@ -50,8 +49,9 @@ gamePlaying = discord.Streaming(name=';join <osrs-name>',
 
 # define extensions
 initial_extensions =    [
+                        'cogs.looper',
                         'cogs.cmds',
-                        'cogs.looper'
+                        'cogs.super'
                         ]
 
 # load extensions

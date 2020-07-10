@@ -1,3 +1,7 @@
+# OSRS Activity Log Bot: funcs.py
+# - Functions that are commonly used throughout the bot
+#
+
 import discord
 from discord.ext import commands
 import time

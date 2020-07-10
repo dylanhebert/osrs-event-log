@@ -1,4 +1,5 @@
-# OSRS Event Log Bot: RSLooper File
+# OSRS Activity Log Bot: looper.py
+# - Main file that initiates an async loop which fires off periodic functions
 #
 
 import discord
@@ -9,7 +10,6 @@ import asyncio
 import aiohttp
 from aiohttp import ClientSession, ClientResponseError
 from concurrent.futures.thread import ThreadPoolExecutor
-import requests
 from bs4 import BeautifulSoup
 from common.logger import logger
 import common.funcs as fs
@@ -183,7 +183,7 @@ async def threadPlayer(bot,disId,rsdata,dataServers):
 # ----------------------------------------------------
 # ----------------------------------------------------
 
-class RSLooper(commands.Cog):
+class MainLooper(commands.Cog):
     
     def __init__(self, bot):
         self.bot = bot
@@ -192,7 +192,7 @@ class RSLooper(commands.Cog):
         self.bot.bg_task = self.bot.loop.create_task(self.looperTask())
 
     async def on_ready(self):
-        logger.debug('RSLooper Cog Ready')
+        logger.debug('MainLooper Cog Ready')
 
     # @commands.command()
     # @commands.cooldown(1, 5, commands.BucketType.guild)
@@ -222,4 +222,4 @@ class RSLooper(commands.Cog):
             
 
 def setup(bot):
-    bot.add_cog(RSLooper(bot))
+    bot.add_cog(MainLooper(bot))

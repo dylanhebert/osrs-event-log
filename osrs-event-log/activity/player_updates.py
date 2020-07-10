@@ -1,3 +1,7 @@
+# OSRS Activity Log Bot: player_updates.py
+# - PlayerUpdate class that builds messages to be sent into a Discord channel
+#
+
 import discord
 import asyncio
 from common.logger import logger
