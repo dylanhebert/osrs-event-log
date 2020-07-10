@@ -12,7 +12,7 @@ from aiohttp import ClientSession, ClientResponseError
 from concurrent.futures.thread import ThreadPoolExecutor
 from bs4 import BeautifulSoup
 from common.logger import logger
-import common.funcs as fs
+import common.utils as fs
 from activity.player_updates import PlayerUpdate
 
 # -------------- VARIABLES ------------- #

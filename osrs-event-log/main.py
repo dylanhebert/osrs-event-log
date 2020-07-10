@@ -12,7 +12,7 @@ import datetime
 import os
 import sys, traceback
 from common.logger import logger
-import common.funcs as fs
+import common.utils as fs
 
 # Check if we have players/servers .json files, create them if not
 def checkDataJson(file_name):

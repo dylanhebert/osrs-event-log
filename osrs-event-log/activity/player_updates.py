@@ -5,16 +5,15 @@
 import discord
 import asyncio
 from common.logger import logger
-import common.funcs as fs
+import common.utils as fs
 import math
+
 
 # -------------- VARIABLES ------------- #
 nonMonsterBosses =  [   "Barrows Chests", "Chambers of Xeric", "Theatre of Blood",
                         "The Gauntlet", "The Corrupted Gauntlet", "Wintertodt",
                         "Chambers of Xeric: Challenge Mode"
                     ]
-
-# custom_messages = asyncio.ensure_future(fs.openJson(fs.messagesPath))
 
 # -------------------------------------- #
 # ---------- HELPER METHODS ------------ #

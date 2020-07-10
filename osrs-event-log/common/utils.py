@@ -1,5 +1,5 @@
-# OSRS Activity Log Bot: funcs.py
-# - Functions that are commonly used throughout the bot
+# OSRS Activity Log Bot: utils.py
+# - Utilities & functions commonly used throughout the bot
 #
 
 import discord

@@ -9,7 +9,7 @@ import random
 import asyncio
 import re
 from common.logger import logger
-import common.funcs as fs
+import common.utils as fs
 
 
 class UserCommands(commands.Cog):
