@@ -243,6 +243,34 @@ class RSCommands(commands.Cog):
         await ctx.send('**ok**')
 
 
+    # SEND AN ANNOUNCEMENT ABOUT THE BOT TO EVERY CHANNEL
+    @commands.command(brief='Sends a message/announcement to every server & channel connected to this bot (verified users only)')
+    @commands.cooldown(1, 15, commands.BucketType.guild)
+    async def sendannouncement(self, ctx, *, announcement):
+        if ctx.author.id == 134858274909585409:
+            allServers = await fs.openJson(fs.serversPath)
+            for k,v in allServers.items():
+                try:
+                    server = self.bot.get_guild(int(k))
+                    # if not channel in this server then skip server
+                    if v["chanID"]:
+                        rsChan = server.get_channel(v["chanID"])
+                        # get mention role, if not then use @here
+                        if v["rsRoleID"]:
+                            rsRole = server.get_role(v["rsRoleID"])
+                            rsRoleMen = rsRole.mention
+                        else:
+                            rsRoleMen = "@here"
+                        # send message!
+                        await rsChan.send(f'**{announcement}** {rsRoleMen}')
+                        logger.info(f'Sent announcement in guild id:{k} | name: {v["servName"]} | channel: {rsChan.name} | rs role: {rsRoleMen}')
+                    else:
+                        logger.exception(f'Could not send announcement in guild id:{k} -- No channel specified')
+                except Exception as e:
+                    logger.exception(f'Could not send announcement in guild id:{k} -- {e}')
+            logger.info(f"Done sending announcement: {announcement}")
+
+
     # TESTING STUFF
     # @commands.command()
     # @commands.cooldown(1, 2, commands.BucketType.guild)
