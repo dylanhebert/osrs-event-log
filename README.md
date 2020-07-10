@@ -14,13 +14,23 @@ A simple Discord bot that captures and posts activity, events, and milestones fo
 - Players joining the event log will be populated into *data/players&#46;py*
 
 ## Commands
+### **A**dmin Commands
 ```
-join - <OSRS-Name> | Join the event log list
-leave - Remove yourself from the event log list
-togglemention - Toggles whether or not to @ you on discord for every update
-players - See a list of players currently in the event log list
-add - <@Discord-Member> <OSRS-Name> | Add someone to the event log list (admins only)
-remove - <@Discord-Member> | Remove someone from the event log (admins only)
-posthere - Add/Change the text channel where the bot posts (admins only)
-rsrole - <@somerole> | A role to notify for special messages (admins only)
+posthere - Change the text channel where the bot posts
+rsrole - <@somerole> | A role to notify for milestone messages
+resetrsrole - Defaults the milestone notify role to @here if not already
+add - <@Discord-Member> <OSRS-Name> | Add someone to the Activity Log
+remove - <@Discord-Member> | Remove someone from the Activity Log
+```
+### **G**eneral Commands
+```
+join - <OSRS-Name> | Join the Activity Log
+leave - Remove yourself from the Activity Log
+togglemention - Toggles whether or not to @ you on Discord for every update
+players - See a list of players currently in the Activity Log for that server
+```
+### **S**uper Commands
+```
+sendannouncement - Sends an announcement mentioning the RS role to every server & channel connected to this bot
+sendthought - Sends a message to every server & channel connected to this bot
 ```
