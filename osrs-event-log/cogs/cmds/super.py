@@ -12,7 +12,7 @@ from common.logger import logger
 import common.utils as fs
 
 
-class SuperCommands(commands.Cog):
+class SuperCommands(commands.Cog, command_attrs=dict(hidden=True)):
 
     def __init__(self, bot): # cog access bot
         self.bot = bot
@@ -22,7 +22,10 @@ class SuperCommands(commands.Cog):
 
 
     # SEND AN ANNOUNCEMENT ABOUT THE BOT TO EVERY CHANNEL WITH A MENTION
-    @commands.command(brief='Sends an announcement to every server & channel connected to this bot (verified users only)')
+    @commands.command(  brief="Sends an announcement to every server & channel connected to this bot",
+                        usage="<announcement>",
+                        description="Sends an announcement in bold text to every server & channel connected to this bot. "
+                                    "This will notify the saved role for each server or @here if none specified.")
     @commands.cooldown(1, 15, commands.BucketType.guild)
     async def sendannouncement(self, ctx, *, announcement):
         if ctx.author.id == 134858274909585409:
@@ -50,7 +53,10 @@ class SuperCommands(commands.Cog):
 
 
     # SEND AN MESSAGE (THOUGHT) ABOUT THE BOT TO EVERY CHANNEL WITH NO MENTION
-    @commands.command(brief='Sends a message to every server & channel connected to this bot (verified users only)')
+    @commands.command(  brief="Sends a message to every server & channel connected to this bot",
+                        usage="<message>",
+                        description="Sends a message to every server & channel connected to this bot. "
+                                    "This will NOT notify the saved role for each server.")
     @commands.cooldown(1, 15, commands.BucketType.guild)
     async def sendthought(self, ctx, *, thought):
         if ctx.author.id == 134858274909585409:

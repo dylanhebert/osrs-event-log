@@ -1,4 +1,4 @@
-# OSRS Activity Log Bot: cmds.py
+# OSRS Activity Log Bot: user.py
 # - Commands & functions used by regular users & admins in servers connected to the bot
 #
 
@@ -12,7 +12,7 @@ from common.logger import logger
 import common.utils as fs
 
 
-class UserCommands(commands.Cog):
+class UserCommands(commands.Cog, name="General Commands"):
 
     def __init__(self, bot): # cog access bot
         self.bot = bot
@@ -21,40 +21,10 @@ class UserCommands(commands.Cog):
         logger.debug('UserCommands Cog Ready')
 
 
-    # CHOOSE POST CHANNEL
-    @commands.command(brief='Use this command to change the channel where the bot posts')
-    @commands.cooldown(1, 5, commands.BucketType.guild)
-    async def posthere(self, ctx):
-        if await fs.isAdmin(ctx.author) or ctx.author.id == 134858274909585409:
-            try:
-                await fs.updateServerVal(fs.serversPath,ctx.guild.id,'chanID',ctx.channel.id)
-                await ctx.send(f'I will now start posting in the {ctx.channel.mention} channel!')
-                logger.info(f'\nUpdated post channel in {ctx.guild.name}: {ctx.channel.name} | {ctx.channel.id}')
-            except Exception as e:
-                logger.exception(f'Could not update post channel in guild id:{ctx.guild.id} for channel id:{ctx.channel.id} -- {e}')
-                await ctx.send('**Error updating the post channel!**')
-        else:
-            await ctx.send('**Only members with admin privilages can use this command!**')
-
-
-    # CHOOSE BIG ANNOUNCEMENTS ROLE
-    @commands.command(brief=';rsrole <@somerole> | A role to notify for special messages')
-    @commands.cooldown(1, 5, commands.BucketType.guild)
-    async def rsrole(self, ctx, *, rsRole: discord.Role):
-        if await fs.isAdmin(ctx.author) or ctx.author.id == 134858274909585409:
-            try:
-                await fs.updateServerVal(fs.serversPath,ctx.guild.id,'rsRoleID',rsRole.id)
-                await ctx.send(f'I will now start posting big announcements with the **{rsRole.name}** role mentioned!')
-                logger.info(f'\nUpdated RS Role in {ctx.guild.name}: {rsRole.name} | {rsRole.id}')
-            except Exception as e:
-                logger.exception(f'Could not update rs role in guild id:{ctx.guild.id} for role id:{rsRole.id} -- {e}')
-                await ctx.send('**Error updating the RS Role! Check the role name!**')
-        else:
-            await ctx.send('**Only members with admin privilages can use this command!**')
-
-
     # PLAYER JOINS LOG LOOP THEMSELVES
-    @commands.command(brief=';join <OSRS-Name> | Join the event log list')
+    @commands.command(  brief=";join <OSRS-Name> | Join the Activity Log",
+                        usage="<OSRS-Name>",
+                        description="Join the Activity Log with a specified OSRS username.")
     @commands.cooldown(1, 10, commands.BucketType.guild)
     async def join(self, ctx, *, gameName):
         # serverEntry = await fs.getServerEntry(fs.playersPath,ctx.guild.id)
@@ -102,79 +72,10 @@ class UserCommands(commands.Cog):
                             " -Hiscores are not responding. Try again later")
 
 
-    # ADMINS CAN ADD ANYONE TO LOOP
-    @commands.command(brief=';add <@Discord-Member> <OSRS-Name> | Add someone (admins only)')
-    @commands.cooldown(1, 10, commands.BucketType.guild)
-    async def add(self, ctx, member: discord.Member, *, player):
-        # If player is admin
-        if await fs.isAdmin(ctx.author) or ctx.author.id == 134858274909585409:
-            print('admin!')
-            # serverEntry = await fs.getServerEntry(fs.playersPath,ctx.guild.id)
-            nameRS = fs.NameToRS(player)
-            await ctx.send("*Checking name...*")
-            playerDict = await fs.PlayerIsAcceptable(nameRS)
-            # If player is valid to be added
-            if playerDict != None:
-                await ctx.channel.purge(limit=1) # delete 'getting levels' messages
-                # If player is already in DB
-                if await fs.playerExistsInDB(str(member.id)):
-                    try:
-                        # get old player data
-                        playerEntry = await fs.getPlayerEntry(str(member.id))
-                        # check against old player data
-                        if str(ctx.guild.id) not in playerEntry['servers']:  # update player's server dict
-                            playerEntry['servers'][str(ctx.guild.id)] = {'mention': True}
-                        # add previous data to newer updated player dict
-                        playerDict['servers'] = playerEntry['servers']
-                        # update DB & send update
-                        await fs.updatePlayerEntry(str(member.id),playerDict)
-                        await ctx.send(f'**{member.name}** exists and has been updated in the Event Log List: *{nameRS}*')
-                        logger.info(f'Updated player in {ctx.guild.name}: {member.name} | {nameRS}')
-                    except Exception as e:
-                        logger.exception(f'Could not update player in guild id:{ctx.guild.id} for player id:{member.id} -- {e}')
-                        await ctx.send('**Error updating this player!**')
-                # Player is new to DB
-                else:
-                    try:
-                        # add current server to new player
-                        playerDict['servers'] = {str(ctx.guild.id) : {'mention' : True}}
-                        await fs.updatePlayerEntry(str(member.id),playerDict)
-                        await ctx.send(f'**{member.name}** has been added to the Event Log List: *{nameRS}*')
-                        logger.info(f'Added player in {ctx.guild.name}: {member.name} | {nameRS}')
-                    except Exception as e:
-                        logger.exception(f'Could not add new player in guild id:{ctx.guild.id} for player id:{member.id} -- {e}')
-                        await ctx.send('**Error adding this player!**')
-            # Player is not valid to be added
-            else:
-                await ctx.channel.purge(limit=1) # delete 'getting levels' messages
-                await ctx.send("**This player's event log can't be accessed!** Here are some reasons why:\n"
-                            " -This RuneScape character doesn't exist\n"
-                            " -You may have to try again later")
-        # Player is not admin
-        else:
-            await ctx.send('**Only members with admin privilages can use this command!**')
-
-
-    # ADMINS CAN REMOVE ANYONE FROM EVENT LOG
-    @commands.command(brief=';remove <@Discord-Member> | Remove someone from the event log (admins only)')
-    @commands.cooldown(1, 5, commands.BucketType.guild)
-    async def remove(self, ctx, *, member: discord.Member):
-        if ctx.author == member or await fs.isAdmin(ctx.author) or ctx.author.id == 134858274909585409:
-            try:
-                if await fs.delPlayerEntry(member.id) == True:
-                    await ctx.send(f'**{member.name}** has been removed from the Event Log List!')
-                    logger.info(f'Removed player in {ctx.guild.name}: {member.name} | {member.id}')
-                else:
-                    await ctx.send(f'**{member.name}** is not in the Event Log List!')
-            except Exception as e:
-                logger.exception(f'Could not remove player in guild id:{ctx.guild.id} for player id:{ctx.author.id} -- {e}')
-                await ctx.send('**Error removing the member! Check the spelling!**')
-        else:
-            await ctx.send('**Only members with admin privilages can use this command!**')
-
-
     # MEMBER CAN REMOVE THEMSELVES FROM EVENT LOG
-    @commands.command(brief='Remove yourself from the event log')
+    @commands.command(  brief="Remove yourself from the Activity Log",
+                        description="Remove yourself completely from the Activity Log's databases. "
+                                    "You can use ;join to rejoin at any time.")
     @commands.cooldown(1, 5, commands.BucketType.guild)
     async def leave(self, ctx):
         try:
@@ -189,7 +90,8 @@ class UserCommands(commands.Cog):
 
 
     # LIST PLAYERS IN LOOP
-    @commands.command(brief='See a list of players currently in the event log list')
+    @commands.command(  brief="See a list of players currently in the Activity Log",
+                        description="See a list of players currently in the Activity Log within this server.")
     @commands.cooldown(1, 10, commands.BucketType.guild)
     async def players(self, ctx):
         playersLst = []
@@ -210,7 +112,11 @@ class UserCommands(commands.Cog):
 
 
     # TOGGLES WHETHER TO MENTION THE PLAYER OR NOT FOR EVERY UPDATE
-    @commands.command(brief='Toggles whether or not to @ you on discord for every update')
+    @commands.command(  brief="Toggles whether or not to @ you on Discord for every update",
+                        description="Toggles whether or not to @ you on Discord for every update. "
+                                    "This is toggled on by default. "
+                                    "You will still be notified for milestones from anyone in the server "
+                                    "unless you mute notifications for the text channel or role this bot posts to.")
     @commands.cooldown(1, 5, commands.BucketType.guild)
     async def togglemention(self, ctx):
         if await fs.playerExistsInDB(str(ctx.author.id)):
@@ -238,7 +144,7 @@ class UserCommands(commands.Cog):
 
 
     # SIT
-    @commands.command(brief='ok')
+    @commands.command(brief="ok", hidden=True)
     @commands.cooldown(1, 2, commands.BucketType.guild)
     async def sit(self, ctx):
         await ctx.send('**ok**')

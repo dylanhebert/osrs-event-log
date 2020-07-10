@@ -40,18 +40,30 @@ def get_prefix(bot, message):
         return ';'
     return commands.when_mentioned_or(*prefixes)(bot, message)
 
+# Set help command
+customHelp = commands.DefaultHelpCommand(
+    width=140,
+    sort_commands=False,
+    no_category="Other Commands"
+    )
+
+# Set bot status
+gamePlaying = discord.Streaming(
+    name=';join <osrs-name>',
+    url='https://www.youtube.com/watch?v=FADpdNyXzek')
+
 # create bot object
-bot = commands.Bot( command_prefix = get_prefix,
-                    description = 'OSRS Activity Log by Green Donut')
-# gamePlaying = discord.Game(name= ';join <osrs-name>')
-gamePlaying = discord.Streaming(name=';join <osrs-name>',
-                                url='https://www.youtube.com/watch?v=FADpdNyXzek')
+bot = commands.Bot(
+    command_prefix = get_prefix,
+    help_command = customHelp,
+    description = 'OSRS Activity Log by Green Donut')
 
 # define extensions
 initial_extensions =    [
                         'cogs.looper',
-                        'cogs.cmds',
-                        'cogs.super'
+                        'cogs.cmds.user',
+                        'cogs.cmds.admin',
+                        'cogs.cmds.super'
                         ]
 
 # load extensions
