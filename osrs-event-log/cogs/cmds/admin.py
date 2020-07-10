@@ -58,6 +58,24 @@ class AdminCommands(commands.Cog, name="Admin Commands"):
         else:
             await ctx.send('**Only members with admin privilages can use this command!**')
 
+    
+    # REMOVE STORED MILESTONES ROLE AND DEFAULT TO @here
+    @commands.command(  brief="Defaults the milestone notify role to @here if not already",
+                        description="Defaults the milestone notify role to @here if not already. "
+                                    "Milestones include 99s and thresholds for XP, boss kills, and clue scrolls.")
+    @commands.cooldown(1, 5, commands.BucketType.guild)
+    async def resetrsrole(self, ctx):
+        if await fs.isAdmin(ctx.author) or ctx.author.id == 134858274909585409:
+            try:
+                await fs.updateServerVal(fs.serversPath,ctx.guild.id,'rsRoleID',None)
+                await ctx.send(f'I will now start posting big announcements with the **@here** role mentioned!')
+                logger.info(f'\nReset RS Role in {ctx.guild.name}: @here | {None}')
+            except Exception as e:
+                logger.exception(f'Could not update rs role in guild id:{ctx.guild.id} for @-here -- {e}')
+                await ctx.send('**Error resetting the RS Role!**')
+        else:
+            await ctx.send('**Only members with admin privilages can use this command!**')
+
 
     # ADMINS CAN ADD ANYONE TO LOOP
     @commands.command(  brief=";add <@Discord-Member> <OSRS-Name> | Add someone to the Activity Log",
