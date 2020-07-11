@@ -34,3 +34,5 @@ players - See a list of players currently in the Activity Log for that server
 sendannouncement - Sends an announcement mentioning the RS role to every server & channel connected to this bot
 sendthought - Sends a message to every server & channel connected to this bot
 ```
+
+Thanks for the support!
