@@ -9,7 +9,6 @@ import asyncio
 import aiohttp
 import json
 from common.logger import logger
-import requests
 from bs4 import BeautifulSoup
 import pathlib
 
@@ -119,19 +118,19 @@ async def getPage(name):
     return page
 
 
-# REQUEST WEB PAGE (REQUESTS) (OLD)
-async def getPageRequests(url, name):
-    try:
-        page = requests.get(url + name)
-    except:
-        page = None
-        logger.debug('requests.get failed! Returning None')
-    logger.debug('scraped...')
-    # page.encoding = 'utf-8'
-    # logger.debug('encoded...')
-    # page = page.text
-    # logger.debug('to text...')
-    return page
+# # REQUEST WEB PAGE (REQUESTS) (OLD)
+# async def getPageRequests(url, name):
+#     try:
+#         page = requests.get(url + name)
+#     except:
+#         page = None
+#         logger.debug('requests.get failed! Returning None')
+#     logger.debug('scraped...')
+#     # page.encoding = 'utf-8'
+#     # logger.debug('encoded...')
+#     # page = page.text
+#     # logger.debug('to text...')
+#     return page
 
 # GET A PLAYERS SCORES INTO DICT
 async def getPlayerScores(nameRS, page):
