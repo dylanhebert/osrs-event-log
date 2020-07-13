@@ -33,9 +33,9 @@ checkDataJson('data/servers.json')
 checkDataJson('data/players.json')
 
 # Get bot Token
-with open('mycreds.json','r') as f:
-    botInfo = json.load(f)
-botToken = botInfo['BOT_TOKEN']
+with open('bot_config.json','r') as f:
+    BOT_INFO_ALL = json.load(f)
+BOT_TOKEN = BOT_INFO_ALL['BOT_TOKEN']
 
 # Set prefix
 def get_prefix(bot, message):
@@ -125,4 +125,4 @@ async def on_guild_remove(guild):
     await fs.delServerDB(guild.id,guild.name)
 
 
-bot.run(botToken, bot=True)
+bot.run(BOT_TOKEN, bot=True)
