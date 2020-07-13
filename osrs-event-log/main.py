@@ -4,6 +4,10 @@
 # - See README.md for setup instructions
 #
 
+# IDEAS:
+# - recentmilestones: shows a rundown of the last 5-10 milestones
+
+
 import json
 import discord
 from discord.ext import commands
