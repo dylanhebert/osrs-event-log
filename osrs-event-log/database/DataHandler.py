@@ -16,29 +16,30 @@ DB_RUNESCAPE_PATH = DIR_PATH + "/db_runescape.json"
 MAX_PLAYERS_PER_MEMBER = 2
 
 
-# OPEN JSON FILE
 def db_open(path):
+    """Opens a json file as a python dict/list"""
     with open(path,"r") as f:
         return json.load(f)
 
-# WRITE JSON FILE
 def db_write(path,db):
+    """Writes a python dict/list as a json file"""
     with open(path,"w") as f:
         json.dump(db, f, indent=4, sort_keys=False)
         # json.dump(db, f)
 
-def db_add(path,key,val):
-    db = db_open(path)
-    db[key] = val
-    db_write(path,db)
+# def db_add(path,key,val):
+#     db = db_open(path)
+#     db[key] = val
+#     db_write(path,db)
 
-def db_append_list(path,key,val):
-    db = db_open(path)
-    db[key].append(val)
-    db_write(path,db)
+# def db_append_list(path,key,val):
+#     db = db_open(path)
+#     db[key].append(val)
+#     db_write(path,db)
 
 
 def check_player_member_link(db_dis, Server, Member, rs_name):
+    """Check if a player already has a link to a server"""
     try:
         # This member already has this player
         if db_dis[f'player:{rs_name}#server:{Server.id}#member'] == Member.id:
@@ -58,6 +59,9 @@ def check_player_member_link(db_dis, Server, Member, rs_name):
 
 
 def player_add_server(db_dis, Server, rs_name):
+    """Try to add a server id to a player's all_servers list\n
+    Add all_servers entry for the player if none already
+    """
     try: 
         db_dis[f'player:{rs_name}#all_servers'].append(Server.id)
         print(f'{rs_name} is an existing player name...')
@@ -67,6 +71,7 @@ def player_add_server(db_dis, Server, rs_name):
 
 
 def player_remove_server(db_dis, Server, rs_name):
+    """Try to remove a server id from a player's all_servers list"""
     try: 
         db_dis[f'player:{rs_name}#all_servers'].remove(Server.id)
         print(f'Removed server ID {Server.id} from {rs_name} in DB')
@@ -81,20 +86,13 @@ def player_remove_server(db_dis, Server, rs_name):
 
 
 class DataHandler:
+    """Contains functions for handling all database operations"""
     def __init__(self):
         pass
 
 
-    # def add(self, Object, object_function):
-    #     db_dis = db_open(DB_DISCORD_PATH)  # open Discord DB
-    #     HandledObject = object_function(Object)
-
-
-    # def handle_server(self, Server):
-    #     return f'server:{Server.id}#all_members'
-
-
     def verify_files(self,file_name):
+        """Verify if a file is present in a path"""
         if os.path.exists(file_name):
             print(f'Found {file_name}')
             # TEMP CODE FOR TESTING
@@ -116,6 +114,7 @@ class DataHandler:
 
 
     def add_server(self, Server):
+        """Add a server to the bot"""
         print('------------------------------')
         print(f'Initialized ADD SERVER: {Server.id}')
         db = db_open(DB_DISCORD_PATH)
@@ -127,8 +126,11 @@ class DataHandler:
         db['active_servers'].append(Server.id)
         db_write(DB_DISCORD_PATH, db)
         print(f"ADDED NEW SERVER - Name: {Server.name} | ID: {Server.id}")
+        return True
 
     def remove_server(self, Server):
+        """Remove a server from the bot\n
+        Retains server info in case server is added back"""
         print('------------------------------')
         print(f'Initialized REMOVE SERVER: {Server.id}')
         db = db_open(DB_DISCORD_PATH)
@@ -138,15 +140,20 @@ class DataHandler:
         db['removed_servers'].append(Server.id)
         db_write(DB_DISCORD_PATH, db)
         print(f"REMOVED SERVER - Name: {Server.name} | ID: {Server.id}")
+        return True
 
     
     def add_player(self, Server, Member, rs_name):
+        """Add a player to a specific server\n
+        Create new member if this member's id doesnt exist\n
+        Returns False if player could not be added"""
         print('------------------------------')
         print(f'Initialized ADD PLAYER: {rs_name} | Added by: {Member.name}')
         # do RS name checking/verfying here...
         nameOK = True
         if not nameOK:
-            return print('This Runescape name is not valid!')
+            print('This Runescape name is not valid!')
+            return False
         print(f'Validated name: {rs_name}...')
 
         # Name is valid
@@ -154,7 +161,8 @@ class DataHandler:
 
         # Check if player is already in this server linked with a member
         if not check_player_member_link(db_dis, Server, Member, rs_name):
-            return print('Could not verify player-member link!')
+            print('Could not verify player-member link!')
+            return False
 
         # Get list of existing players for this member in this server
         player_path = f'player:{rs_name}#server:{Server.id}'
@@ -169,8 +177,9 @@ class DataHandler:
             print(f"ADDED NEW MEMBER - Name: {Member.name} | ID: {Member.id} | Server ID {Server.id}")
         if len(player_list) >= MAX_PLAYERS_PER_MEMBER:
             # Member has too many players for them in this server
-            return print(f'You can only have up to {MAX_PLAYERS_PER_MEMBER} OSRS accounts connected to a Discord member per server.\n' 
-                        f'Please remove one to add another. Current accounts: {", ".join(player_list)}')
+            print(f'You can only have up to {MAX_PLAYERS_PER_MEMBER} OSRS accounts connected to a Discord member per server.\n' 
+                f'Please remove one to add another. Current accounts: {", ".join(player_list)}')
+            return False
         player_list.append(rs_name)
 
         # Add server to player (my method)
@@ -189,16 +198,21 @@ class DataHandler:
         db_rs[rs_name] = {'skills': {}, 'minigames': {}}  # <-- this should already be built
         db_write(DB_RUNESCAPE_PATH, db_rs)
         print(f"ADDED NEW PLAYER - RS name : {rs_name} | Member: {Member.name} | ID: {Member.id} | Server ID {Server.id}")
+        return True
 
 
     def remove_player(self, Server, Member, rs_name):
+        """Remove a player from a specific server\n
+        Remove player from runescape.json if there are no more servers for player\n
+        Returns False if player could not be removed"""
         print('------------------------------')
         print(f'Initialized REMOVE PLAYER: {rs_name} | Removed by: {Member.name}')
         db_dis = db_open(DB_DISCORD_PATH)  # open Discord DB
 
         # Check if this player is in this server, try removing server from player
         if not player_remove_server(db_dis,Server,rs_name):
-            return print(f'Could not remove player: {rs_name}')
+            print(f'Could not remove player: {rs_name}')
+            return False
 
         # Get ID of member in this server with this player (admin could be removing)
         player_path = f'player:{rs_name}#server:{Server.id}'
@@ -220,22 +234,29 @@ class DataHandler:
             db_write(DB_RUNESCAPE_PATH, db_rs)
             print(f"Completely removed player from all DBs | RS name: {rs_name}")
         print(f"REMOVED PLAYER - RS name : {rs_name} | Linked Member ID : {linked_member} | Remover ID: {Member.id} | Server ID {Server.id}")
+        return True
 
 
     def rename_player(self, Server, Member, old_rs_name, new_rs_name):
+        """Rename a player in a specific server\n
+        Move all info from old player to new player\n
+        Returns False if player could not be renamed"""
         print('------------------------------')
         print(f'Initialized RENAME PLAYER: Old: {old_rs_name} | New: {new_rs_name} | Updated by: {Member.name}')
         if old_rs_name == new_rs_name:
-            return print('These are the same names!')
+            print('These are the same names!')
+            return False
         db_dis = db_open(DB_DISCORD_PATH)  # open Discord DB
         
         # Check if new player is already in this server linked with a member
         if not check_player_member_link(db_dis, Server, Member, new_rs_name):
-            return print('Could not verify player-member link!')
+            print('Could not verify player-member link!')
+            return False
 
         # Check if this server is in this player, try removing server from player
         if not player_remove_server(db_dis,Server,old_rs_name):
-            return print(f'Could not remove player: {old_rs_name}')
+            print(f'Could not remove player: {old_rs_name}')
+            return False
 
         # Get list of existing players for this member in this server
         old_player_path = f'player:{old_rs_name}#server:{Server.id}'
@@ -271,3 +292,4 @@ class DataHandler:
         db_rs[new_rs_name] = {'skills': {}, 'minigames': {}}  # <-- this should already be built
         db_write(DB_RUNESCAPE_PATH, db_rs)
         print(f"RENAMED PLAYER: Old: {old_rs_name} | New: {new_rs_name} | Updated by ID: {Member.id} | Server ID {Server.id}")
+        return True
