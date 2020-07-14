@@ -11,14 +11,14 @@ async def check_player_member_link(db_dis, Server, Member, rs_name):
     try:
         # This member already has this player
         if db_dis[f'player:{rs_name}#server:{Server.id}#member'] == Member.id:
-            raise ex.DataHandlerError(f'**{Member.name}** is already linked to RS player *{rs_name}*!')
-        # This player had a member on this server but is now open (removed)
+            raise ex.DataHandlerError(f'**{Member.name}** is already linked to OSRS account: *{rs_name}*!')
+        # This player had a member on this server but is now open (deprecated)
         elif db_dis[f'player:{rs_name}#server:{Server.id}#member'] == None:
             logger.debug(f'{rs_name} was used in this server before. {Member.name} will now try to take it')
             return True
         # Another member is using this player
         else:
-            raise ex.DataHandlerError(f'RS player *{rs_name}* is already linked to another member on this server!')
+            raise ex.DataHandlerError(f'OSRS account *{rs_name}* is already linked to another member on this server!')
     # This is an open player for this server
     except KeyError:
         return True
@@ -42,6 +42,21 @@ async def player_remove_server(db_dis, Server, rs_name):
         db_dis[f'player:{rs_name}#all_servers'].remove(Server.id)
         logger.info(f'Removed server ID {Server.id} from {rs_name} in DB')
     except KeyError:
-        raise ex.DataHandlerError(f'RS player *{rs_name}* is not present in any Activity Log!')
+        raise ex.DataHandlerError(f'OSRS account *{rs_name}* is not present in any Activity Log!')
     except ValueError:
-        raise ex.DataHandlerError(f"RS player *{rs_name}* is not present in this server's Activity Log!")
+        raise ex.DataHandlerError(f"OSRS account *{rs_name}* is not present in this server's Activity Log!")
+
+
+async def player_in_server_member(db_dis, Server, Member, rs_name):
+    """Check if a player is in a member for this server\n
+    Returns True or False"""
+    try:
+        # This member is using this player in this server
+        if db_dis[f'player:{rs_name}#server:{Server.id}#member'] == Member.id:
+            return True
+        # Another member is using this player
+        else:
+            return False
+    # This is an open player for this server
+    except KeyError:
+        raise ex.DataHandlerError(f"OSRS account *{rs_name}* is not present in this server's Activity Log!")

@@ -34,7 +34,7 @@ class UserCommands(commands.Cog, name="General Commands"):
         player_dict = await util.check_player_validity(name_rs)
         # If player is valid to be added
         if player_dict != None:
-            await ctx.channel.purge(limit=1)  # delete 'getting levels' messages
+            # await ctx.channel.purge(limit=1)  # delete 'getting levels' messages
             # ADD PLAYER (get exceptions working here)
             try:
                 await db.add_player(ctx.guild, ctx.author, name_rs, player_dict)
@@ -45,7 +45,7 @@ class UserCommands(commands.Cog, name="General Commands"):
                 return await ctx.send(e)
         # Player is not valid to be added
         else:
-            await ctx.channel.purge(limit=1) # delete 'getting levels' messages
+            # await ctx.channel.purge(limit=1) # delete 'getting levels' messages
             await ctx.send("**This player's RS name can't be accessed!** Here are some reasons why:\n"
                             " -This Runescape character doesn't exist\n"
                             " -They don't have any high enough levels on the Hiscores\n"
@@ -61,7 +61,7 @@ class UserCommands(commands.Cog, name="General Commands"):
     async def remove(self, ctx, *, game_name):
         name_rs = util.name_to_rs(game_name)
         try:
-            await db.remove_player(ctx.guild, ctx.author, name_rs)
+            await db.remove_player(ctx.guild, ctx.author, name_rs, False)
             await ctx.send(f'**{ctx.author.name}** has removed an account from the Activity Log: *{name_rs}*')
         except Exception as e:
             return await ctx.send(e)

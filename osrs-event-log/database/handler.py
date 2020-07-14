@@ -177,13 +177,20 @@ async def add_player(Server, Member, rs_name, stats_dict):
 
 # ------------------------------- Remove Player ------------------------------ #
 
-async def remove_player(Server, Member, rs_name):
+async def remove_player(Server, Member, rs_name, force_rm):
     """Remove a player from a specific server\n
     Remove player from runescape.json if there are no more servers for player\n
     Returns False if player could not be removed"""
     logger.info('------------------------------')
     logger.info(f'Initialized REMOVE PLAYER: {rs_name} | Removed by: {Member.name}')
     db_dis = await db_open(DB_DISCORD_PATH)  # open Discord DB
+
+    # Check if Member passed is tied to this player on this server (non-admin remove)
+    if not force_rm:
+        try: 
+            if not await h.player_in_server_member(db_dis, Server, Member, rs_name):
+                raise ex.DataHandlerError(f'**{Member.name}** does not use OSRS account: *{rs_name}*')
+        except Exception as e: raise e
 
     # Check if this player is in this server, try removing server from player
     try: await h.player_remove_server(db_dis, Server, rs_name)
@@ -211,7 +218,7 @@ async def remove_player(Server, Member, rs_name):
         await db_write(DB_RUNESCAPE_PATH, db_rs)
         logger.info(f"Completely removed player from all DBs | RS name: {rs_name}")
     await db_write(DB_DISCORD_PATH, db_dis)
-    logger.info(f"REMOVED PLAYER - RS name : {rs_name} | Linked Member ID : {linked_member} | Remover ID: {Member.id} | Server ID {Server.id}")
+    logger.info(f"REMOVED PLAYER - RS name : {rs_name} | Linked Member ID : {linked_member} | Remover ID: {Member.id} | Server: {Server.name} | ID: {Server.id}")
     return True
 
 
