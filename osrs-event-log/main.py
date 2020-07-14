@@ -6,6 +6,8 @@
 
 # IDEAS:
 # - recentmilestones: shows a rundown of the last 5-10 milestones
+# - add pause feature per server?
+# - put max alt account number in bot_config file
 
 
 import json
@@ -44,7 +46,7 @@ custom_help = commands.DefaultHelpCommand(
 
 # Set bot status
 game_playing = discord.Streaming(
-    name=';join <osrs-name>',
+    name=';add <osrs-name>',
     url='https://www.youtube.com/watch?v=FADpdNyXzek')
 
 # create bot object
@@ -54,15 +56,10 @@ bot = commands.Bot(
     description = 'OSRS Activity Log by Green Donut')
 
 # define extensions
-initial_extensions = [
-    'cogs.cmds.user'
-]
-# initial_extensions =    [
-#                         'cogs.looper',
-#                         'cogs.cmds.user',
-#                         'cogs.cmds.admin',
-#                         'cogs.cmds.super'
-#                         ]
+initial_extensions =    [
+                        'cogs.cmds.user',
+                        'cogs.cmds.admin'
+                        ]
 
 # load extensions
 if __name__ == '__main__':
@@ -105,8 +102,7 @@ async def on_guild_join(guild):
         await guild.system_channel.send(f'Thanks for having me, {guild.name}\n'
                                 'Set a channel for me to post in with **;posthere**\n'
                                 'Set a role for me to mention for big announcements with **;rsrole**\n'
-                                'Add your OSRS name to the Event Log List with **;join <your OSRS name>**\n'
-                                'If you change your OSRS name, use the command again with your new name')  
+                                'Add your OSRS name to the Activity Log with **;add <your OSRS name>**')  
     logger.info('\n---------------------------------------\n'
             f'Joined {guild.name} with {guild.member_count} users!\n'
             f' System channel = {sys_chan}\n'

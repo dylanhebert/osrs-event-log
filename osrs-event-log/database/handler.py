@@ -152,7 +152,8 @@ async def add_player(Server, Member, rs_name, stats_dict):
     if len(player_list) >= MAX_PLAYERS_PER_MEMBER:
         # Member has too many players for them in this server
         raise ex.DataHandlerError(f'You can only have up to **{MAX_PLAYERS_PER_MEMBER}** OSRS accounts connected to a Discord member per server.\n' 
-                                f'Please remove one to add another. Current accounts: *{", ".join(player_list)}*')
+                                f'Please remove one to add another. Current accounts: *{", ".join(player_list)}*\n'
+                                'If you are changing an OSRS name, use *;transfer {old-name}>>{new-name}* to retain your Activity Log records')
     player_list.append(rs_name)
 
     # Add server to player (my method)
@@ -281,7 +282,7 @@ async def get_member_entry(Server, Member, entry):
     db = await db_open(DB_DISCORD_PATH)
     try: return db[f'member:{Member.id}#server:{Server.id}#{entry}']
     except KeyError:
-        raise ex.DataHandlerError(f'{Member.name} does not have any RS accounts on this server!')
+        raise ex.DataHandlerError(f'Could not find {entry} for {Member.name}')
 
 # ---------------------------- Toggle Player Entry --------------------------- #
 

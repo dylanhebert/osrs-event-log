@@ -10,6 +10,7 @@ import asyncio
 import re
 from common.logger import logger
 import common.util as util
+import database.handler as db
 
 
 class AdminCommands(commands.Cog, name="Admin Commands"):
@@ -30,7 +31,7 @@ class AdminCommands(commands.Cog, name="Admin Commands"):
     async def posthere(self, ctx):
         if await util.is_admin(ctx.author) or ctx.author.id == 134858274909585409:
             try:
-                await util.update_server_val(util.servers_path,ctx.guild.id,'chan_id',ctx.channel.id)
+                await db.update_server_entry(ctx.guild, 'channel', ctx.channel.id)
                 await ctx.send(f'I will now start posting in the {ctx.channel.mention} channel!')
                 logger.info(f'\nUpdated post channel in {ctx.guild.name}: {ctx.channel.name} | {ctx.channel.id}')
             except Exception as e:
@@ -49,7 +50,7 @@ class AdminCommands(commands.Cog, name="Admin Commands"):
     async def rsrole(self, ctx, *, rs_role: discord.Role):
         if await util.is_admin(ctx.author) or ctx.author.id == 134858274909585409:
             try:
-                await util.update_server_val(util.servers_path,ctx.guild.id,'rs_role_id',rs_role.id)
+                await db.update_server_entry(ctx.guild, 'role', rs_role.id)
                 await ctx.send(f'I will now start posting big announcements with the **{rs_role.name}** role mentioned!')
                 logger.info(f'\nUpdated RS Role in {ctx.guild.name}: {rs_role.name} | {rs_role.id}')
             except Exception as e:
@@ -67,7 +68,7 @@ class AdminCommands(commands.Cog, name="Admin Commands"):
     async def resetrsrole(self, ctx):
         if await util.is_admin(ctx.author) or ctx.author.id == 134858274909585409:
             try:
-                await util.update_server_val(util.servers_path,ctx.guild.id,'rs_role_id',None)
+                await db.update_server_entry(ctx.guild, 'role', None)
                 await ctx.send(f'I will now start posting big announcements with the **@here** role mentioned!')
                 logger.info(f'\nReset RS Role in {ctx.guild.name}: @here | {None}')
             except Exception as e:
@@ -77,7 +78,7 @@ class AdminCommands(commands.Cog, name="Admin Commands"):
             await ctx.send('**Only members with admin privilages can use this command!**')
 
 
-    # ADMINS CAN ADD ANYONE TO LOOP
+    """# ADMINS CAN ADD ANYONE TO LOOP
     @commands.command(  brief=";add <@Discord-Member> <OSRS-Name> | Add someone to the Activity Log",
                         usage="<@Discord-Member> <OSRS-Name>",
                         description="Add someone else to the Activity Log that is not you. "
@@ -151,7 +152,7 @@ class AdminCommands(commands.Cog, name="Admin Commands"):
                 logger.exception(f'Could not remove player in guild id:{ctx.guild.id} for player id:{ctx.author.id} -- {e}')
                 await ctx.send('**Error removing the member! Check the spelling!**')
         else:
-            await ctx.send('**Only members with admin privilages can use this command!**')
+            await ctx.send('**Only members with admin privilages can use this command!**')"""
 
 
 def setup(bot):

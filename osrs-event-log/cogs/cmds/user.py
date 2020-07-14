@@ -23,11 +23,11 @@ class UserCommands(commands.Cog, name="General Commands"):
 
 
     # PLAYER JOINS LOG LOOP THEMSELVES
-    @commands.command(  brief=";addaccount <OSRS-Name> | Add an account to your Activity Log",
+    @commands.command(  brief=";add <OSRS-Name> | Add an account to your Activity Log",
                         usage="<OSRS-Name>",
                         description="Join the Activity Log with a specified OSRS username.")
     @commands.cooldown(1, 5, commands.BucketType.guild)
-    async def addaccount(self, ctx, *, game_name):
+    async def add(self, ctx, *, game_name):
         # server_entry = await util.get_server_entry(util.players_path,ctx.guild.id)
         name_rs = util.name_to_rs(game_name)
         await ctx.send("*Checking name...*")
@@ -39,7 +39,8 @@ class UserCommands(commands.Cog, name="General Commands"):
             try:
                 await db.add_player(ctx.guild, ctx.author, name_rs, player_dict)
                 await ctx.send(f'**{ctx.author.name}** has added an account to the Activity Log: *{name_rs}*\n'
-                            f'Toggle on/off this bot mentioning you every update with *;togglemention {game_name}*')
+                            f'Toggle on/off this bot mentioning you every update with *;togglemention {game_name}*\n'
+                            f'If you change this OSRS name, use *;transfer {game_name}>>{{new-name}}* to retain your Activity Log records')
             except Exception as e:
                 return await ctx.send(e)
         # Player is not valid to be added
@@ -52,12 +53,12 @@ class UserCommands(commands.Cog, name="General Commands"):
 
 
     # MEMBER CAN REMOVE THEMSELVES FROM EVENT LOG
-    @commands.command(  brief=";removeaccount <OSRS-Name> | Remove an account from your Activity Log",
+    @commands.command(  brief=";remove <OSRS-Name> | Remove an account from your Activity Log",
                         usage="<OSRS-Name>",
                         description="Remove one of your RS accounts from this server in the Activity Log's databases. "
-                                    "You can use ;addaccount to add another.")
+                                    "You can use ;add to add another.")
     @commands.cooldown(1, 5, commands.BucketType.guild)
-    async def removeaccount(self, ctx, *, game_name):
+    async def remove(self, ctx, *, game_name):
         name_rs = util.name_to_rs(game_name)
         try:
             await db.remove_player(ctx.guild, ctx.author, name_rs)
@@ -70,12 +71,12 @@ class UserCommands(commands.Cog, name="General Commands"):
     @commands.command(  brief="List all RS accounts associated with you in this server",
                         description="List all RS accounts associated with you in the Activity Log for this server.")
     @commands.cooldown(1, 5, commands.BucketType.guild)
-    async def myaccounts(self, ctx):
+    async def accounts(self, ctx):
         try:
             player_list = await db.get_member_entry(ctx.guild, ctx.author, 'players')
             await ctx.send(f'**{ctx.author.name}**: *{"* **|** *".join(player_list)}*')
-        except Exception as e:
-            return await ctx.send(e)
+        except Exception:
+            return await ctx.send(f'**{ctx.author.name}** does not have any RS accounts on this server!')
 
 
     """# LIST PLAYERS IN LOOP
