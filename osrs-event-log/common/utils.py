@@ -19,6 +19,9 @@ serversPath = dir_path + "/data/servers.json"
 playersPath = dir_path + "/data/players.json"
 messagesPath = dir_path + "/data/custom_messages.json"
 
+# Timeout for access a player hiscore page
+TIMEOUT = aiohttp.ClientTimeout(total=15)
+
 # HISCORES PAGE (before username)
 hiscoresURL = "https://secure.runescape.com/m=hiscore_oldschool/hiscorepersonal?user1="
 
@@ -104,17 +107,21 @@ async def PlayerIsAcceptable(name):
 # REQUEST WEB PAGE (AIOHTTP)
 async def getPage(name):
     try:
-        async with aiohttp.ClientSession() as session:
-            async with session.get(hiscoresURL + name) as p:
-                if p.status == 200:
-                    page = await p.text()
-                else:
-                    logger.info(f'Unable to get page for {name} | Page status: {p.status}')
-                    page = None
+        async with aiohttp.ClientSession(timeout=TIMEOUT) as session:
+            try:
+                async with session.get(hiscoresURL + name) as p:
+                    if p.status == 200:
+                        page = await p.text()
+                        logger.debug(f'{name}: Scraped page with aiohttp...')
+                    else:
+                        logger.info(f'Unable to get page for {name} | Page status: {p.status}')
+                        page = None
+            except asyncio.TimeoutError as e:
+                page = None
+                logger.exception(f'{name}: Timeout getting async session, returning None for page')
     except Exception as e:
         page = None
-        logger.exception(f'aiohttp failed, returning None for page: {e}')
-    logger.debug('scraped page with aiohttp...')
+        logger.exception(f'{name}: aiohttp failed, returning None for page')
     return page
 
 
