@@ -2,18 +2,20 @@
 # Player = A Runescape account
 #
 
-import helpers as h
 import pathlib
 import json
 import os
 import asyncio
+from . import helpers as h
 
 
 # --------------------------------- Constants -------------------------------- #
 
 DIR_PATH = str(pathlib.Path().absolute())
-DB_DISCORD_PATH = DIR_PATH + "/db_discord.json"
-DB_RUNESCAPE_PATH = DIR_PATH + "/db_runescape.json"
+DATA_PATH = "database/"
+FULL_DATA_PATH = DIR_PATH + "/" + DATA_PATH
+DB_DISCORD_PATH = FULL_DATA_PATH + "db_discord.json"
+DB_RUNESCAPE_PATH = FULL_DATA_PATH + "db_runescape.json"
 
 MAX_PLAYERS_PER_MEMBER = 2
 
@@ -44,26 +46,29 @@ async def db_write(path,db):
 
 # ------------------------------- Verify Files ------------------------------- #
 
-async def verify_files(file_name):
+def verify_files(file_name):
     """Verify if a file is present in a path"""
-    if os.path.exists(file_name):
-        print(f'Found {file_name}')
+    path_check = DATA_PATH + file_name
+    if os.path.exists(path_check):
+        print(f'Found {path_check}')
         # TEMP CODE FOR TESTING
         if file_name == 'db_discord.json':
             db = {'active_servers': [],'removed_servers': []}
-            await db_write(DB_DISCORD_PATH, db)
+            with open(DB_DISCORD_PATH, 'w') as outfile:  
+                json.dump(db, outfile, indent=4, sort_keys=False)
         else:
             db = {}
-            await db_write(DB_RUNESCAPE_PATH, db)
+            with open(DB_RUNESCAPE_PATH, 'w') as outfile:  
+                json.dump(db, outfile, indent=4, sort_keys=False)
         pass
     else:
         if file_name == 'db_discord.json':
             db = {'active_servers': [],'removed_servers': []}
         else:
             db = {}
-        with open(file_name, 'w') as outfile:  
+        with open(path_check, 'w') as outfile:  
             json.dump(db, outfile)
-        print(f'Created new {file_name}')
+        print(f'Created new {path_check}')
 
 
 # -------------------------------- Add Server -------------------------------- #

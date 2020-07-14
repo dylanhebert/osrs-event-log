@@ -10,7 +10,7 @@ import math
 
 
 # -------------- VARIABLES ------------- #
-nonMonsterBosses =  [   "Barrows Chests", "Chambers of Xeric", "Theatre of Blood",
+non_monster_bosses =  [   "Barrows Chests", "Chambers of Xeric", "Theatre of Blood",
                         "The Gauntlet", "The Corrupted Gauntlet", "Wintertodt",
                         "Chambers of Xeric: Challenge Mode"
                     ]
@@ -18,7 +18,7 @@ nonMonsterBosses =  [   "Barrows Chests", "Chambers of Xeric", "Theatre of Blood
 # -------------------------------------- #
 # ---------- HELPER METHODS ------------ #
 # -------------------------------------- #
-def clueSort(title):
+def clue_sort(title):
     if '(all)' in title:
         return 'Total'
     if '(beginner)' in title:
@@ -39,92 +39,92 @@ def clueSort(title):
 # ---------- PLAYER UPDATE CLASS ------------#
 # -------------------------------------------#
 class PlayerUpdate:
-    def __init__(self, oldData, messages):
-        self.oldData = oldData
-        self.rsName = fs.NameToDiscord(oldData['rsName'])
-        self.mentionMember = None
-        self.mentionRole = None
-        self.overallUpdate = None
+    def __init__(self, old_data, messages):
+        self.old_data = old_data
+        self.rs_name = fs.name_to_discord(old_data['rs_name'])
+        self.mention_member = None
+        self.mention_role = None
+        self.overall_update = None
         self.skills = []
         self.minigames = []
         self.milestones = []
-        self.clueAllTotal = None
-        self.duplicateServerPost = False  # fix for duplicate 'Overall' entries & logging when a player is in multiple servers
+        self.clue_all_total = None
+        self.duplicate_server_post = False  # fix for duplicate 'Overall' entries & logging when a player is in multiple servers
         self.custom_messages = messages
 
 
     # ---------- CLASS METHODS ------------ #
 
     # --- POST UPDATE(S) --- #
-    async def postUpdate(self, bot, server, channel, rsRole, memID):
+    async def post_update(self, bot, server, channel, rs_role, memID):
         # gather all server-specific variables we need
-        logger.debug(f"rsName: {self.rsName}, skillUpdates: {len(self.skills)}, minigameUpdates: {len(self.minigames)}, milestones: {len(self.milestones)}...")
+        logger.debug(f"rs_name: {self.rs_name}, skill_updates: {len(self.skills)}, minigame_updates: {len(self.minigames)}, milestones: {len(self.milestones)}...")
         member = server.get_member(memID)
-        self.getMentionMember(member,server)  # build our mention string
-        self.getMentionRole(rsRole)  # build our mention string
+        self.get_mention_member(member,server)  # build our mention string
+        self.get_mention_role(rs_role)  # build our mention string
 
         # MILESTONE UPDATES
         if self.milestones:
             # only add overall info here if there's no regular update
-            if self.overallUpdate != None and not self.skills:
-                if self.duplicateServerPost == False:
-                    self.milestones.append(self.overallUpdate)
+            if self.overall_update != None and not self.skills:
+                if self.duplicate_server_post == False:
+                    self.milestones.append(self.overall_update)
                     logger.debug(f"joined overall for milestone...")
-            allMilestones = "".join(self.milestones)
-            fullMessage = f'**- {self.mentionRole} {self.mentionMember} -**\n{allMilestones}'
+            all_milestones = "".join(self.milestones)
+            full_message = f'**- {self.mention_role} {self.mention_member} -**\n{all_milestones}'
             ### Add in code here later to work around Discord's 2k char limit ###
-            await channel.send(fullMessage)
-            if self.duplicateServerPost == False:
-                logger.info(f"New milestone posted for {self.rsName} | Milestones posted: {len(self.milestones)}:\n{fullMessage}")
+            await channel.send(full_message)
+            if self.duplicate_server_post == False:
+                logger.info(f"New milestone posted for {self.rs_name} | Milestones posted: {len(self.milestones)}:\n{full_message}")
 
         # REGULAR UPDATES
-        allSkills = ""
-        allMinigames = ""
+        all_skills = ""
+        all_minigames = ""
         # skill updates
         if self.skills:
             # add overall info to bottom of skills in update
-            if self.overallUpdate != None:
-                if self.duplicateServerPost == False:
-                    self.skills.append(self.overallUpdate)
+            if self.overall_update != None:
+                if self.duplicate_server_post == False:
+                    self.skills.append(self.overall_update)
                     logger.debug(f"joined overall...")
                 else:
                     logger.debug(f"overall already joined, not appending...")
-            allSkills = "".join(self.skills)
-            logger.debug(f"created allSkills...")
+            all_skills = "".join(self.skills)
+            logger.debug(f"created all_skills...")
         # minigame updates
         if self.minigames:
-            allMinigames = "".join(self.minigames)
-            logger.debug(f"created allMinigames...")
+            all_minigames = "".join(self.minigames)
+            logger.debug(f"created all_minigames...")
         # post updates
-        if allSkills or allMinigames:
-            fullMessage = f'**- {self.mentionMember} -**\n{allSkills}{allMinigames}'
+        if all_skills or all_minigames:
+            full_message = f'**- {self.mention_member} -**\n{all_skills}{all_minigames}'
             ### Add in code here later to work around Discord's 2k char limit ###
-            await channel.send(fullMessage)
-            if self.duplicateServerPost == False:
-                logger.info(f"New update posted for {self.rsName} | Updates posted: {len(self.skills) + len(self.minigames)}:\n{fullMessage}")
+            await channel.send(full_message)
+            if self.duplicate_server_post == False:
+                logger.info(f"New update posted for {self.rs_name} | Updates posted: {len(self.skills) + len(self.minigames)}:\n{full_message}")
         
         # We've now posted to our first server, others will be duplicates
-        self.duplicateServerPost = True
+        self.duplicate_server_post = True
         return
 
 
     # --- POST UPDATE(S) --- #
-    def getMentionMember(self, member, server):
-        if self.oldData['servers'][str(server.id)]['mention'] == True:
-            self.mentionMember = member.mention
+    def get_mention_member(self, member, server):
+        if self.old_data['servers'][str(server.id)]['mention'] == True:
+            self.mention_member = member.mention
         else:
-            self.mentionMember = member.name
+            self.mention_member = member.name
 
     # --- BUILD ROLE MENTION STRING --- #
     # defaults to @here when no role specified
-    def getMentionRole(self, rsRole):
-        if rsRole == None:
-            self.mentionRole = "@here"
+    def get_mention_role(self, rs_role):
+        if rs_role == None:
+            self.mention_role = "@here"
         else:
-            self.mentionRole = rsRole.mention
+            self.mention_role = rs_role.mention
 
     # --- CHECK FOR UPDATES --- #
-    def hasAnyUpdates(self):
+    def has_any_updates(self):
         if self.skills or self.minigames or self.milestones:
             return True
         else:
@@ -134,75 +134,75 @@ class PlayerUpdate:
     # ---------- UPDATE CREATION METHODS ------------ #
 
     # --- SKILLS --- #
-    def updateSkill(self, newData, title, newEntry):
+    def updateSkill(self, new_data, title, new_entry):
         logger.debug("in PlayerUpdate-updateSkill...")
 
         # skill was already on hiscores
-        if not newEntry:  
-            oldData = self.oldData['skills'][title]
-            logger.debug(f"existing entry, old lvl: {oldData['level']}, new lvl: {newData['level']}...")
-            xpNew = fs.formatInt(newData['xp'])
-            xpOld = fs.formatInt(oldData['xp'])
-            xpDiff = xpNew - xpOld
+        if not new_entry:  
+            old_data = self.old_data['skills'][title]
+            logger.debug(f"existing entry, old lvl: {old_data['level']}, new lvl: {new_data['level']}...")
+            xp_new = fs.format_int(new_data['xp'])
+            xp_old = fs.format_int(old_data['xp'])
+            xp_diff = xp_new - xp_old
             logger.debug("calculated xp diff...")
-            if newData['level'] != oldData['level']:  # check if level change
+            if new_data['level'] != old_data['level']:  # check if level change
                 logger.debug("difference in level...")
                 # only add new Overall info below any skills updates
                 if title == 'Overall':
-                    self.makeOverallUpdate(oldData, newData)  # send to make method
+                    self.make_overall_update(old_data, new_data)  # send to make method
                 # updating skill that already exists on hiscores
-                else: self.makeSkillUpdate(oldData, newData, title, xpDiff)
+                else: self.make_skill_update(old_data, new_data, title, xp_diff)
             else:  # xp gain, but no level change
-                logger.debug(f"{title} had no lvl change, xp diff: {xpDiff}...")
+                logger.debug(f"{title} had no lvl change, xp diff: {xp_diff}...")
 
             # check for any significant XP updates
-            if xpNew >= 10000000:
-                self.checkXpUpdate(oldData, newData, title, xpNew, xpOld, xpDiff)
+            if xp_new >= 10000000:
+                self.check_xp_update(old_data, new_data, title, xp_new, xp_old, xp_diff)
 
         # skill is new to hiscores
         else:
             logger.debug("new entry...")
-            message = f"**{self.rsName} levelled up {title} to {newData['level']}**\
+            message = f"**{self.rs_name} levelled up {title} to {new_data['level']}**\
                         ```This is the first time this skill is on the Hiscores```"
             self.skills.append(message)
             logger.debug(f"appended NEW update for {title} to skills list...")
 
 
     # --- MINIGAMES --- #
-    def updateMinigame(self, newData, title, newEntry):
-        logger.debug("in PlayerUpdate-updateMinigame...")
+    def update_minigame(self, new_data, title, new_entry):
+        logger.debug("in PlayerUpdate-update_minigame...")
 
         # CLUES
         if 'Clue' in title:
             logger.debug("found clue...")
-            clueLvl = clueSort(title)
-            logger.debug(f"clue lvl: {clueLvl}...")
+            clue_lvl = clue_sort(title)
+            logger.debug(f"clue lvl: {clue_lvl}...")
 
-            if not newEntry:  # minigame was already on hiscores
+            if not new_entry:  # minigame was already on hiscores
                 logger.debug("existing entry...")
-                oldData = self.oldData['minigames'][title]
-                countNew = fs.formatInt(newData['score'])
-                countOld = fs.formatInt(oldData['score'])
-                countDiff = countNew - countOld
-                self.makeClueUpdate(oldData, newData, title, countNew, countOld, countDiff, clueLvl)
+                old_data = self.old_data['minigames'][title]
+                count_new = fs.format_int(new_data['score'])
+                count_old = fs.format_int(old_data['score'])
+                count_diff = count_new - count_old
+                self.make_clue_update(old_data, new_data, title, count_new, count_old, count_diff, clue_lvl)
 
             else:  # minigame is new to hiscores
                 logger.debug("new entry...")
                 # all clue scrolls, get count
-                if clueLvl == 'Total':
-                    logger.debug(f"(all) clue found, count: {newData['score']}...")
-                    self.clueAllTotal = fs.formatInt(newData['score'])
+                if clue_lvl == 'Total':
+                    logger.debug(f"(all) clue found, count: {new_data['score']}...")
+                    self.clue_all_total = fs.format_int(new_data['score'])
                     return
                 # set correct usage of a/an
-                if clueLvl in ['Easy', 'Elite']: an = 'an'
+                if clue_lvl in ['Easy', 'Elite']: an = 'an'
                 else: an = 'a'
                 # append total clues to message if total clues rank is on hiscores
-                if self.clueAllTotal != None:
-                    totalClueMsg = f" | Total clues completed: {fs.formatIntStr(self.clueAllTotal)}"
+                if self.clue_all_total != None:
+                    total_clue_msg = f" | Total clues completed: {fs.format_int_str(self.clue_all_total)}"
                 else:
-                    totalClueMsg = ""
-                message = f"**{self.rsName} completed {an} {clueLvl} Clue Scroll for the first time**\
-                            ```{clueLvl} clues completed: {fs.formatIntStr(newData['score'])} | Current rank: {newData['rank']}{totalClueMsg}```"
+                    total_clue_msg = ""
+                message = f"**{self.rs_name} completed {an} {clue_lvl} Clue Scroll for the first time**\
+                            ```{clue_lvl} clues completed: {fs.format_int_str(new_data['score'])} | Current rank: {new_data['rank']}{total_clue_msg}```"
                 self.minigames.append(message)
                 logger.debug(f"appended update for {title} to minigames list...")
 
@@ -215,40 +215,40 @@ class PlayerUpdate:
         else:
             logger.debug("found boss...")
             # change first word depending on boss/activity
-            if title in nonMonsterBosses:  # not monsters
+            if title in non_monster_bosses:  # not monsters
                 if title == "Wintertodt":  # special case for wintertodt
-                    action1 = 'subdued'
-                    action2 = 'subdue'
+                    action_1 = 'subdued'
+                    action_2 = 'subdue'
                     logger.debug("nonmonster boss, wintertodt...")
                 else:  # anything else not wintertodt
-                    action1 = 'completed'
-                    action2 = 'completion'
+                    action_1 = 'completed'
+                    action_2 = 'completion'
                     logger.debug("nonmonster boss...")
             else:  # any other boss will default to this
-                action1 = 'killed'
-                action2 = 'kill'
+                action_1 = 'killed'
+                action_2 = 'kill'
                 logger.debug("monster boss...")
 
-            if not newEntry:  # minigame was already on hiscores
+            if not new_entry:  # minigame was already on hiscores
                 logger.debug("existing entry...")
-                oldData = self.oldData['minigames'][title]
-                killNew = fs.formatInt(newData['score'])
-                killOld = fs.formatInt(oldData['score'])
-                killDiff = killNew - killOld
-                self.makeBossUpdate(oldData, newData, title, killNew, killOld, killDiff, action1, action2)
+                old_data = self.old_data['minigames'][title]
+                kill_new = fs.format_int(new_data['score'])
+                kill_old = fs.format_int(old_data['score'])
+                kill_diff = kill_new - kill_old
+                self.make_boss_update(old_data, new_data, title, kill_new, kill_old, kill_diff, action_1, action_2)
 
             else:  # minigame is new to hiscores
                 logger.debug("new entry...")
                 # check if this was a special boss
                 if title in self.custom_messages['bosses']:
-                    messageExtra = self.custom_messages['bosses'][title]
-                    message = f"**{self.rsName} {action1} {title} for the first time! {messageExtra}**\
-                                ```Total {action2} count: {fs.formatIntStr(newData['score'])} | Current rank: {newData['rank']}```"
+                    message_extra = self.custom_messages['bosses'][title]
+                    message = f"**{self.rs_name} {action_1} {title} for the first time! {message_extra}**\
+                                ```Total {action_2} count: {fs.format_int_str(new_data['score'])} | Current rank: {new_data['rank']}```"
                     self.milestones.append(message)
                     logger.debug(f"appended Boss update for {title} to milestones list...")
                 else:
-                    message = f"**{self.rsName} {action1} {title} for the first time**\
-                                ```Total {action2} count: {fs.formatIntStr(newData['score'])} | Current rank: {newData['rank']}```"
+                    message = f"**{self.rs_name} {action_1} {title} for the first time**\
+                                ```Total {action_2} count: {fs.format_int_str(new_data['score'])} | Current rank: {new_data['rank']}```"
                     self.minigames.append(message)
                     logger.debug(f"appended update for {title} to minigames list...")
             
@@ -256,46 +256,46 @@ class PlayerUpdate:
     # ---------- MESSAGE & MILESTONE CHECKING METHODS ------------ #
 
     # --- OVERALL --- #
-    def makeOverallUpdate(self, oldData, newData):
+    def make_overall_update(self, old_data, new_data):
         logger.debug("assigning Overall...")
-        lvlNew = fs.formatInt(newData['level'])
-        lvlOld = fs.formatInt(oldData['level'])
+        lvl_new = fs.format_int(new_data['level'])
+        lvl_old = fs.format_int(old_data['level'])
         # MAX
-        maxLvl = 2277
-        if lvlNew == maxLvl and lvlOld != maxLvl:
-            message = f"**{self.rsName} HAS ACHIEVED MAX TOTAL LEVEL {newData['level']}! DAMN SON**\
-                        ```Overall XP: {newData['xp']} | Overall rank: {newData['rank']}```"
+        max_lvl = 2277
+        if lvl_new == max_lvl and lvl_old != max_lvl:
+            message = f"**{self.rs_name} HAS ACHIEVED MAX TOTAL LEVEL {new_data['level']}! DAMN SON**\
+                        ```Overall XP: {new_data['xp']} | Overall rank: {new_data['rank']}```"
             self.milestones.append(message)
         # 2200 total
-        elif lvlOld < 2200 and lvlNew >= 2200:
-            message = f"**{self.rsName} has achieved 2,200 total level**\
-                        ```Total level: {newData['level']} | Overall XP: {newData['xp']}```"
+        elif lvl_old < 2200 and lvl_new >= 2200:
+            message = f"**{self.rs_name} has achieved 2,200 total level**\
+                        ```Total level: {new_data['level']} | Overall XP: {new_data['xp']}```"
             self.milestones.append(message)
         # 2000 total
-        elif lvlOld < 2000 and lvlNew >= 2000:
-            message = f"**{self.rsName} has achieved 2,000 total level**\
-                        ```Total level: {newData['level']} | Overall XP: {newData['xp']}```"
+        elif lvl_old < 2000 and lvl_new >= 2000:
+            message = f"**{self.rs_name} has achieved 2,000 total level**\
+                        ```Total level: {new_data['level']} | Overall XP: {new_data['xp']}```"
             self.milestones.append(message)
         # no milestones
-        else: self.overallUpdate = f"```Total level: {newData['level']} | Total Overall XP: {newData['xp']}```"
+        else: self.overall_update = f"```Total level: {new_data['level']} | Total Overall XP: {new_data['xp']}```"
 
 
     # --- SKILL --- #
-    def makeSkillUpdate(self, oldData, newData, title, xpDiff):
+    def make_skill_update(self, old_data, new_data, title, xp_diff):
         logger.debug(f"assigning {title}...")
-        newLvl = newData['level']
+        new_lvl = new_data['level']
         # special messages for 99
-        if newLvl == '99':
-            messageExtra = f". {self.custom_messages['max_levels'][title]}"
+        if new_lvl == '99':
+            message_extra = f". {self.custom_messages['max_levels'][title]}"
         # check for special messages
-        elif newLvl in self.custom_messages['levels']:
-            messageExtra = f". {self.custom_messages['levels'][newLvl]}"
-        else: messageExtra = ''
+        elif new_lvl in self.custom_messages['levels']:
+            message_extra = f". {self.custom_messages['levels'][new_lvl]}"
+        else: message_extra = ''
         # make message
-        message = f"**{self.rsName} levelled up {title} to {newLvl}{messageExtra}**\
-                    ```{fs.formatIntStr(xpDiff)} XP gained | Total {title} XP: {newData['xp']}```"
+        message = f"**{self.rs_name} levelled up {title} to {new_lvl}{message_extra}**\
+                    ```{fs.format_int_str(xp_diff)} XP gained | Total {title} XP: {new_data['xp']}```"
         # 99 milestone
-        if newLvl == '99':
+        if new_lvl == '99':
             self.milestones.append(message)
             logger.debug(f"appended update for {title} to milestones list...")
         # any other level
@@ -305,7 +305,7 @@ class PlayerUpdate:
 
     
     # --- XP UPDATE --- #
-    def checkXpUpdate(self, oldData, newData, title, xpNew, xpOld, xpDiff):
+    def check_xp_update(self, old_data, new_data, title, xp_new, xp_old, xp_diff):
         logger.debug(f"checking for xp milestones...")
         # check for overall or skill
         if title == 'Overall':
@@ -314,10 +314,10 @@ class PlayerUpdate:
             threshold = 10000000  # 10 million
         # loop thru intervals to see if a threshold has been passed
         increment = threshold
-        while xpNew >= threshold:
-            if xpOld < threshold:
-                message = f"**{self.rsName} has achieved {fs.formatIntStr(threshold)} {title} XP**\
-                            ```{fs.formatIntStr(xpDiff)} XP gained | Total {title} XP: {newData['xp']}```"
+        while xp_new >= threshold:
+            if xp_old < threshold:
+                message = f"**{self.rs_name} has achieved {fs.format_int_str(threshold)} {title} XP**\
+                            ```{fs.format_int_str(xp_diff)} XP gained | Total {title} XP: {new_data['xp']}```"
                 # 10M xp is too low for milestone notification - 2/23/20
                 if threshold == 10000000:
                     self.skills.append(message)
@@ -332,43 +332,43 @@ class PlayerUpdate:
 
 
     # --- CLUE UPDATE --- #
-    def makeClueUpdate(self, oldData, newData, title, countNew, countOld, countDiff, clueLvl):
+    def make_clue_update(self, old_data, new_data, title, count_new, count_old, count_diff, clue_lvl):
         # check for clue milestones
-        foundMilestone = False
-        if clueLvl == 'Total':
-            self.clueAllTotal = fs.formatInt(newData['score'])
+        found_milestone = False
+        if clue_lvl == 'Total':
+            self.clue_all_total = fs.format_int(new_data['score'])
             threshold = 250
         else:
             threshold = 100
         # loop thru intervals to see if a threshold has been passed
         increment = threshold
-        while countNew >= threshold:
-            if countOld < threshold:
-                if clueLvl != 'Total':  # show total if not already looking at total clues
-                    messageExtra = f" | Total clues completed: {fs.formatIntStr(self.clueAllTotal)}"
-                else: messageExtra = ""
-                message = f"**{self.rsName} has completed at least {fs.formatIntStr(threshold)} {clueLvl} Clue Scrolls**\
-                            ```{clueLvl} clues completed: {newData['score']} | Current rank: {newData['rank']}{messageExtra}```"
+        while count_new >= threshold:
+            if count_old < threshold:
+                if clue_lvl != 'Total':  # show total if not already looking at total clues
+                    message_extra = f" | Total clues completed: {fs.format_int_str(self.clue_all_total)}"
+                else: message_extra = ""
+                message = f"**{self.rs_name} has completed at least {fs.format_int_str(threshold)} {clue_lvl} Clue Scrolls**\
+                            ```{clue_lvl} clues completed: {new_data['score']} | Current rank: {new_data['rank']}{message_extra}```"
                 self.milestones.append(message)
                 logger.debug(f"appended Clue update for {title} to milestones list...")
-                foundMilestone = True
+                found_milestone = True
                 break
             else:
                 threshold += increment
         # done with loop, check if posting regular update
-        if not foundMilestone and clueLvl != 'Total':
+        if not found_milestone and clue_lvl != 'Total':
             # set correct usage of plural (deprecated)
-            # if countDiff == 1: s = ''
+            # if count_diff == 1: s = ''
             # else: s = 's'
             logger.debug("found diff...")
 
             # append total clues to message if total clues rank is on hiscores
-            if self.clueAllTotal != None:
-                totalClueMsg = f" | Total clues completed: {fs.formatIntStr(self.clueAllTotal)}"
+            if self.clue_all_total != None:
+                total_clue_msg = f" | Total clues completed: {fs.format_int_str(self.clue_all_total)}"
             else:
-                totalClueMsg = ""
-            message = f"**{self.rsName} has completed {newData['score']} {clueLvl} Clue Scrolls**\
-                        ```New {clueLvl} clues logged: {countDiff} | Current rank: {newData['rank']}{totalClueMsg}```"
+                total_clue_msg = ""
+            message = f"**{self.rs_name} has completed {new_data['score']} {clue_lvl} Clue Scrolls**\
+                        ```New {clue_lvl} clues logged: {count_diff} | Current rank: {new_data['rank']}{total_clue_msg}```"
 
             self.minigames.append(message)
             logger.debug(f"appended update for {title} to minigames list...")
@@ -376,32 +376,32 @@ class PlayerUpdate:
 
 
     # --- BOSS UPDATE --- #
-    def makeBossUpdate(self, oldData, newData, title, killNew, killOld, killDiff, action1, action2):
+    def make_boss_update(self, old_data, new_data, title, kill_new, kill_old, kill_diff, action_1, action_2):
         logger.debug(f"assigning Boss: {title}...")
         # check for boss milestones
-        foundMilestone = False
+        found_milestone = False
         threshold = 500
         # loop thru intervals to see if a threshold has been passed
         increment = threshold
-        while killNew >= threshold:
-            if killOld < threshold:
-                message = f"**{self.rsName} has {action1} {title} at least {fs.formatIntStr(threshold)} times**\
-                            ```Total {action2} count: {newData['score']} | Current rank: {newData['rank']}```"
+        while kill_new >= threshold:
+            if kill_old < threshold:
+                message = f"**{self.rs_name} has {action_1} {title} at least {fs.format_int_str(threshold)} times**\
+                            ```Total {action_2} count: {new_data['score']} | Current rank: {new_data['rank']}```"
                 self.milestones.append(message)
                 logger.debug(f"appended Boss update for {title} to milestones list...")
-                foundMilestone = True
+                found_milestone = True
                 break
             else:
                 threshold += increment
         # done with loop, check if posting regular update
         logger.debug("done checking loop...")
-        if not foundMilestone:
+        if not found_milestone:
             # set correct tense of time  --not needed anymore, flipped total/new counts - 7/4/20
-            # if killDiff == 1: times = 'time'
+            # if kill_diff == 1: times = 'time'
             # else: times = 'times'
             logger.debug("found diff...")
             try:
-                message = f"**{self.rsName} has {action1} {title} {newData['score']} times**```New {action2}s logged: {fs.formatIntStr(killDiff)} | Current rank: {newData['rank']}```"
+                message = f"**{self.rs_name} has {action_1} {title} {new_data['score']} times**```New {action_2}s logged: {fs.format_int_str(kill_diff)} | Current rank: {new_data['rank']}```"
             except Exception as e:
                 logger.exception(f'Error posting boss update: {e}')
             logger.debug("made message...")

@@ -11,26 +11,17 @@
 import json
 import discord
 from discord.ext import commands
+import asyncio
 import time
 import datetime
 import os
 import sys, traceback
 from common.logger import logger
-import common.utils as fs
+import database.handler as db
 
-# Check if we have players/servers .json files, create them if not
-def checkDataJson(file_name):
-    if os.path.exists(file_name):
-        logger.info(f'Found {file_name}...')
-        pass
-    else:
-        data = {}
-        with open(file_name, 'w') as outfile:  
-            json.dump(data, outfile)
-        logger.info(f'Created new {file_name}...')
 # Our data .jsons
-checkDataJson('data/servers.json')
-checkDataJson('data/players.json')
+db.verify_files('db_discord.json')
+db.verify_files('db_runescape.json')
 
 # Get bot Token
 with open('bot_config.json','r') as f:
@@ -45,7 +36,7 @@ def get_prefix(bot, message):
     return commands.when_mentioned_or(*prefixes)(bot, message)
 
 # Set help command
-customHelp = commands.DefaultHelpCommand(
+custom_help = commands.DefaultHelpCommand(
     width=140,
     sort_commands=False,
     no_category="Other Commands"
@@ -59,16 +50,17 @@ gamePlaying = discord.Streaming(
 # create bot object
 bot = commands.Bot(
     command_prefix = get_prefix,
-    help_command = customHelp,
+    help_command = custom_help,
     description = 'OSRS Activity Log by Green Donut')
 
 # define extensions
-initial_extensions =    [
-                        'cogs.looper',
-                        'cogs.cmds.user',
-                        'cogs.cmds.admin',
-                        'cogs.cmds.super'
-                        ]
+initial_extensions = []
+# initial_extensions =    [
+#                         'cogs.looper',
+#                         'cogs.cmds.user',
+#                         'cogs.cmds.admin',
+#                         'cogs.cmds.super'
+#                         ]
 
 # load extensions
 if __name__ == '__main__':
@@ -117,12 +109,12 @@ async def on_guild_join(guild):
             f'Joined {guild.name} with {guild.member_count} users!\n'
             f' System channel = {sysChan}\n'
             '---------------------------------------')
-    await fs.addServerDB(guild.id,guild.name)
+    await db.add_server(guild)
 
 # bot leaving server
 @bot.event
 async def on_guild_remove(guild):
-    await fs.delServerDB(guild.id,guild.name)
+    await db.remove_server(guild)
 
 
 bot.run(BOT_TOKEN, bot=True)

@@ -15,19 +15,19 @@ import pathlib
 # --- VARIABLES ---
 # paths to json files
 dir_path = str(pathlib.Path().absolute())
-serversPath = dir_path + "/data/servers.json"
-playersPath = dir_path + "/data/players.json"
-messagesPath = dir_path + "/data/custom_messages.json"
+servers_path = dir_path + "/data/servers.json"
+players_path = dir_path + "/data/players.json"
+messages_path = dir_path + "/data/custom_messages.json"
 
 # HISCORES PAGE (before username)
-hiscoresURL = "https://secure.runescape.com/m=hiscore_oldschool/hiscorepersonal?user1="
+HISCORES_URL = "https://secure.runescape.com/m=hiscore_oldschool/hiscorepersonal?user1="
 
 
 # ------- NON-ASYNC FUNCTIONS -------
 #------------------------------------
 
 # FORMAT NAME: DISCORD -> RS
-def NameToRS(name):
+def name_to_rs(name):
     if ' ' in name:
         name = name.replace(' ', '+')
         return name.title()
@@ -35,7 +35,7 @@ def NameToRS(name):
         return name.title()
 
 # FORMAT NAME: RS -> DISCORD
-def NameToDiscord(name):
+def name_to_discord(name):
     if '+' in name:
         name = name.title().replace('+', ' ')
         return name
@@ -44,19 +44,19 @@ def NameToDiscord(name):
         return name
 
 # MINUTES CONVERTER
-async def timeMins(secs):
+async def time_mins(secs):
     minutes = secs * 60
     return minutes
 
 # COMPARE OLD VS NEW XP
-def xpChanged(old, new):
+def xp_changed(old, new):
     if old != new:
         return True
     else:
         return False
 
 # FORMAT COMMAS IN LONG INTS
-def formatInt(num):
+def format_int(num):
     if "," in num:
         num = int(num.replace(",", ""))
     else:
@@ -64,7 +64,7 @@ def formatInt(num):
     return num
 
 # FORMAT COMMAS IN LONG INTS #2
-def formatIntStr(num):
+def format_int_str(num):
     if len(str(num)) >= 4:
         num = "{:,}".format(num)
     else:
@@ -76,20 +76,20 @@ def formatIntStr(num):
 #------------------------------------
 
 # CHECK IF A MEMBER IS ADMIN
-async def isAdmin(mem):
+async def is_admin(mem):
     if mem.guild_permissions.administrator == True:
         return True
     else:
         return False
 
 # CHECK IF A RS PLAYER IS ACCEPTABLE
-async def PlayerIsAcceptable(name):
-    page = await getPage(name)
+async def player_is_acceptable(name):
+    page = await get_page(name)
     if page != None:
         try:
             logger.info(f"{name} has a valid hiscores page!")
-            playerDict = await getPlayerScores(name, page)
-            return playerDict
+            player_dict = await get_player_scores(name, page)
+            return player_dict
         except Exception as e:
             logger.exception(f'Unable to parse player hiscores: {name} | {e}')
             return None
@@ -102,10 +102,10 @@ async def PlayerIsAcceptable(name):
 #------------------------------
 
 # REQUEST WEB PAGE (AIOHTTP)
-async def getPage(name):
+async def get_page(name):
     try:
         async with aiohttp.ClientSession() as session:
-            async with session.get(hiscoresURL + name) as p:
+            async with session.get(HISCORES_URL + name) as p:
                 if p.status == 200:
                     page = await p.text()
                 else:
@@ -133,56 +133,56 @@ async def getPage(name):
 #     return page
 
 # GET A PLAYERS SCORES INTO DICT
-async def getPlayerScores(nameRS, page):
-    parseMinigames = False
-    logger.debug(f'{nameRS}: got page...')
+async def get_player_scores(name_rs, page):
+    parse_minigames = False
+    logger.debug(f'{name_rs}: got page...')
     soup = BeautifulSoup( page, 'html.parser' )
-    logger.debug(f'{nameRS}: got soup...')
+    logger.debug(f'{name_rs}: got soup...')
     scores = soup.find(id="contentHiscores")
-    logger.debug(f'{nameRS}: got scores...')
+    logger.debug(f'{name_rs}: got scores...')
     # new player dict to fill and return to correct discord id
-    playerDict = {
-        'rsName' : nameRS,
+    player_dict = {
+        'rs_name' : name_rs,
         'servers' : {},
         'skills' : {},
         'minigames': {}
     }
     # check if player has no hiscore profile
-    logger.debug(f'{nameRS}: contents[1]: '+scores.contents[1].name)
+    logger.debug(f'{name_rs}: contents[1]: '+scores.contents[1].name)
     if scores.contents[1].name != 'table':  # if there's no table, the player has no scores
-        logger.info(f"{nameRS} not found! Appended empty playerDict.")
-        return playerDict
+        logger.info(f"{name_rs} not found! Appended empty player_dict.")
+        return player_dict
     # player has hiscore profile
-    logger.debug(f"{nameRS}: found player...")
+    logger.debug(f"{name_rs}: found player...")
     for tr in scores.find_all('tr')[3:]:
         if 'Minigame' in tr.get_text():
-            parseMinigames = True
+            parse_minigames = True
             continue
-        rowEntry = tr.find_all('td')
-        skill = rowEntry[1].get_text().strip()
-        skillDict = {}
-        skillDict['rank'] = rowEntry[2].get_text()
-        if not parseMinigames:
-            skillDict['level'] = rowEntry[3].get_text()
-            skillDict['xp'] = rowEntry[4].get_text()
-            playerDict['skills'][skill] = skillDict  # update skill to skills dict
+        row_entry = tr.find_all('td')
+        skill = row_entry[1].get_text().strip()
+        skill_dict = {}
+        skill_dict['rank'] = row_entry[2].get_text()
+        if not parse_minigames:
+            skill_dict['level'] = row_entry[3].get_text()
+            skill_dict['xp'] = row_entry[4].get_text()
+            player_dict['skills'][skill] = skill_dict  # update skill to skills dict
         else:
-            skillDict['score'] = rowEntry[3].get_text()
-            playerDict['minigames'][skill] = skillDict  # update clue/boss to minigames dict
-    logger.info(f"{nameRS}: Successfully created dict for {nameRS}!")
-    return playerDict
+            skill_dict['score'] = row_entry[3].get_text()
+            player_dict['minigames'][skill] = skill_dict  # update clue/boss to minigames dict
+    logger.info(f"{name_rs}: Successfully created dict for {name_rs}!")
+    return player_dict
 
 
 # ------- JSON FILE FUNCTIONS -------
 #------------------------------------
 
 # OPEN JSON FILE 
-async def openJson(path):
+async def open_json(path):
     with open(path,"r") as f:
         return json.load(f)
 
 # WRITE JSON FILE
-async def writeJson(path,data):
+async def write_json(path, data):
     with open(path,"w") as f:
         json.dump(data, f, indent=4)
 
@@ -191,125 +191,125 @@ async def writeJson(path,data):
 #------------------------------------
 
 # BOT ADDED TO NEW SERVER, POPULATE DATABASES
-async def addServerDB(servID,servName):
-    # update serversPath DB
-    relServ = {
-        servID: {
-            'servName': servName,
-            'chanID': None,
-            'rsRoleID': None
+async def add_server_db(serv_id, serv_name):
+    # update servers_path DB
+    rel_serv = {
+        serv_id: {
+            'serv_name': serv_name,
+            'chan_id': None,
+            'rs_role_id': None
         }
     }
     try:
         # load existing json file
-        dataS = await openJson(serversPath)
+        data_s = await open_json(servers_path)
         # append server to json file
-        dataS.update(relServ)
+        data_s.update(rel_serv)
         # write updated json file
-        await writeJson(serversPath,dataS)
-        newFileS = False
+        await write_json(servers_path,data_s)
+        new_file_s = False
     except:
         # no json file found
-        await writeJson(serversPath,relServ)
-        newFileS = True
+        await write_json(servers_path,rel_serv)
+        new_file_s = True
 
-    # update playersPath DB
-    relPlay = {}
+    # update players_path DB
+    rel_play = {}
     try:
         # load existing json file
-        await openJson(playersPath)
+        await open_json(players_path)
         # # append server to json file
-        # dataP.update(relPlay)
+        # data_p.update(rel_play)
         # # write updated json file
-        # await writeJson(playersPath,dataP)
-        newFileP = False
+        # await write_json(players_path,data_p)
+        new_file_p = False
     except:
         # no json file found
-        await writeJson(playersPath,relPlay)
-        newFileP = True
+        await write_json(players_path,rel_play)
+        new_file_p = True
     # log results
-    if newFileS == True:
-        logger.info(f'\nCreated json file: {serversPath}')
-    if newFileP == True:
-        logger.info(f'\nCreated json file: {playersPath}')
-    logger.info(f'\nNew guild added to databases: {servName} | {servID}')
+    if new_file_s == True:
+        logger.info(f'\nCreated json file: {servers_path}')
+    if new_file_p == True:
+        logger.info(f'\nCreated json file: {players_path}')
+    logger.info(f'\nNew guild added to databases: {serv_name} | {serv_id}')
 
 
 # BOT REMOVED FROM SERVER, REMOVE FROM DATABASES
-async def delServerDB(servID,servName):
-    dataS = await openJson(serversPath)
-    # dataP = await openJson(playersPath)
+async def del_server_db(serv_id, serv_name):
+    data_s = await open_json(servers_path)
+    # data_p = await open_json(players_path)
     # delete server in servers DB
-    if str(servID) in dataS:
-        del dataS[str(servID)]
+    if str(serv_id) in data_s:
+        del data_s[str(serv_id)]
     # # delete server in players DB
-    # if str(servID) in dataP:
-    #     del dataP[str(servID)]
-    await writeJson(serversPath,dataS)
-    # await writeJson(playersPath,dataP)
-    logger.info(f'\nGuild removed from databases: {servName} | {servID}')
+    # if str(serv_id) in data_p:
+    #     del data_p[str(serv_id)]
+    await write_json(servers_path,data_s)
+    # await write_json(players_path,data_p)
+    logger.info(f'\nGuild removed from databases: {serv_name} | {serv_id}')
 
 
 ### NEW PLAYERPATH METHODS ###
 
 # CHECK IF PLAYER ID IS IN DB
-async def playerExistsInDB(playerID):
-    data = await openJson(playersPath)
+async def player_exists_in_db(player_id):
+    data = await open_json(players_path)
     for a in data.keys():
-        if a == str(playerID):
+        if a == str(player_id):
             return True
     return False
 
 
 # CHECK IF SERVER ID IS IN PLAYER
-async def serverExistsInPlayer(playerID,serverID):
-    data = await openJson(playersPath)
+async def server_exists_in_player(player_id, server_id):
+    data = await open_json(players_path)
     for a in data.keys():
-        if a == str(playerID):
-            if str(serverID) in data[a]['servers']:
+        if a == str(player_id):
+            if str(server_id) in data[a]['servers']:
                 return True
     return False
 
 
 # RETURN PLAYER AS DICT FROM DB
-async def getPlayerEntry(playerID):
-    data = await openJson(playersPath)
+async def get_player_entry(player_id):
+    data = await open_json(players_path)
     for a in data.keys():
-        if a == str(playerID):
+        if a == str(player_id):
             return data[a]
 
 
 # RETURN ONE VALUE FROM PLAYER
-async def getPlayerVal(playerID,key):
-    data = await openJson(playersPath)
+async def get_player_val(player_id, key):
+    data = await open_json(players_path)
     for a in data.keys():
-        if a == str(playerID):
+        if a == str(player_id):
             player = data[a]
             return player[key]
 
 
 # UPDATE ENTIRE PLAYER ENTRY
-async def updatePlayerEntry(playerID,newEntry):
-    data = await openJson(playersPath)
-    data[str(playerID)] = newEntry
-    await writeJson(playersPath,data)
+async def update_player_entry(player_id, new_entry):
+    data = await open_json(players_path)
+    data[str(player_id)] = new_entry
+    await write_json(players_path, data)
 
 
 # UPDATE ONE VALUE FOR A PLAYER
-async def updatePlayerVal(playerID,key,newVal):
-    data = await openJson(playersPath)
-    player = data[str(playerID)]
-    player[key] = newVal
-    data[str(playerID)] = player
-    await writeJson(playersPath,data)
+async def update_player_val(player_id, key, new_val):
+    data = await open_json(players_path)
+    player = data[str(player_id)]
+    player[key] = new_val
+    data[str(player_id)] = player
+    await write_json(players_path, data)
 
 
 # DELETE A PLAYER ENTRY IN PLAYER PATH
-async def delPlayerEntry(playerID):
-    data = await openJson(playersPath)
-    if str(playerID) in data:
-        del data[str(playerID)]
-        await writeJson(playersPath,data)
+async def del_player_entry(player_id):
+    data = await open_json(players_path)
+    if str(player_id) in data:
+        del data[str(player_id)]
+        await write_json(players_path, data)
         return True
     else:
         return False
@@ -318,39 +318,39 @@ async def delPlayerEntry(playerID):
 ### LEGACY METHODS WHEN SERVERS WERE KEYS IN PLAYERPATH ###
 
 # RETURN SERVER AS DICT FROM DB
-async def getServerEntry(path,servID):
-    data = await openJson(path)
+async def get_server_entry(path, serv_id):
+    data = await open_json(path)
     for a in data.keys():
-        if a == str(servID):
+        if a == str(serv_id):
             return data[a]
 
 
 # RETURN ONE VALUE FROM SERVER
-async def getServerVal(path,servID,key):
-    data = await openJson(path)
+async def get_server_val(path, serv_id, key):
+    data = await open_json(path)
     for a in data.keys():
-        if a == str(servID):
+        if a == str(serv_id):
             server = data[a]
             return server[key]
 
 
 # UPDATE ONE VALUE FOR A SERVER
-async def updateServerVal(path,servID,key,newVal):
-    data = await openJson(path)
-    server = data[str(servID)]
-    server[key] = newVal
-    data[str(servID)] = server
-    await writeJson(path,data)
+async def update_server_val(path, serv_id, key, new_val):
+    data = await open_json(path)
+    server = data[str(serv_id)]
+    server[key] = new_val
+    data[str(serv_id)] = server
+    await write_json(path, data)
 
 
 # DELETE A KEY FROM A SERVER
-async def delServerKey(path,servID,key):
-    data = await openJson(path)
-    server = data[str(servID)]
+async def del_server_key(path, serv_id, key):
+    data = await open_json(path)
+    server = data[str(serv_id)]
     if str(key) in server:
         del server[str(key)]
-        data[str(servID)] = server
-        await writeJson(path,data)
+        data[str(serv_id)] = server
+        await write_json(path,data)
         return True
     else:
         return False

@@ -10,6 +10,7 @@ import asyncio
 import re
 from common.logger import logger
 import common.utils as fs
+import database.handler as db
 
 
 class UserCommands(commands.Cog, name="General Commands"):
@@ -26,29 +27,29 @@ class UserCommands(commands.Cog, name="General Commands"):
                         usage="<OSRS-Name>",
                         description="Join the Activity Log with a specified OSRS username.")
     @commands.cooldown(1, 10, commands.BucketType.guild)
-    async def join(self, ctx, *, gameName):
-        # serverEntry = await fs.getServerEntry(fs.playersPath,ctx.guild.id)
-        nameRS = fs.NameToRS(gameName)
+    async def join(self, ctx, *, game_name):
+        # server_entry = await fs.get_server_entry(fs.players_path,ctx.guild.id)
+        name_rs = fs.name_to_rs(game_name)
         await ctx.send("*Checking name...*")
-        playerDict = await fs.PlayerIsAcceptable(nameRS)
+        player_dict = await fs.player_is_acceptable(name_rs)
         # If player is valid to be added
-        if playerDict != None:
+        if player_dict != None:
             await ctx.channel.purge(limit=1) # delete 'getting levels' messages
             # If player is already in DB
-            if await fs.playerExistsInDB(str(ctx.author.id)):
+            if await fs.player_exists_in_db(str(ctx.author.id)):
                 try:
                     # get old player data
-                    playerEntry = await fs.getPlayerEntry(str(ctx.author.id))
+                    player_entry = await fs.get_player_entry(str(ctx.author.id))
                     # check against old player data
-                    if str(ctx.guild.id) not in playerEntry['servers']:  # update player's server list
+                    if str(ctx.guild.id) not in player_entry['servers']:  # update player's server list
                         logger.info(f'New server [{ctx.guild.name}] for player [{ctx.author.name}]')
-                        playerEntry['servers'][str(ctx.guild.id)] = {'mention' : True}
+                        player_entry['servers'][str(ctx.guild.id)] = {'mention' : True}
                     # add previous data to newer updated player dict
-                    playerDict['servers'] = playerEntry['servers']
+                    player_dict['servers'] = player_entry['servers']
                     # update DB & send update
-                    await fs.updatePlayerEntry(str(ctx.author.id),playerDict)
-                    await ctx.send(f'**{ctx.author.name}** exists and has been updated in the Event Log List: *{nameRS}*')
-                    logger.info(f'Updated player in {ctx.guild.name}: {ctx.author.name} | {nameRS}')
+                    await fs.update_player_entry(str(ctx.author.id),player_dict)
+                    await ctx.send(f'**{ctx.author.name}** exists and has been updated in the Event Log List: *{name_rs}*')
+                    logger.info(f'Updated player in {ctx.guild.name}: {ctx.author.name} | {name_rs}')
                 except Exception as e:
                     logger.exception(f'Could not update player in guild id:{ctx.guild.id} for player id:{ctx.author.id} -- {e}')
                     await ctx.send('**Error updating this player!**')
@@ -56,11 +57,11 @@ class UserCommands(commands.Cog, name="General Commands"):
             else:
                 try:
                     # add current server to new player
-                    playerDict['servers'] = {str(ctx.guild.id) : {'mention' : True}}
-                    await fs.updatePlayerEntry(str(ctx.author.id),playerDict)
-                    await ctx.send(f'**{ctx.author.name}** has been added to the Event Log List: *{nameRS}*\n'
+                    player_dict['servers'] = {str(ctx.guild.id) : {'mention' : True}}
+                    await fs.update_player_entry(str(ctx.author.id),player_dict)
+                    await ctx.send(f'**{ctx.author.name}** has been added to the Event Log List: *{name_rs}*\n'
                                     'Toggle on/off this bot mentioning you every update with ;togglemention')
-                    logger.info(f'Added player in {ctx.guild.name}: {ctx.author.name} | {nameRS}')
+                    logger.info(f'Added player in {ctx.guild.name}: {ctx.author.name} | {name_rs}')
                 except Exception as e:
                     logger.exception(f'Could not add new player in guild id:{ctx.guild.id} for player id:{ctx.author.id} -- {e}')
                     await ctx.send('**Error adding this player!**')
@@ -79,7 +80,7 @@ class UserCommands(commands.Cog, name="General Commands"):
     @commands.cooldown(1, 5, commands.BucketType.guild)
     async def leave(self, ctx):
         try:
-            if await fs.delPlayerEntry(ctx.author.id) == True:
+            if await fs.del_player_entry(ctx.author.id) == True:
                 await ctx.send(f'**{ctx.author.name}** has been removed from the Event Log List!')
                 logger.info(f'Removed player in {ctx.guild.name}: {ctx.author.name} | {ctx.author.id}')
             else:
@@ -94,20 +95,20 @@ class UserCommands(commands.Cog, name="General Commands"):
                         description="See a list of players currently in the Activity Log within this server.")
     @commands.cooldown(1, 10, commands.BucketType.guild)
     async def players(self, ctx):
-        playersLst = []
-        allPlayers = await fs.openJson(fs.playersPath)
-        for k,v in allPlayers.items():
+        players_list = []
+        all_players = await fs.open_json(fs.players_path)
+        for k,v in all_players.items():
             try:
                 # only get players that are in current server
                 if str(ctx.guild.id) in v['servers']:
                     mem = ctx.guild.get_member(int(k))
-                    playersLst.append(f"{mem.name}" +"  **|**  "+ f"*{v['rsName']}*\n")
+                    players_list.append(f"{mem.name}" +"  **|**  "+ f"*{v['rs_name']}*\n")
             except:
                 logger.debug(f'Skipped {k} in ;players')
                 pass
-        count = len(playersLst)
-        playersLst = "".join(playersLst)
-        await ctx.send(f'**Stored Players - {ctx.guild.name} - Total: {count}**\n'+playersLst)
+        count = len(players_list)
+        players_list = "".join(players_list)
+        await ctx.send(f'**Stored Players - {ctx.guild.name} - Total: {count}**\n'+players_list)
         logger.info(f';players called in {ctx.guild.name} by {ctx.author.name}')
 
 
@@ -119,21 +120,21 @@ class UserCommands(commands.Cog, name="General Commands"):
                                     "unless you mute notifications for the text channel or role this bot posts to.")
     @commands.cooldown(1, 5, commands.BucketType.guild)
     async def togglemention(self, ctx):
-        if await fs.playerExistsInDB(str(ctx.author.id)):
-            if await fs.serverExistsInPlayer(str(ctx.author.id),ctx.guild.id):
+        if await fs.player_exists_in_db(str(ctx.author.id)):
+            if await fs.server_exists_in_player(str(ctx.author.id),ctx.guild.id):
                 try:
-                    playerEntry = await fs.getPlayerEntry(str(ctx.author.id))
-                    newToggle = not playerEntry['servers'][str(ctx.guild.id)]['mention']
-                    playerEntry['servers'][str(ctx.guild.id)]['mention'] = newToggle  # toggle
-                    await fs.updatePlayerEntry(str(ctx.author.id),playerEntry)
-                    if newToggle == False: 
-                        mentNot = ' NOT'
-                        mentStr = ctx.author.name
+                    player_entry = await fs.get_player_entry(str(ctx.author.id))
+                    new_toggle = not player_entry['servers'][str(ctx.guild.id)]['mention']
+                    player_entry['servers'][str(ctx.guild.id)]['mention'] = new_toggle  # toggle
+                    await fs.update_player_entry(str(ctx.author.id),player_entry)
+                    if new_toggle == False: 
+                        ment_not = ' NOT'
+                        ment_str = ctx.author.name
                     else:
-                        mentNot = ''
-                        mentStr = ctx.author.mention
-                    await ctx.send(f'**{mentStr}** *WILL{mentNot}* be mentioned in their updates for this server')
-                    logger.info(f"Updated player in {ctx.guild.name}: {ctx.author.name} | mention = {newToggle}")
+                        ment_not = ''
+                        ment_str = ctx.author.mention
+                    await ctx.send(f'**{ment_str}** *WILL{ment_not}* be mentioned in their updates for this server')
+                    logger.info(f"Updated player in {ctx.guild.name}: {ctx.author.name} | mention = {new_toggle}")
                 except Exception as e:
                     logger.exception(f'Could not update togglemention in guild id:{ctx.guild.id} for player id:{ctx.author.id} -- {e}')
                     await ctx.send('**Error updating this player!**')

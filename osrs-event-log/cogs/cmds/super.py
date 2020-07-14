@@ -29,22 +29,22 @@ class SuperCommands(commands.Cog, command_attrs=dict(hidden=True)):
     @commands.cooldown(1, 15, commands.BucketType.guild)
     async def sendannouncement(self, ctx, *, announcement):
         if ctx.author.id == 134858274909585409:
-            allServers = await fs.openJson(fs.serversPath)
-            for k,v in allServers.items():
+            all_servers = await fs.open_json(fs.servers_path)
+            for k,v in all_servers.items():
                 try:
                     server = self.bot.get_guild(int(k))
                     # if not channel in this server then skip server
-                    if v["chanID"]:
-                        rsChan = server.get_channel(v["chanID"])
+                    if v["chan_id"]:
+                        rs_chan = server.get_channel(v["chan_id"])
                         # get mention role, if not then use @here
-                        if v["rsRoleID"]:
-                            rsRole = server.get_role(v["rsRoleID"])
-                            rsRoleMen = rsRole.mention
+                        if v["rs_role_id"]:
+                            rs_role = server.get_role(v["rs_role_id"])
+                            rs_role_men = rs_role.mention
                         else:
-                            rsRoleMen = "@here"
+                            rs_role_men = "@here"
                         # send message!
-                        await rsChan.send(f'**{announcement}** {rsRoleMen}')
-                        logger.info(f'Sent announcement in guild id:{k} | name: {v["servName"]} | channel: {rsChan.name} | rs role: {rsRoleMen}')
+                        await rs_chan.send(f'**{announcement}** {rs_role_men}')
+                        logger.info(f'Sent announcement in guild id:{k} | name: {v["serv_name"]} | channel: {rs_chan.name} | rs role: {rs_role_men}')
                     else:
                         logger.exception(f'Could not send announcement in guild id:{k} -- No channel specified')
                 except Exception as e:
@@ -60,16 +60,16 @@ class SuperCommands(commands.Cog, command_attrs=dict(hidden=True)):
     @commands.cooldown(1, 15, commands.BucketType.guild)
     async def sendthought(self, ctx, *, thought):
         if ctx.author.id == 134858274909585409:
-            allServers = await fs.openJson(fs.serversPath)
-            for k,v in allServers.items():
+            all_servers = await fs.open_json(fs.servers_path)
+            for k,v in all_servers.items():
                 try:
                     server = self.bot.get_guild(int(k))
                     # if not channel in this server then skip server
-                    if v["chanID"]:
-                        rsChan = server.get_channel(v["chanID"])
+                    if v["chan_id"]:
+                        rs_chan = server.get_channel(v["chan_id"])
                         # send message!
-                        await rsChan.send(f'{thought}')
-                        logger.info(f'Sent thought in guild id:{k} | name: {v["servName"]} | channel: {rsChan.name}')
+                        await rs_chan.send(f'{thought}')
+                        logger.info(f'Sent thought in guild id:{k} | name: {v["serv_name"]} | channel: {rs_chan.name}')
                     else:
                         logger.exception(f'Could not send thought in guild id:{k} -- No channel specified')
                 except Exception as e:
