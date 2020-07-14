@@ -9,7 +9,7 @@ import random
 import asyncio
 import re
 from common.logger import logger
-import common.utils as fs
+import common.util as util
 
 
 class UserCommands(commands.Cog, name="General Commands"):
@@ -27,18 +27,18 @@ class UserCommands(commands.Cog, name="General Commands"):
                         description="Join the Activity Log with a specified OSRS username.")
     @commands.cooldown(1, 10, commands.BucketType.guild)
     async def join(self, ctx, *, gameName):
-        # server_entry = await fs.get_server_entry(fs.players_path,ctx.guild.id)
-        name_rs = fs.name_to_rs(gameName)
+        # server_entry = await util.get_server_entry(util.players_path,ctx.guild.id)
+        name_rs = util.name_to_rs(gameName)
         await ctx.send("*Checking name...*")
-        player_dict = await fs.player_is_acceptable(name_rs)
+        player_dict = await util.check_player_validity(name_rs)
         # If player is valid to be added
         if player_dict != None:
             await ctx.channel.purge(limit=1) # delete 'getting levels' messages
             # If player is already in DB
-            if await fs.player_exists_in_db(str(ctx.author.id)):
+            if await util.player_exists_in_db(str(ctx.author.id)):
                 try:
                     # get old player data
-                    player_entry = await fs.get_player_entry(str(ctx.author.id))
+                    player_entry = await util.get_player_entry(str(ctx.author.id))
                     # check against old player data
                     if str(ctx.guild.id) not in player_entry['servers']:  # update player's server list
                         logger.info(f'New server [{ctx.guild.name}] for player [{ctx.author.name}]')
@@ -46,7 +46,7 @@ class UserCommands(commands.Cog, name="General Commands"):
                     # add previous data to newer updated player dict
                     player_dict['servers'] = player_entry['servers']
                     # update DB & send update
-                    await fs.update_player_entry(str(ctx.author.id),player_dict)
+                    await util.update_player_entry(str(ctx.author.id),player_dict)
                     await ctx.send(f'**{ctx.author.name}** exists and has been updated in the Event Log List: *{name_rs}*')
                     logger.info(f'Updated player in {ctx.guild.name}: {ctx.author.name} | {name_rs}')
                 except Exception as e:
@@ -57,7 +57,7 @@ class UserCommands(commands.Cog, name="General Commands"):
                 try:
                     # add current server to new player
                     player_dict['servers'] = {str(ctx.guild.id) : {'mention' : True}}
-                    await fs.update_player_entry(str(ctx.author.id),player_dict)
+                    await util.update_player_entry(str(ctx.author.id),player_dict)
                     await ctx.send(f'**{ctx.author.name}** has been added to the Event Log List: *{name_rs}*\n'
                                     'Toggle on/off this bot mentioning you every update with ;togglemention')
                     logger.info(f'Added player in {ctx.guild.name}: {ctx.author.name} | {name_rs}')
@@ -79,7 +79,7 @@ class UserCommands(commands.Cog, name="General Commands"):
     @commands.cooldown(1, 5, commands.BucketType.guild)
     async def leave(self, ctx):
         try:
-            if await fs.del_player_entry(ctx.author.id) == True:
+            if await util.del_player_entry(ctx.author.id) == True:
                 await ctx.send(f'**{ctx.author.name}** has been removed from the Event Log List!')
                 logger.info(f'Removed player in {ctx.guild.name}: {ctx.author.name} | {ctx.author.id}')
             else:
@@ -95,7 +95,7 @@ class UserCommands(commands.Cog, name="General Commands"):
     @commands.cooldown(1, 10, commands.BucketType.guild)
     async def players(self, ctx):
         players_list = []
-        all_players = await fs.open_json(fs.players_path)
+        all_players = await util.open_json(util.players_path)
         for k,v in all_players.items():
             try:
                 # only get players that are in current server
@@ -119,13 +119,13 @@ class UserCommands(commands.Cog, name="General Commands"):
                                     "unless you mute notifications for the text channel or role this bot posts to.")
     @commands.cooldown(1, 5, commands.BucketType.guild)
     async def togglemention(self, ctx):
-        if await fs.player_exists_in_db(str(ctx.author.id)):
-            if await fs.server_exists_in_player(str(ctx.author.id),ctx.guild.id):
+        if await util.player_exists_in_db(str(ctx.author.id)):
+            if await util.server_exists_in_player(str(ctx.author.id),ctx.guild.id):
                 try:
-                    player_entry = await fs.get_player_entry(str(ctx.author.id))
+                    player_entry = await util.get_player_entry(str(ctx.author.id))
                     new_toggle = not player_entry['servers'][str(ctx.guild.id)]['mention']
                     player_entry['servers'][str(ctx.guild.id)]['mention'] = new_toggle  # toggle
-                    await fs.update_player_entry(str(ctx.author.id),player_entry)
+                    await util.update_player_entry(str(ctx.author.id),player_entry)
                     if new_toggle == False: 
                         ment_not = ' NOT'
                         ment_str = ctx.author.name

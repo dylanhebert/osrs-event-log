@@ -9,7 +9,7 @@ import random
 import asyncio
 import re
 from common.logger import logger
-import common.utils as fs
+import common.util as util
 
 
 class AdminCommands(commands.Cog, name="Admin Commands"):
@@ -28,9 +28,9 @@ class AdminCommands(commands.Cog, name="Admin Commands"):
                                     "If this command is never used, I will not post in your server.")
     @commands.cooldown(1, 5, commands.BucketType.guild)
     async def posthere(self, ctx):
-        if await fs.is_admin(ctx.author) or ctx.author.id == 134858274909585409:
+        if await util.is_admin(ctx.author) or ctx.author.id == 134858274909585409:
             try:
-                await fs.update_server_val(fs.servers_path,ctx.guild.id,'chan_id',ctx.channel.id)
+                await util.update_server_val(util.servers_path,ctx.guild.id,'chan_id',ctx.channel.id)
                 await ctx.send(f'I will now start posting in the {ctx.channel.mention} channel!')
                 logger.info(f'\nUpdated post channel in {ctx.guild.name}: {ctx.channel.name} | {ctx.channel.id}')
             except Exception as e:
@@ -47,9 +47,9 @@ class AdminCommands(commands.Cog, name="Admin Commands"):
                                     "Milestones include 99s and thresholds for XP, boss kills, and clue scrolls.")
     @commands.cooldown(1, 5, commands.BucketType.guild)
     async def rsrole(self, ctx, *, rs_role: discord.Role):
-        if await fs.is_admin(ctx.author) or ctx.author.id == 134858274909585409:
+        if await util.is_admin(ctx.author) or ctx.author.id == 134858274909585409:
             try:
-                await fs.update_server_val(fs.servers_path,ctx.guild.id,'rs_role_id',rs_role.id)
+                await util.update_server_val(util.servers_path,ctx.guild.id,'rs_role_id',rs_role.id)
                 await ctx.send(f'I will now start posting big announcements with the **{rs_role.name}** role mentioned!')
                 logger.info(f'\nUpdated RS Role in {ctx.guild.name}: {rs_role.name} | {rs_role.id}')
             except Exception as e:
@@ -65,9 +65,9 @@ class AdminCommands(commands.Cog, name="Admin Commands"):
                                     "Milestones include 99s and thresholds for XP, boss kills, and clue scrolls.")
     @commands.cooldown(1, 5, commands.BucketType.guild)
     async def resetrsrole(self, ctx):
-        if await fs.is_admin(ctx.author) or ctx.author.id == 134858274909585409:
+        if await util.is_admin(ctx.author) or ctx.author.id == 134858274909585409:
             try:
-                await fs.update_server_val(fs.servers_path,ctx.guild.id,'rs_role_id',None)
+                await util.update_server_val(util.servers_path,ctx.guild.id,'rs_role_id',None)
                 await ctx.send(f'I will now start posting big announcements with the **@here** role mentioned!')
                 logger.info(f'\nReset RS Role in {ctx.guild.name}: @here | {None}')
             except Exception as e:
@@ -85,27 +85,27 @@ class AdminCommands(commands.Cog, name="Admin Commands"):
     @commands.cooldown(1, 10, commands.BucketType.guild)
     async def add(self, ctx, member: discord.Member, *, player):
         # If player is admin
-        if await fs.is_admin(ctx.author) or ctx.author.id == 134858274909585409:
+        if await util.is_admin(ctx.author) or ctx.author.id == 134858274909585409:
             print('admin!')
-            # server_entry = await fs.get_server_entry(fs.players_path,ctx.guild.id)
-            name_rs = fs.name_to_rs(player)
+            # server_entry = await util.get_server_entry(util.players_path,ctx.guild.id)
+            name_rs = util.name_to_rs(player)
             await ctx.send("*Checking name...*")
-            player_dict = await fs.player_is_acceptable(name_rs)
+            player_dict = await util.check_player_validity(name_rs)
             # If player is valid to be added
             if player_dict != None:
                 await ctx.channel.purge(limit=1) # delete 'getting levels' messages
                 # If player is already in DB
-                if await fs.player_exists_in_db(str(member.id)):
+                if await util.player_exists_in_db(str(member.id)):
                     try:
                         # get old player data
-                        player_entry = await fs.get_player_entry(str(member.id))
+                        player_entry = await util.get_player_entry(str(member.id))
                         # check against old player data
                         if str(ctx.guild.id) not in player_entry['servers']:  # update player's server dict
                             player_entry['servers'][str(ctx.guild.id)] = {'mention': True}
                         # add previous data to newer updated player dict
                         player_dict['servers'] = player_entry['servers']
                         # update DB & send update
-                        await fs.update_player_entry(str(member.id),player_dict)
+                        await util.update_player_entry(str(member.id),player_dict)
                         await ctx.send(f'**{member.name}** exists and has been updated in the Event Log List: *{name_rs}*')
                         logger.info(f'Updated player in {ctx.guild.name}: {member.name} | {name_rs}')
                     except Exception as e:
@@ -116,7 +116,7 @@ class AdminCommands(commands.Cog, name="Admin Commands"):
                     try:
                         # add current server to new player
                         player_dict['servers'] = {str(ctx.guild.id) : {'mention' : True}}
-                        await fs.update_player_entry(str(member.id),player_dict)
+                        await util.update_player_entry(str(member.id),player_dict)
                         await ctx.send(f'**{member.name}** has been added to the Event Log List: *{name_rs}*')
                         logger.info(f'Added player in {ctx.guild.name}: {member.name} | {name_rs}')
                     except Exception as e:
@@ -140,9 +140,9 @@ class AdminCommands(commands.Cog, name="Admin Commands"):
                                     "Anyone wishing to remove themselves should use ;leave.")
     @commands.cooldown(1, 5, commands.BucketType.guild)
     async def remove(self, ctx, *, member: discord.Member):
-        if await fs.is_admin(ctx.author) or ctx.author.id == 134858274909585409:
+        if await util.is_admin(ctx.author) or ctx.author.id == 134858274909585409:
             try:
-                if await fs.del_player_entry(member.id) == True:
+                if await util.del_player_entry(member.id) == True:
                     await ctx.send(f'**{member.name}** has been removed from the Event Log List!')
                     logger.info(f'Removed player in {ctx.guild.name}: {member.name} | {member.id}')
                 else:

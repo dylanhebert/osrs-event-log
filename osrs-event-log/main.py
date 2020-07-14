@@ -30,9 +30,9 @@ BOT_TOKEN = BOT_INFO_ALL['BOT_TOKEN']
 
 # Set prefix
 def get_prefix(bot, message):
-    prefixes = [';']
+    prefixes = ['=']
     if not message.guild:
-        return ';'
+        return '='
     return commands.when_mentioned_or(*prefixes)(bot, message)
 
 # Set help command
@@ -43,7 +43,7 @@ custom_help = commands.DefaultHelpCommand(
     )
 
 # Set bot status
-gamePlaying = discord.Streaming(
+game_playing = discord.Streaming(
     name=';join <osrs-name>',
     url='https://www.youtube.com/watch?v=FADpdNyXzek')
 
@@ -54,7 +54,9 @@ bot = commands.Bot(
     description = 'OSRS Activity Log by Green Donut')
 
 # define extensions
-initial_extensions = []
+initial_extensions = [
+    'cogs.cmds.user'
+]
 # initial_extensions =    [
 #                         'cogs.looper',
 #                         'cogs.cmds.user',
@@ -75,7 +77,7 @@ if __name__ == '__main__':
 @bot.event
 async def on_ready():
     logger.info(f'\n** BOT STARTED: {bot.user.name} - {bot.user.id} **')
-    await bot.change_presence(activity = gamePlaying)
+    await bot.change_presence(activity = game_playing)
 
 # bot disconnection, log it!
 @bot.event
@@ -97,9 +99,9 @@ async def on_command_error(ctx, error):
 # bot joining server
 @bot.event
 async def on_guild_join(guild):
-    sysChan = False
+    sys_chan = False
     if guild.system_channel != None:
-        sysChan = True
+        sys_chan = True
         await guild.system_channel.send(f'Thanks for having me, {guild.name}\n'
                                 'Set a channel for me to post in with **;posthere**\n'
                                 'Set a role for me to mention for big announcements with **;rsrole**\n'
@@ -107,7 +109,7 @@ async def on_guild_join(guild):
                                 'If you change your OSRS name, use the command again with your new name')  
     logger.info('\n---------------------------------------\n'
             f'Joined {guild.name} with {guild.member_count} users!\n'
-            f' System channel = {sysChan}\n'
+            f' System channel = {sys_chan}\n'
             '---------------------------------------')
     await db.add_server(guild)
 

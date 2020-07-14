@@ -5,7 +5,7 @@
 import discord
 import asyncio
 from common.logger import logger
-import common.utils as fs
+import common.util as util
 import math
 
 
@@ -41,7 +41,7 @@ def clue_sort(title):
 class PlayerUpdate:
     def __init__(self, old_data, messages):
         self.old_data = old_data
-        self.rs_name = fs.name_to_discord(old_data['rs_name'])
+        self.rs_name = util.name_to_discord(old_data['rs_name'])
         self.mention_member = None
         self.mention_role = None
         self.overall_update = None
@@ -141,8 +141,8 @@ class PlayerUpdate:
         if not new_entry:  
             old_data = self.old_data['skills'][title]
             logger.debug(f"existing entry, old lvl: {old_data['level']}, new lvl: {new_data['level']}...")
-            xp_new = fs.format_int(new_data['xp'])
-            xp_old = fs.format_int(old_data['xp'])
+            xp_new = util.format_int(new_data['xp'])
+            xp_old = util.format_int(old_data['xp'])
             xp_diff = xp_new - xp_old
             logger.debug("calculated xp diff...")
             if new_data['level'] != old_data['level']:  # check if level change
@@ -181,8 +181,8 @@ class PlayerUpdate:
             if not new_entry:  # minigame was already on hiscores
                 logger.debug("existing entry...")
                 old_data = self.old_data['minigames'][title]
-                count_new = fs.format_int(new_data['score'])
-                count_old = fs.format_int(old_data['score'])
+                count_new = util.format_int(new_data['score'])
+                count_old = util.format_int(old_data['score'])
                 count_diff = count_new - count_old
                 self.make_clue_update(old_data, new_data, title, count_new, count_old, count_diff, clue_lvl)
 
@@ -191,18 +191,18 @@ class PlayerUpdate:
                 # all clue scrolls, get count
                 if clue_lvl == 'Total':
                     logger.debug(f"(all) clue found, count: {new_data['score']}...")
-                    self.clue_all_total = fs.format_int(new_data['score'])
+                    self.clue_all_total = util.format_int(new_data['score'])
                     return
                 # set correct usage of a/an
                 if clue_lvl in ['Easy', 'Elite']: an = 'an'
                 else: an = 'a'
                 # append total clues to message if total clues rank is on hiscores
                 if self.clue_all_total != None:
-                    total_clue_msg = f" | Total clues completed: {fs.format_int_str(self.clue_all_total)}"
+                    total_clue_msg = f" | Total clues completed: {util.format_int_str(self.clue_all_total)}"
                 else:
                     total_clue_msg = ""
                 message = f"**{self.rs_name} completed {an} {clue_lvl} Clue Scroll for the first time**\
-                            ```{clue_lvl} clues completed: {fs.format_int_str(new_data['score'])} | Current rank: {new_data['rank']}{total_clue_msg}```"
+                            ```{clue_lvl} clues completed: {util.format_int_str(new_data['score'])} | Current rank: {new_data['rank']}{total_clue_msg}```"
                 self.minigames.append(message)
                 logger.debug(f"appended update for {title} to minigames list...")
 
@@ -232,8 +232,8 @@ class PlayerUpdate:
             if not new_entry:  # minigame was already on hiscores
                 logger.debug("existing entry...")
                 old_data = self.old_data['minigames'][title]
-                kill_new = fs.format_int(new_data['score'])
-                kill_old = fs.format_int(old_data['score'])
+                kill_new = util.format_int(new_data['score'])
+                kill_old = util.format_int(old_data['score'])
                 kill_diff = kill_new - kill_old
                 self.make_boss_update(old_data, new_data, title, kill_new, kill_old, kill_diff, action_1, action_2)
 
@@ -243,12 +243,12 @@ class PlayerUpdate:
                 if title in self.custom_messages['bosses']:
                     message_extra = self.custom_messages['bosses'][title]
                     message = f"**{self.rs_name} {action_1} {title} for the first time! {message_extra}**\
-                                ```Total {action_2} count: {fs.format_int_str(new_data['score'])} | Current rank: {new_data['rank']}```"
+                                ```Total {action_2} count: {util.format_int_str(new_data['score'])} | Current rank: {new_data['rank']}```"
                     self.milestones.append(message)
                     logger.debug(f"appended Boss update for {title} to milestones list...")
                 else:
                     message = f"**{self.rs_name} {action_1} {title} for the first time**\
-                                ```Total {action_2} count: {fs.format_int_str(new_data['score'])} | Current rank: {new_data['rank']}```"
+                                ```Total {action_2} count: {util.format_int_str(new_data['score'])} | Current rank: {new_data['rank']}```"
                     self.minigames.append(message)
                     logger.debug(f"appended update for {title} to minigames list...")
             
@@ -258,8 +258,8 @@ class PlayerUpdate:
     # --- OVERALL --- #
     def make_overall_update(self, old_data, new_data):
         logger.debug("assigning Overall...")
-        lvl_new = fs.format_int(new_data['level'])
-        lvl_old = fs.format_int(old_data['level'])
+        lvl_new = util.format_int(new_data['level'])
+        lvl_old = util.format_int(old_data['level'])
         # MAX
         max_lvl = 2277
         if lvl_new == max_lvl and lvl_old != max_lvl:
@@ -293,7 +293,7 @@ class PlayerUpdate:
         else: message_extra = ''
         # make message
         message = f"**{self.rs_name} levelled up {title} to {new_lvl}{message_extra}**\
-                    ```{fs.format_int_str(xp_diff)} XP gained | Total {title} XP: {new_data['xp']}```"
+                    ```{util.format_int_str(xp_diff)} XP gained | Total {title} XP: {new_data['xp']}```"
         # 99 milestone
         if new_lvl == '99':
             self.milestones.append(message)
@@ -316,8 +316,8 @@ class PlayerUpdate:
         increment = threshold
         while xp_new >= threshold:
             if xp_old < threshold:
-                message = f"**{self.rs_name} has achieved {fs.format_int_str(threshold)} {title} XP**\
-                            ```{fs.format_int_str(xp_diff)} XP gained | Total {title} XP: {new_data['xp']}```"
+                message = f"**{self.rs_name} has achieved {util.format_int_str(threshold)} {title} XP**\
+                            ```{util.format_int_str(xp_diff)} XP gained | Total {title} XP: {new_data['xp']}```"
                 # 10M xp is too low for milestone notification - 2/23/20
                 if threshold == 10000000:
                     self.skills.append(message)
@@ -336,7 +336,7 @@ class PlayerUpdate:
         # check for clue milestones
         found_milestone = False
         if clue_lvl == 'Total':
-            self.clue_all_total = fs.format_int(new_data['score'])
+            self.clue_all_total = util.format_int(new_data['score'])
             threshold = 250
         else:
             threshold = 100
@@ -345,9 +345,9 @@ class PlayerUpdate:
         while count_new >= threshold:
             if count_old < threshold:
                 if clue_lvl != 'Total':  # show total if not already looking at total clues
-                    message_extra = f" | Total clues completed: {fs.format_int_str(self.clue_all_total)}"
+                    message_extra = f" | Total clues completed: {util.format_int_str(self.clue_all_total)}"
                 else: message_extra = ""
-                message = f"**{self.rs_name} has completed at least {fs.format_int_str(threshold)} {clue_lvl} Clue Scrolls**\
+                message = f"**{self.rs_name} has completed at least {util.format_int_str(threshold)} {clue_lvl} Clue Scrolls**\
                             ```{clue_lvl} clues completed: {new_data['score']} | Current rank: {new_data['rank']}{message_extra}```"
                 self.milestones.append(message)
                 logger.debug(f"appended Clue update for {title} to milestones list...")
@@ -364,7 +364,7 @@ class PlayerUpdate:
 
             # append total clues to message if total clues rank is on hiscores
             if self.clue_all_total != None:
-                total_clue_msg = f" | Total clues completed: {fs.format_int_str(self.clue_all_total)}"
+                total_clue_msg = f" | Total clues completed: {util.format_int_str(self.clue_all_total)}"
             else:
                 total_clue_msg = ""
             message = f"**{self.rs_name} has completed {new_data['score']} {clue_lvl} Clue Scrolls**\
@@ -385,7 +385,7 @@ class PlayerUpdate:
         increment = threshold
         while kill_new >= threshold:
             if kill_old < threshold:
-                message = f"**{self.rs_name} has {action_1} {title} at least {fs.format_int_str(threshold)} times**\
+                message = f"**{self.rs_name} has {action_1} {title} at least {util.format_int_str(threshold)} times**\
                             ```Total {action_2} count: {new_data['score']} | Current rank: {new_data['rank']}```"
                 self.milestones.append(message)
                 logger.debug(f"appended Boss update for {title} to milestones list...")
@@ -401,7 +401,7 @@ class PlayerUpdate:
             # else: times = 'times'
             logger.debug("found diff...")
             try:
-                message = f"**{self.rs_name} has {action_1} {title} {new_data['score']} times**```New {action_2}s logged: {fs.format_int_str(kill_diff)} | Current rank: {new_data['rank']}```"
+                message = f"**{self.rs_name} has {action_1} {title} {new_data['score']} times**```New {action_2}s logged: {util.format_int_str(kill_diff)} | Current rank: {new_data['rank']}```"
             except Exception as e:
                 logger.exception(f'Error posting boss update: {e}')
             logger.debug("made message...")

@@ -1,4 +1,4 @@
-# OSRS Activity Log Bot: utils.py
+# OSRS Activity Log Bot: util.py
 # - Utilities & functions commonly used throughout the bot
 #
 
@@ -83,7 +83,7 @@ async def is_admin(mem):
         return False
 
 # CHECK IF A RS PLAYER IS ACCEPTABLE
-async def player_is_acceptable(name):
+async def check_player_validity(name):
     page = await get_page(name)
     if page != None:
         try:
@@ -142,8 +142,6 @@ async def get_player_scores(name_rs, page):
     logger.debug(f'{name_rs}: got scores...')
     # new player dict to fill and return to correct discord id
     player_dict = {
-        'rs_name' : name_rs,
-        'servers' : {},
         'skills' : {},
         'minigames': {}
     }

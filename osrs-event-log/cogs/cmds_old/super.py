@@ -9,7 +9,7 @@ import random
 import asyncio
 import re
 from common.logger import logger
-import common.utils as fs
+import common.util as util
 
 
 class SuperCommands(commands.Cog, command_attrs=dict(hidden=True)):
@@ -29,7 +29,7 @@ class SuperCommands(commands.Cog, command_attrs=dict(hidden=True)):
     @commands.cooldown(1, 15, commands.BucketType.guild)
     async def sendannouncement(self, ctx, *, announcement):
         if ctx.author.id == 134858274909585409:
-            all_servers = await fs.open_json(fs.servers_path)
+            all_servers = await util.open_json(util.servers_path)
             for k,v in all_servers.items():
                 try:
                     server = self.bot.get_guild(int(k))
@@ -60,7 +60,7 @@ class SuperCommands(commands.Cog, command_attrs=dict(hidden=True)):
     @commands.cooldown(1, 15, commands.BucketType.guild)
     async def sendthought(self, ctx, *, thought):
         if ctx.author.id == 134858274909585409:
-            all_servers = await fs.open_json(fs.servers_path)
+            all_servers = await util.open_json(util.servers_path)
             for k,v in all_servers.items():
                 try:
                     server = self.bot.get_guild(int(k))

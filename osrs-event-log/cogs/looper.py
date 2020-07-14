@@ -12,7 +12,7 @@ from aiohttp import ClientSession, ClientResponseError
 from concurrent.futures.thread import ThreadPoolExecutor
 from bs4 import BeautifulSoup
 from common.logger import logger
-import common.utils as fs
+import common.util as util
 from activity.player_updates import PlayerUpdate
 
 # -------------- VARIABLES ------------- #
@@ -27,8 +27,8 @@ PLAYER_THREAD_LIMIT = asyncio.Semaphore( 5 )
 # RUNNING MAIN LOOP
 async def run_osrs_loop(bot):
     logger.debug('In looped method...')
-    data_servers = await fs.open_json(fs.servers_path)
-    data_players = await fs.open_json(fs.players_path)
+    data_servers = await util.open_json(util.servers_path)
+    data_players = await util.open_json(util.players_path)
     # New code to thread scraping and to enfore a limit
     try:
         tasks = [
@@ -53,7 +53,7 @@ async def thread_player(bot, dis_id, rs_data, data_servers):
     logger.debug(f"checking player: {dis_id} -- {rs_data['rs_name']}")
     parse_minigames = False
     ### Changed for aiohttp integration ###
-    page = await fs.get_page(rs_data['rs_name'])
+    page = await util.get_page(rs_data['rs_name'])
     # if page isnt responding, skip player
     if page == None:
         logger.info(f"Unable to get player: {rs_data['rs_name']} | Page status: None")
@@ -77,7 +77,7 @@ async def thread_player(bot, dis_id, rs_data, data_servers):
     # player has hiscore profile
     logger.debug(f"{rs_data['rs_name']}: found player...")
     overall_xp_changed = False
-    Update = PlayerUpdate( rs_data, await fs.open_json(fs.messages_path) )  # create player-update object
+    Update = PlayerUpdate( rs_data, await util.open_json(util.messages_path) )  # create player-update object
     for tr in scores.find_all('tr')[3:]:
         # find Overall row, skip if weve already found it
         if not overall_xp_changed and 'Overall' in tr.get_text():
@@ -85,7 +85,7 @@ async def thread_player(bot, dis_id, rs_data, data_servers):
             # if this fails then Overall is (likely) to be new to the json
             try:
                 # if overall xp did not change, skip player
-                if not fs.xp_changed( rs_data['skills']['Overall']['xp'], tr.find_all('td')[4].get_text() ):
+                if not util.xp_changed( rs_data['skills']['Overall']['xp'], tr.find_all('td')[4].get_text() ):
                     overall_xp_changed = False
                     logger.debug(f"{rs_data['rs_name']}: Overall xp didnt change, skipping...")
                     break  # SKIP POINT HERE
@@ -151,8 +151,8 @@ async def thread_player(bot, dis_id, rs_data, data_servers):
     # Finish up & post update
     if overall_xp_changed:
         logger.debug(f"{rs_data['rs_name']}: updating database value...")
-        # await fs.update_server_val(fs.players_path,int(s),dis_id,rs_data)  # finally update player with new data
-        await fs.update_player_entry(dis_id, rs_data)  # finally update player with new data
+        # await util.update_server_val(util.players_path,int(s),dis_id,rs_data)  # finally update player with new data
+        await util.update_player_entry(dis_id, rs_data)  # finally update player with new data
         if Update.has_any_updates():
             # get servers to post to for player
             for k in rs_data['servers'].keys():
@@ -166,7 +166,7 @@ async def thread_player(bot, dis_id, rs_data, data_servers):
                     if server_entry['rs_role_id'] == None:
                         rs_role = None
                     else:
-                        rs_role = discord.utils.get(server.roles, id = server_entry['rs_role_id'])
+                        rs_role = discord.util.get(server.roles, id = server_entry['rs_role_id'])
                     await Update.post_update(bot, server, event_channel, rs_role, int(dis_id))
                     #await asyncio.sleep(.3)
                 # any kind of error posting to server
@@ -216,7 +216,7 @@ class MainLooper(commands.Cog):
     #         except Exception as e:  # catch any error in looper here
     #             logger.exception(f'Unknown error running main loop: {e}')
     #         logger.debug(f'Now sleeping for {TIME_LOOP} minutes...')
-    #         await asyncio.sleep(await fs.time_mins( TIME_LOOP ))
+    #         await asyncio.sleep(await util.time_mins( TIME_LOOP ))
 
             
             

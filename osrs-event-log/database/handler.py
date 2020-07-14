@@ -6,7 +6,9 @@ import pathlib
 import json
 import os
 import asyncio
+from common.logger import logger
 from . import helpers as h
+from common import exceptions as ex
 
 
 # --------------------------------- Constants -------------------------------- #
@@ -50,16 +52,16 @@ def verify_files(file_name):
     """Verify if a file is present in a path"""
     path_check = DATA_PATH + file_name
     if os.path.exists(path_check):
-        print(f'Found {path_check}')
+        logger.debug(f'Found {path_check}')
         # TEMP CODE FOR TESTING
-        if file_name == 'db_discord.json':
-            db = {'active_servers': [],'removed_servers': []}
-            with open(DB_DISCORD_PATH, 'w') as outfile:  
-                json.dump(db, outfile, indent=4, sort_keys=False)
-        else:
-            db = {}
-            with open(DB_RUNESCAPE_PATH, 'w') as outfile:  
-                json.dump(db, outfile, indent=4, sort_keys=False)
+        # if file_name == 'db_discord.json':
+        #     db = {'active_servers': [],'removed_servers': []}
+        #     with open(DB_DISCORD_PATH, 'w') as outfile:  
+        #         json.dump(db, outfile, indent=4, sort_keys=False)
+        # else:
+        #     db = {}
+        #     with open(DB_RUNESCAPE_PATH, 'w') as outfile:  
+        #         json.dump(db, outfile, indent=4, sort_keys=False)
         pass
     else:
         if file_name == 'db_discord.json':
@@ -68,15 +70,15 @@ def verify_files(file_name):
             db = {}
         with open(path_check, 'w') as outfile:  
             json.dump(db, outfile)
-        print(f'Created new {path_check}')
+        logger.info(f'CREATED NEW FILE: {path_check}')
 
 
 # -------------------------------- Add Server -------------------------------- #
 
 async def add_server(Server):
     """Add a server to the bot"""
-    print('------------------------------')
-    print(f'Initialized ADD SERVER: {Server.id}')
+    logger.info('------------------------------')
+    logger.info(f'Initialized ADD SERVER: {Server.id}')
     db = await db_open(DB_DISCORD_PATH)
     # Check if bot has been removed before
     try: db['removed_servers'].remove(Server.id)
@@ -84,10 +86,10 @@ async def add_server(Server):
         db[f'server:{Server.id}#all_players'] = []
         db[f'server:{Server.id}#channel'] = None
         db[f'server:{Server.id}#role'] = None
-        print('New server...')
+        logger.debug('New server...')
     db['active_servers'].append(Server.id)
     await db_write(DB_DISCORD_PATH, db)
-    print(f"ADDED NEW SERVER - Name: {Server.name} | ID: {Server.id}")
+    logger.info(f"ADDED NEW SERVER - Name: {Server.name} | ID: {Server.id}")
     return True
 
 
@@ -96,15 +98,15 @@ async def add_server(Server):
 async def remove_server(Server):
     """Remove a server from the bot\n
     Retains server info in case server is added back"""
-    print('------------------------------')
-    print(f'Initialized REMOVE SERVER: {Server.id}')
+    logger.info('------------------------------')
+    logger.info(f'Initialized REMOVE SERVER: {Server.id}')
     db = await db_open(DB_DISCORD_PATH)
     # Remove from active servers list
     db['active_servers'].remove(Server.id)
     # Keep a list of removed servers
     db['removed_servers'].append(Server.id)
     await db_write(DB_DISCORD_PATH, db)
-    print(f"REMOVED SERVER - Name: {Server.name} | ID: {Server.id}")
+    logger.info(f"REMOVED SERVER - Name: {Server.name} | ID: {Server.id}")
     return True
 
 
@@ -112,36 +114,29 @@ async def remove_server(Server):
 
 async def update_server_entry(Server, entry, new_val):
     """Update a server entry's value"""
-    print('------------------------------')
-    print(f'Initialized UPDATE SERVER ENTRY - Name: {Server.name} | ID: {Server.id}')
+    logger.info('------------------------------')
+    logger.info(f'Initialized UPDATE SERVER ENTRY - Name: {Server.name} | ID: {Server.id}')
     db = await db_open(DB_DISCORD_PATH)
     db[f'server:{Server.id}#{entry}'] = new_val
     await db_write(DB_DISCORD_PATH, db)
-    print(f"UPDATED SERVER ENTRY - Name: {Server.name} | ID: {Server.id} | Entry: {entry} | Value: {new_val}")
+    logger.info(f"UPDATED SERVER ENTRY - Name: {Server.name} | ID: {Server.id} | Entry: {entry} | Value: {new_val}")
 
 
 # -------------------------------- Add Player -------------------------------- #
 
-async def add_player(Server, Member, rs_name):
+async def add_player(Server, Member, rs_name, stats_dict):
     """Add a player to a specific server\n
     Create new member if this member's id doesnt exist\n
     Returns False if player could not be added"""
-    print('------------------------------')
-    print(f'Initialized ADD PLAYER: {rs_name} | Added by: {Member.name}')
-    # do RS name checking/verfying here...
-    nameOK = True
-    if not nameOK:
-        print('This Runescape name is not valid!')
-        return False
-    print(f'Validated name: {rs_name}...')
+    logger.info('------------------------------')
+    logger.info(f'Initialized ADD PLAYER: {rs_name} | Added by: {Member.name} | ID: {Member.id} | Server: {Server.name} | ID: {Server.id}')
 
-    # Name is valid
-    db_dis = await db_open(DB_DISCORD_PATH)  # open Discord DB
+    # Open Discord DB
+    db_dis = await db_open(DB_DISCORD_PATH)
 
     # Check if player is already in this server linked with a member
-    if not await h.check_player_member_link(db_dis, Server, Member, rs_name):
-        print('Could not verify player-member link!')
-        return False
+    try: await h.check_player_member_link(db_dis, Server, Member, rs_name)
+    except Exception as e: raise e
 
     # Get list of existing players for this member in this server
     player_path = f'player:{rs_name}#server:{Server.id}'
@@ -149,16 +144,15 @@ async def add_player(Server, Member, rs_name):
     try: 
         # Member already has a player in this server
         player_list = db_dis[f'{member_path}#players']
-        print(f'Found player list for member: {Member.id} in server: {Server.id}...')
+        logger.debug(f'Found player list for member: {Member.id} in server: {Server.id}...')
     except KeyError:
         # Member doesn't have a player in this server
         player_list = []
-        print(f"ADDED NEW MEMBER - Name: {Member.name} | ID: {Member.id} | Server ID {Server.id}")
+        logger.info(f"ADDED NEW MEMBER - Name: {Member.name} | ID: {Member.id} | Server ID {Server.id}")
     if len(player_list) >= MAX_PLAYERS_PER_MEMBER:
         # Member has too many players for them in this server
-        print(f'You can only have up to {MAX_PLAYERS_PER_MEMBER} OSRS accounts connected to a Discord member per server.\n' 
-            f'Please remove one to add another. Current accounts: {", ".join(player_list)}')
-        return False
+        raise ex.DataHandlerError(f'You can only have up to **{MAX_PLAYERS_PER_MEMBER}** OSRS accounts connected to a Discord member per server.\n' 
+                                f'Please remove one to add another. Current accounts: *{", ".join(player_list)}*')
     player_list.append(rs_name)
 
     # Add server to player (my method)
@@ -174,9 +168,9 @@ async def add_player(Server, Member, rs_name):
 
     # Edit Runescape DB
     db_rs = await db_open(DB_RUNESCAPE_PATH)  # open Runescape DB
-    db_rs[rs_name] = {'skills': {}, 'minigames': {}}  # <-- this should already be built
+    db_rs[rs_name] = stats_dict
     await db_write(DB_RUNESCAPE_PATH, db_rs)
-    print(f"ADDED NEW PLAYER - RS name : {rs_name} | Member: {Member.name} | ID: {Member.id} | Server ID {Server.id}")
+    logger.info(f"ADDED NEW PLAYER - RS name : {rs_name} | Member: {Member.name} | ID: {Member.id} | Server: {Server.name} | ID: {Server.id}")
     return True
 
 
@@ -186,20 +180,22 @@ async def remove_player(Server, Member, rs_name):
     """Remove a player from a specific server\n
     Remove player from runescape.json if there are no more servers for player\n
     Returns False if player could not be removed"""
-    print('------------------------------')
-    print(f'Initialized REMOVE PLAYER: {rs_name} | Removed by: {Member.name}')
+    logger.info('------------------------------')
+    logger.info(f'Initialized REMOVE PLAYER: {rs_name} | Removed by: {Member.name}')
     db_dis = await db_open(DB_DISCORD_PATH)  # open Discord DB
 
     # Check if this player is in this server, try removing server from player
-    if not await h.player_remove_server(db_dis,Server,rs_name):
-        print(f'Could not remove player: {rs_name}')
-        return False
+    try: await h.player_remove_server(db_dis, Server, rs_name)
+    except Exception as e: raise e
 
     # Get ID of member in this server with this player (admin could be removing)
     player_path = f'player:{rs_name}#server:{Server.id}'
     linked_member = db_dis[f'{player_path}#member']
     # Update all DB entries for this player
     db_dis[f'member:{linked_member}#server:{Server.id}#players'].remove(rs_name)
+    # Check if member has any more players in this server
+    if not db_dis[f'member:{linked_member}#server:{Server.id}#players']:
+        del db_dis[f'member:{linked_member}#server:{Server.id}#players']
     db_dis[f'server:{Server.id}#all_players'].remove(rs_name)
     del db_dis[f'{player_path}#member']
     del db_dis[f'{player_path}#mention']
@@ -212,9 +208,9 @@ async def remove_player(Server, Member, rs_name):
         db_rs = await db_open(DB_RUNESCAPE_PATH)  # open Runescape DB
         del db_rs[rs_name]
         await db_write(DB_RUNESCAPE_PATH, db_rs)
-        print(f"Completely removed player from all DBs | RS name: {rs_name}")
+        logger.info(f"Completely removed player from all DBs | RS name: {rs_name}")
     await db_write(DB_DISCORD_PATH, db_dis)
-    print(f"REMOVED PLAYER - RS name : {rs_name} | Linked Member ID : {linked_member} | Remover ID: {Member.id} | Server ID {Server.id}")
+    logger.info(f"REMOVED PLAYER - RS name : {rs_name} | Linked Member ID : {linked_member} | Remover ID: {Member.id} | Server ID {Server.id}")
     return True
 
 
@@ -224,22 +220,19 @@ async def rename_player(Server, Member, old_rs_name, new_rs_name):
     """Rename a player in a specific server\n
     Move all info from old player to new player\n
     Returns False if player could not be renamed"""
-    print('------------------------------')
-    print(f'Initialized RENAME PLAYER: Old: {old_rs_name} | New: {new_rs_name} | Updated by: {Member.name}')
+    logger.info('------------------------------')
+    logger.info(f'Initialized RENAME PLAYER: Old: {old_rs_name} | New: {new_rs_name} | Updated by: {Member.name} | ID: {Member.id} | Server: {Server.name} | ID: {Server.id}')
     if old_rs_name == new_rs_name:
-        print('These are the same names!')
-        return False
+        raise ex.DataHandlerError('These are the same names!')
     db_dis = await db_open(DB_DISCORD_PATH)  # open Discord DB
     
     # Check if new player is already in this server linked with a member
-    if not await h.check_player_member_link(db_dis, Server, Member, new_rs_name):
-        print('Could not verify player-member link!')
-        return False
+    try: await h.check_player_member_link(db_dis, Server, Member, new_rs_name)
+    except Exception as e: raise e
 
     # Check if this server is in this player, try removing server from player
-    if not await h.player_remove_server(db_dis,Server,old_rs_name):
-        print(f'Could not remove player: {old_rs_name}')
-        return False
+    try: await h.player_remove_server(db_dis, Server, rs_name)
+    except Exception as e: raise e
 
     # Get list of existing players for this member in this server
     old_player_path = f'player:{old_rs_name}#server:{Server.id}'
@@ -271,9 +264,33 @@ async def rename_player(Server, Member, old_rs_name, new_rs_name):
         # Remove old player from Runescape DB
         del db_rs[old_rs_name]
         await db_write(DB_RUNESCAPE_PATH, db_rs)
-        print(f"Completely removed player from all DBs | RS name : {old_rs_name}")
+        logger.info(f"Completely removed player from all DBs | RS name : {old_rs_name}")
     await db_write(DB_DISCORD_PATH, db_dis)
     db_rs[new_rs_name] = {'skills': {}, 'minigames': {}}  # <-- this should already be built
     await db_write(DB_RUNESCAPE_PATH, db_rs)
-    print(f"RENAMED PLAYER: Old: {old_rs_name} | New: {new_rs_name} | Updated by ID: {Member.id} | Server ID {Server.id}")
+    logger.info(f"RENAMED PLAYER: Old: {old_rs_name} | New: {new_rs_name} | Updated by: {Member.name} | ID: {Member.id} | Server: {Server.name} | ID: {Server.id}")
     return True
+
+
+# ----------------------------- Get Member Entry ----------------------------- #
+
+async def get_member_entry(Server, Member, entry):
+    """Get and return member entry's value"""
+    logger.info('------------------------------')
+    logger.info(f'Initialized GET MEMBER ENTRY - Member: {Member.name} | ID: {Member.id} | Entry: {entry}')
+    db = await db_open(DB_DISCORD_PATH)
+    try: return db[f'member:{Member.id}#server:{Server.id}#{entry}']
+    except KeyError:
+        raise ex.DataHandlerError(f'{Member.name} does not have any RS accounts on this server!')
+
+# ---------------------------- Toggle Player Entry --------------------------- #
+
+async def toggle_player_entry(Server, Member, entry):
+    """Toggles a player entry's value between True and False"""
+    logger.info('------------------------------')
+    logger.info(f'Initialized UPDATE SERVER ENTRY - Name: {Server.name} | ID: {Server.id}')
+    db = await db_open(DB_DISCORD_PATH)
+    db[f'server:{Server.id}#{entry}'] = new_val
+    await db_write(DB_DISCORD_PATH, db)
+    logger.info(f"UPDATED SERVER ENTRY - Name: {Server.name} | ID: {Server.id} | Entry: {entry} | Value: {new_val}")
+    return db[f'server:{Server.id}#{entry}']
