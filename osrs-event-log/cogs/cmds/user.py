@@ -73,7 +73,7 @@ class UserCommands(commands.Cog, name="General Commands"):
     async def myaccounts(self, ctx):
         try:
             player_list = await db.get_member_entry(ctx.guild, ctx.author, 'players')
-            await ctx.send(f'**{ctx.author.name}**: *{"*  **|**  *".join(player_list)}*')
+            await ctx.send(f"**{ctx.author.name}** - *{'*  **|**  *'.join(player_list)}*")
         except Exception:
             return await ctx.send(f'**{ctx.author.name}** does not have any RS accounts on this server!')
 
@@ -90,7 +90,7 @@ class UserCommands(commands.Cog, name="General Commands"):
             try:
                 # only get players that are in current server
                 mem = ctx.guild.get_member(int(k))
-                players_list.append(f'**{mem.name}**' +" - "+ f"*{'*  **|**  *'.join(v)}*\n")
+                players_list.append(f"**{mem.name}** - *{'*  **|**  *'.join(v)}*\n")
             except:
                 logger.debug(f'Skipped {k} in ;players')
                 pass
