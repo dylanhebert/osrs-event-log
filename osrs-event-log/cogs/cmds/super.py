@@ -10,6 +10,7 @@ import asyncio
 import re
 from common.logger import logger
 import common.util as util
+import database.handlers as db
 
 
 class SuperCommands(commands.Cog, command_attrs=dict(hidden=True)):
@@ -21,7 +22,22 @@ class SuperCommands(commands.Cog, command_attrs=dict(hidden=True)):
         logger.debug('SuperCommands Cog Ready')
 
 
-    # SEND AN ANNOUNCEMENT ABOUT THE BOT TO EVERY CHANNEL WITH A MENTION
+    # CHANGE MAX PLAYER COUNT PER MEMBER
+    @commands.command(  brief="Changes the global max player count per Discord member",
+                        usage="<integer>",
+                        description="Changes the global max player count per Discord member")
+    @commands.cooldown(1, 15, commands.BucketType.guild)
+    async def changemaxplayers(self, ctx, *, new_count):
+        if ctx.author.id == 134858274909585409:
+            try: 
+                await db.update_max_players(int(new_count))
+                await ctx.send(f'**Updated player limit globally. New limit: {new_count}**')
+                logger.info(f"UPDATED GLOBAL MAX PLAYER COUNT: {new_count} | Member ID: {ctx.author.id}")
+            except:
+                ctx.send("Could not update global player limit!")
+                
+
+    """# SEND AN ANNOUNCEMENT ABOUT THE BOT TO EVERY CHANNEL WITH A MENTION
     @commands.command(  brief="Sends an announcement to every server & channel connected to this bot",
                         usage="<announcement>",
                         description="Sends an announcement in bold text to every server & channel connected to this bot. "
@@ -74,7 +90,9 @@ class SuperCommands(commands.Cog, command_attrs=dict(hidden=True)):
                         logger.exception(f'Could not send thought in guild id:{k} -- No channel specified')
                 except Exception as e:
                     logger.exception(f'Could not send thought in guild id:{k} -- {e}')
-            logger.info(f"Done sending thought: {thought}")
+            logger.info(f"Done sending thought: {thought}")"""
+            
+            
 
 
     # RENAME BOT

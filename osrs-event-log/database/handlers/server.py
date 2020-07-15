@@ -58,12 +58,15 @@ async def update_server_entry(Server, entry, new_val):
 
 # ---------------------------- Get Server Players ---------------------------- #
 
-async def get_server_players(Server, Member, entry):
-    """Gets info for all players in a server"""
+async def get_server_players(Server):
+    """Gets member IDs with all players in a server"""
     logger.info('------------------------------')
-    logger.info(f'Initialized UPDATE SERVER ENTRY - Name: {Server.name} | ID: {Server.id}')
+    logger.info(f'Initialized GET SERVER PLAYERS - Name: {Server.name} | ID: {Server.id}')
     db = await h.db_open(h.DB_DISCORD_PATH)
-    db[f'server:{Server.id}#{entry}'] = new_val
-    await h.db_write(h.DB_DISCORD_PATH, db)
-    logger.info(f"UPDATED SERVER ENTRY - Name: {Server.name} | ID: {Server.id} | Entry: {entry} | Value: {new_val}")
-    return db[f'server:{Server.id}#{entry}']
+    # Loop through db to get member IDs for each player name
+    members_players = {}
+    for player in db[f'server:{Server.id}#all_players']:
+        try: members_players[str(db[f'player:{player}#server:{Server.id}#member'])].append(player)
+        except: members_players[str(db[f'player:{player}#server:{Server.id}#member'])] = [player]
+    logger.info(f"GET SERVER PLAYERS - Name: {Server.name} | ID: {Server.id}")
+    return members_players

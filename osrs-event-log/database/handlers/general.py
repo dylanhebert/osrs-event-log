@@ -41,8 +41,9 @@ async def update_max_players(new_val):
         logger.debug(f'Old max players: {config_all["MAX_PLAYERS_PER_MEMBER"]}')
         config_all['MAX_PLAYERS_PER_MEMBER'] = new_val
         await h.db_write(config_path, config_all)
+        h.MAX_PLAYERS_PER_MEMBER = new_val
     except Exception as e:
-        logger.exception(f'COULD NOT LOAD BOT CONFIG!')
+        raise ex.DataHandlerError(f'COULD NOT LOAD BOT CONFIG!')
         
         
 # ---------------------------------- TESTING --------------------------------- #

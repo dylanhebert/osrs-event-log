@@ -22,7 +22,8 @@ class UserCommands(commands.Cog, name="General Commands"):
         logger.debug('UserCommands Cog Ready')
 
 
-    # PLAYER JOINS LOG LOOP THEMSELVES
+# --------------------- PLAYER JOINS LOG LOOP THEMSELVES --------------------- #
+
     @commands.command(  brief=";add <OSRS-Name> | Add an account to your Activity Log",
                         usage="<OSRS-Name>",
                         description="Join the Activity Log with a specified OSRS username.")
@@ -52,7 +53,8 @@ class UserCommands(commands.Cog, name="General Commands"):
                             " -Hiscores are not responding. Try again later")
 
 
-    # MEMBER CAN REMOVE THEMSELVES FROM EVENT LOG
+# -------------- MEMBER CAN REMOVE THEMSELVES FROM ACTIVITY LOG -------------- #
+
     @commands.command(  brief=";remove <OSRS-Name> | Remove an account from your Activity Log",
                         usage="<OSRS-Name>",
                         description="Remove one of your RS accounts from this server in the Activity Log's databases. "
@@ -67,37 +69,38 @@ class UserCommands(commands.Cog, name="General Commands"):
             return await ctx.send(e)
         
     
-    # MEMBER LISTS ACCOUNTS FOR THEMSELVES
+# ------------------- MEMBER LISTS ACCOUNTS FOR THEMSELVES ------------------- #
+
     @commands.command(  brief="List all RS accounts associated with you in this server",
                         description="List all RS accounts associated with you in the Activity Log for this server.")
     @commands.cooldown(1, 5, commands.BucketType.guild)
-    async def accounts(self, ctx):
+    async def myaccounts(self, ctx):
         try:
             player_list = await db.get_member_entry(ctx.guild, ctx.author, 'players')
-            await ctx.send(f'**{ctx.author.name}**: *{"* **|** *".join(player_list)}*')
+            await ctx.send(f'**{ctx.author.name}**: *{"*  **|**  *".join(player_list)}*')
         except Exception:
             return await ctx.send(f'**{ctx.author.name}** does not have any RS accounts on this server!')
 
 
-    # LIST PLAYERS IN LOOP
+# ------------------- LIST PLAYERS IN LOOP FOR THIS SERVER ------------------- #
+
     @commands.command(  brief="See a list of players currently in the Activity Log",
                         description="See a list of players currently in the Activity Log within this server.")
     @commands.cooldown(1, 10, commands.BucketType.guild)
     async def players(self, ctx):
         players_list = []
-        all_players = await util.open_json(util.players_path)
-        for k,v in all_players.items():
+        members_players = await db.get_server_players(ctx.guild)
+        for k,v in members_players.items():
             try:
                 # only get players that are in current server
-                if str(ctx.guild.id) in v['servers']:
-                    mem = ctx.guild.get_member(int(k))
-                    players_list.append(f"{mem.name}" +"  **|**  "+ f"*{v['rs_name']}*\n")
+                mem = ctx.guild.get_member(int(k))
+                players_list.append(f'**{mem.name}**' +" - "+ f"*{'*  **|**  *'.join(v)}*\n")
             except:
                 logger.debug(f'Skipped {k} in ;players')
                 pass
         count = len(players_list)
         players_list = "".join(players_list)
-        await ctx.send(f'**Stored Players - {ctx.guild.name} - Total: {count}**\n'+players_list)
+        await ctx.send(f'**Stored Players - {ctx.guild.name} - Total Members: {count}**\n'+players_list)
         logger.info(f';players called in {ctx.guild.name} by {ctx.author.name}')
 
 

@@ -53,7 +53,8 @@ bot = commands.Bot(
 # define extensions
 initial_extensions =    [
                         'cogs.cmds.user',
-                        'cogs.cmds.admin'
+                        'cogs.cmds.admin',
+                        'cogs.cmds.super'
                         ]
 
 # load extensions
