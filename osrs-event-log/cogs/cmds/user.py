@@ -10,7 +10,7 @@ import asyncio
 import re
 from common.logger import logger
 import common.util as util
-import database.handler as db
+import database.handlers as db
 
 
 class UserCommands(commands.Cog, name="General Commands"):
@@ -79,7 +79,7 @@ class UserCommands(commands.Cog, name="General Commands"):
             return await ctx.send(f'**{ctx.author.name}** does not have any RS accounts on this server!')
 
 
-    """# LIST PLAYERS IN LOOP
+    # LIST PLAYERS IN LOOP
     @commands.command(  brief="See a list of players currently in the Activity Log",
                         description="See a list of players currently in the Activity Log within this server.")
     @commands.cooldown(1, 10, commands.BucketType.guild)
@@ -101,7 +101,7 @@ class UserCommands(commands.Cog, name="General Commands"):
         logger.info(f';players called in {ctx.guild.name} by {ctx.author.name}')
 
 
-    # TOGGLES WHETHER TO MENTION THE PLAYER OR NOT FOR EVERY UPDATE
+    """# TOGGLES WHETHER TO MENTION THE PLAYER OR NOT FOR EVERY UPDATE
     @commands.command(  brief="Toggles whether or not to @ you on Discord for every update",
                         description="Toggles whether or not to @ you on Discord for every update. "
                                     "This is toggled on by default. "

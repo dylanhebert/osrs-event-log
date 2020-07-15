@@ -19,16 +19,11 @@ import datetime
 import os
 import sys, traceback
 from common.logger import logger
-import database.handler as db
+import database.handlers as db
 
 # Our data .jsons
 db.verify_files('db_discord.json')
 db.verify_files('db_runescape.json')
-
-# Get bot Token
-with open('bot_config.json','r') as f:
-    BOT_INFO_ALL = json.load(f)
-BOT_TOKEN = BOT_INFO_ALL['BOT_TOKEN']
 
 # Set prefix
 def get_prefix(bot, message):
@@ -115,4 +110,4 @@ async def on_guild_remove(guild):
     await db.remove_server(guild)
 
 
-bot.run(BOT_TOKEN, bot=True)
+bot.run(db.get_bot_token(), bot=True)

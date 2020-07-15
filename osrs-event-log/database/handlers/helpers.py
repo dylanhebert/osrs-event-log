@@ -1,10 +1,48 @@
 # Data handler helpers
 #
 
+import pathlib
 import asyncio
+import json
 from common.logger import logger
 from common import exceptions as ex
 
+
+# -------------------------- Gather Bot Config Data -------------------------- #
+
+DIR_PATH = str(pathlib.Path().absolute())
+
+with open(DIR_PATH + "/bot_config.json",'r') as f:
+    BOT_INFO_ALL = json.load(f)
+    
+BOT_TOKEN = BOT_INFO_ALL['BOT_TOKEN']
+    
+# --------------------------------- Constants -------------------------------- #
+
+MAX_PLAYERS_PER_MEMBER = BOT_INFO_ALL['MAX_PLAYERS_PER_MEMBER']
+
+DATA_PATH = "database/"
+FULL_DATA_PATH = DIR_PATH + "/" + DATA_PATH
+DB_DISCORD_PATH = FULL_DATA_PATH + "db_discord.json"
+DB_RUNESCAPE_PATH = FULL_DATA_PATH + "db_runescape.json"
+
+
+
+# ------------------------------ Json Read/Write ----------------------------- #
+
+async def db_open(path):
+    """Opens a json file as a python dict/list"""
+    with open(path,"r") as f:
+        return json.load(f)
+
+async def db_write(path,db):
+    """Writes a python dict/list as a json file"""
+    with open(path,"w") as f:
+        json.dump(db, f, indent=4, sort_keys=False)
+        # json.dump(db, f)
+
+
+# ---------------------------- Specific Functions ---------------------------- #
 
 async def check_player_member_link(db_dis, Server, Member, rs_name):
     """Check if a player already has a link to a server"""
