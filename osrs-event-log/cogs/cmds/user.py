@@ -29,14 +29,11 @@ class UserCommands(commands.Cog, name="General Commands"):
                         description="Join the Activity Log with a specified OSRS username.")
     @commands.cooldown(1, 5, commands.BucketType.guild)
     async def add(self, ctx, *, game_name):
-        # server_entry = await util.get_server_entry(util.players_path,ctx.guild.id)
         name_rs = util.name_to_rs(game_name)
         await ctx.send("*Checking name...*")
         player_dict = await util.check_player_validity(name_rs)
         # If player is valid to be added
         if player_dict != None:
-            # await ctx.channel.purge(limit=1)  # delete 'getting levels' messages
-            # ADD PLAYER (get exceptions working here)
             try:
                 await db.add_player(ctx.guild, ctx.author, name_rs, player_dict)
                 await ctx.send(f'**{ctx.author.name}** has added an account to the Activity Log: *{name_rs}*\n'
@@ -46,7 +43,6 @@ class UserCommands(commands.Cog, name="General Commands"):
                 return await ctx.send(e)
         # Player is not valid to be added
         else:
-            # await ctx.channel.purge(limit=1) # delete 'getting levels' messages
             await ctx.send("**This player's RS name can't be accessed!** Here are some reasons why:\n"
                             " -This Runescape character doesn't exist\n"
                             " -They don't have any high enough levels on the Hiscores\n"

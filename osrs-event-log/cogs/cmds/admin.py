@@ -78,54 +78,30 @@ class AdminCommands(commands.Cog, name="Admin Commands"):
             await ctx.send('**Only members with admin privilages can use this command!**')
 
 
-    """# ADMINS CAN ADD ANYONE TO LOOP
-    @commands.command(  brief=";add <@Discord-Member> <OSRS-Name> | Add someone to the Activity Log",
+    # ADMINS CAN ADD ANYONE TO LOOP
+    @commands.command(  brief=";addother <@Discord-Member> <OSRS-Name> | Add someone to the Activity Log",
                         usage="<@Discord-Member> <OSRS-Name>",
                         description="Add someone else to the Activity Log that is not you. "
                                     "Anyone wishing to add themselves should use ;join.")
     @commands.cooldown(1, 10, commands.BucketType.guild)
-    async def add(self, ctx, member: discord.Member, *, player):
+    async def addother(self, ctx, member: discord.Member, *, game_name):
         # If player is admin
         if await util.is_admin(ctx.author) or ctx.author.id == 134858274909585409:
             print('admin!')
-            # server_entry = await util.get_server_entry(util.players_path,ctx.guild.id)
-            name_rs = util.name_to_rs(player)
+            name_rs = util.name_to_rs(game_name)
             await ctx.send("*Checking name...*")
             player_dict = await util.check_player_validity(name_rs)
             # If player is valid to be added
             if player_dict != None:
-                await ctx.channel.purge(limit=1) # delete 'getting levels' messages
-                # If player is already in DB
-                if await util.player_exists_in_db(str(member.id)):
-                    try:
-                        # get old player data
-                        player_entry = await util.get_player_entry(str(member.id))
-                        # check against old player data
-                        if str(ctx.guild.id) not in player_entry['servers']:  # update player's server dict
-                            player_entry['servers'][str(ctx.guild.id)] = {'mention': True}
-                        # add previous data to newer updated player dict
-                        player_dict['servers'] = player_entry['servers']
-                        # update DB & send update
-                        await util.update_player_entry(str(member.id),player_dict)
-                        await ctx.send(f'**{member.name}** exists and has been updated in the Event Log List: *{name_rs}*')
-                        logger.info(f'Updated player in {ctx.guild.name}: {member.name} | {name_rs}')
-                    except Exception as e:
-                        logger.exception(f'Could not update player in guild id:{ctx.guild.id} for player id:{member.id} -- {e}')
-                        await ctx.send('**Error updating this player!**')
-                # Player is new to DB
-                else:
-                    try:
-                        # add current server to new player
-                        player_dict['servers'] = {str(ctx.guild.id) : {'mention' : True}}
-                        await util.update_player_entry(str(member.id),player_dict)
-                        await ctx.send(f'**{member.name}** has been added to the Event Log List: *{name_rs}*')
-                        logger.info(f'Added player in {ctx.guild.name}: {member.name} | {name_rs}')
-                    except Exception as e:
-                        logger.exception(f'Could not add new player in guild id:{ctx.guild.id} for player id:{member.id} -- {e}')
-                        await ctx.send('**Error adding this player!**')
+                try:
+                    await db.add_player(ctx.guild, member, name_rs, player_dict)
+                    await ctx.send(f'**{member.name}** has added an account to the Activity Log: *{name_rs}*\n'
+                                f'Toggle on/off this bot mentioning you every update with *;togglemention {game_name}*\n'
+                                f'If you change this OSRS name, use *;transfer {game_name}>>{{new-name}}* to retain your Activity Log records')
+                except Exception as e:
+                    return await ctx.send(e)
             # Player is not valid to be added
             else:
-                await ctx.channel.purge(limit=1) # delete 'getting levels' messages
                 await ctx.send("**This player's event log can't be accessed!** Here are some reasons why:\n"
                             " -This RuneScape character doesn't exist\n"
                             " -You may have to try again later")
@@ -135,24 +111,21 @@ class AdminCommands(commands.Cog, name="Admin Commands"):
 
 
     # ADMINS CAN REMOVE ANYONE FROM EVENT LOG
-    @commands.command(  brief=";remove <@Discord-Member> | Remove someone from the Activity Log",
-                        usage="<@Discord-Member>",
+    @commands.command(  brief=";removeother <@Discord-Member> | Remove someone from the Activity Log",
+                        usage="<@Discord-Member> <OSRS-Name>",
                         description="Remove someone else from the Activity Log that is not you. "
-                                    "Anyone wishing to remove themselves should use ;leave.")
+                                    "Anyone wishing to remove themselves should use ;remove.")
     @commands.cooldown(1, 5, commands.BucketType.guild)
-    async def remove(self, ctx, *, member: discord.Member):
+    async def removeother(self, ctx, member: discord.Member, *, game_name):
         if await util.is_admin(ctx.author) or ctx.author.id == 134858274909585409:
+            name_rs = util.name_to_rs(game_name)
             try:
-                if await util.del_player_entry(member.id) == True:
-                    await ctx.send(f'**{member.name}** has been removed from the Event Log List!')
-                    logger.info(f'Removed player in {ctx.guild.name}: {member.name} | {member.id}')
-                else:
-                    await ctx.send(f'**{member.name}** is not in the Event Log List!')
+                await db.remove_player(ctx.guild, member, name_rs, False)
+                await ctx.send(f'**{ctx.author.name}** has removed an account listed under **{member.name}** from the Activity Log: *{name_rs}*')
             except Exception as e:
-                logger.exception(f'Could not remove player in guild id:{ctx.guild.id} for player id:{ctx.author.id} -- {e}')
-                await ctx.send('**Error removing the member! Check the spelling!**')
+                return await ctx.send(e)
         else:
-            await ctx.send('**Only members with admin privilages can use this command!**')"""
+            await ctx.send('**Only members with admin privilages can use this command!**')
 
 
 def setup(bot):
