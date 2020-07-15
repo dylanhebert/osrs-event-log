@@ -167,12 +167,17 @@ async def rename_player(Server, Member, old_rs_name, new_rs_name):
 
 # ---------------------------- Toggle Player Entry --------------------------- #
 
-async def toggle_player_entry(Server, Member, entry):
+async def toggle_player_entry(Server, Member, rs_name, entry):
     """Toggles a player entry's value between True and False"""
     logger.info('------------------------------')
-    logger.info(f'Initialized UPDATE SERVER ENTRY - Name: {Server.name} | ID: {Server.id}')
+    logger.info(f"Initialized TOGGLE PLAYER ENTRY - Player: {rs_name} | Member: {Member.name} | ID: {Member.id} | Server: {Server.name} | ID: {Server.id}")
     db = await h.db_open(h.DB_DISCORD_PATH)
-    db[f'server:{Server.id}#{entry}'] = new_val
+    try: 
+        if not await h.player_in_server_member(db, Server, Member, rs_name):
+            raise ex.DataHandlerError(f'**{Member.name}** does not use OSRS account: *{rs_name}*')
+    except Exception as e: raise e
+    new_toggle = not db[f'player:{rs_name}#server:{Server.id}#{entry}']
+    db[f'player:{rs_name}#server:{Server.id}#{entry}'] = new_toggle
     await h.db_write(h.DB_DISCORD_PATH, db)
-    logger.info(f"UPDATED SERVER ENTRY - Name: {Server.name} | ID: {Server.id} | Entry: {entry} | Value: {new_val}")
-    return db[f'server:{Server.id}#{entry}']
+    logger.info(f"TOGGLED PLAYER ENTRY - Player: {rs_name} | Member: {Member.name} | ID: {Member.id} | Server: {Server.name} | ID: {Server.id}")
+    return new_toggle

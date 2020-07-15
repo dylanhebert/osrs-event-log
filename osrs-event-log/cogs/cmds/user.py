@@ -100,43 +100,35 @@ class UserCommands(commands.Cog, name="General Commands"):
         logger.info(f';players called in {ctx.guild.name} by {ctx.author.name}')
 
 
-    """# TOGGLES WHETHER TO MENTION THE PLAYER OR NOT FOR EVERY UPDATE
+# ------- TOGGLES WHETHER TO MENTION THE PLAYER OR NOT FOR EVERY UPDATE ------ #
+
     @commands.command(  brief="Toggles whether or not to @ you on Discord for every update",
+                        usage="<OSRS-Name>",
                         description="Toggles whether or not to @ you on Discord for every update. "
                                     "This is toggled on by default. "
                                     "You will still be notified for milestones from anyone in the server "
                                     "unless you mute notifications for the text channel or role this bot posts to.")
     @commands.cooldown(1, 5, commands.BucketType.guild)
-    async def togglemention(self, ctx):
-        if await util.player_exists_in_db(str(ctx.author.id)):
-            if await util.server_exists_in_player(str(ctx.author.id),ctx.guild.id):
-                try:
-                    player_entry = await util.get_player_entry(str(ctx.author.id))
-                    new_toggle = not player_entry['servers'][str(ctx.guild.id)]['mention']
-                    player_entry['servers'][str(ctx.guild.id)]['mention'] = new_toggle  # toggle
-                    await util.update_player_entry(str(ctx.author.id),player_entry)
-                    if new_toggle == False: 
-                        ment_not = ' NOT'
-                        ment_str = ctx.author.name
-                    else:
-                        ment_not = ''
-                        ment_str = ctx.author.mention
-                    await ctx.send(f'**{ment_str}** *WILL{ment_not}* be mentioned in their updates for this server')
-                    logger.info(f"Updated player in {ctx.guild.name}: {ctx.author.name} | mention = {new_toggle}")
-                except Exception as e:
-                    logger.exception(f'Could not update togglemention in guild id:{ctx.guild.id} for player id:{ctx.author.id} -- {e}')
-                    await ctx.send('**Error updating this player!**')
+    async def togglemention(self, ctx, *, game_name):
+        name_rs = util.name_to_rs(game_name)
+        try:
+            new_toggle = await db.toggle_player_entry(ctx.guild, ctx.author, name_rs, 'mention')
+            if new_toggle == False: 
+                ment_not = ' NOT'
+                ment_str = ctx.author.name
             else:
-                await ctx.send('**You are in the Event Log List but not for this server! Use the ;join <osrs-name> command on this server**')
-        else:
-            await ctx.send('**You are not in the Event Log List! Use the ;help command for more info**')
+                ment_not = ''
+                ment_str = ctx.author.mention
+            await ctx.send(f'**{ment_str}** *WILL{ment_not}* be mentioned in their updates for this server')
+        except Exception as e:
+            return await ctx.send(e)
 
 
     # SIT
     @commands.command(brief="ok", hidden=True)
     @commands.cooldown(1, 2, commands.BucketType.guild)
     async def sit(self, ctx):
-        await ctx.send('**ok**')"""
+        await ctx.send('**ok**')
 
 
 def setup(bot):
