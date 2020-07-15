@@ -22,7 +22,8 @@ class AdminCommands(commands.Cog, name="Admin Commands"):
         logger.debug('AdminCommands Cog Ready')
 
 
-    # CHOOSE POST CHANNEL
+# ---------------------------- CHOOSE POST CHANNEL --------------------------- #
+
     @commands.command(  brief="Changes the channel where this bot posts to",
                         description="Changes the channel where this bot posts to. "
                                     "This command must be posted in the text channel where you want my notifications to go. "
@@ -41,7 +42,8 @@ class AdminCommands(commands.Cog, name="Admin Commands"):
             await ctx.send('**Only members with admin privilages can use this command!**')
 
 
-    # CHOOSE MILESTONES ROLE TO NOTIFY
+# --------------------- CHOOSE MILESTONES ROLE TO NOTIFY --------------------- #
+
     @commands.command(  brief=";rsrole <@somerole> | A role to notify for milestone messages",
                         usage="<@somerole>",
                         description="A role to notify for milestone messages. If no role is selected, I will notify @here. "
@@ -60,7 +62,8 @@ class AdminCommands(commands.Cog, name="Admin Commands"):
             await ctx.send('**Only members with admin privilages can use this command!**')
 
     
-    # REMOVE STORED MILESTONES ROLE AND DEFAULT TO @here
+# ------------ REMOVE STORED MILESTONES ROLE AND DEFAULT TO @here ------------ #
+
     @commands.command(  brief="Defaults the milestone notify role to @here if not already",
                         description="Defaults the milestone notify role to @here if not already. "
                                     "Milestones include 99s and thresholds for XP, boss kills, and clue scrolls.")
@@ -78,7 +81,8 @@ class AdminCommands(commands.Cog, name="Admin Commands"):
             await ctx.send('**Only members with admin privilages can use this command!**')
 
 
-    # ADMINS CAN ADD ANYONE TO LOOP
+# ----------------------- ADMINS CAN ADD ANYONE TO LOOP ---------------------- #
+
     @commands.command(  brief=";addother <@Discord-Member> <OSRS-Name> | Add someone to the Activity Log",
                         usage="<@Discord-Member> <OSRS-Name>",
                         description="Add someone else to the Activity Log that is not you. "
@@ -110,7 +114,8 @@ class AdminCommands(commands.Cog, name="Admin Commands"):
             await ctx.send('**Only members with admin privilages can use this command!**')
 
 
-    # ADMINS CAN REMOVE ANYONE FROM EVENT LOG
+# ---------------- ADMINS CAN REMOVE ANYONE FROM ACTIVITY LOG ---------------- #
+
     @commands.command(  brief=";removeother <@Discord-Member> | Remove someone from the Activity Log",
                         usage="<@Discord-Member> <OSRS-Name>",
                         description="Remove someone else from the Activity Log that is not you. "

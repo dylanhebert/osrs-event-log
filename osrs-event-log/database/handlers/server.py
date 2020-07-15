@@ -70,3 +70,20 @@ async def get_server_players(Server):
         except: members_players[str(db[f'player:{player}#server:{Server.id}#member'])] = [player]
     logger.info(f"GET SERVER PLAYERS - Name: {Server.name} | ID: {Server.id}")
     return members_players
+
+
+# ---------------------------- Get Server Settings --------------------------- #
+
+async def get_all_servers(Member):
+    """Gets all settings in all servers"""
+    logger.info('------------------------------')
+    logger.info(f'Initialized GET ALL SERVERS - Name: {Member.name} | ID: {Member.id}')
+    db = await h.db_open(h.DB_DISCORD_PATH)
+    # Loop through db to get servers
+    all_servers = {}
+    for server in db['active_servers']:
+        all_servers[str(server)] = {}
+        all_servers[str(server)]['channel'] = db[f'server:{server}#channel']
+        all_servers[str(server)]['role'] = db[f'server:{server}#role']
+    logger.info(f"GET ALL SERVERS - Name: {Member.name} | ID: {Member.id}")
+    return all_servers

@@ -22,7 +22,8 @@ class SuperCommands(commands.Cog, command_attrs=dict(hidden=True)):
         logger.debug('SuperCommands Cog Ready')
 
 
-    # CHANGE MAX PLAYER COUNT PER MEMBER
+# -------------------- CHANGE MAX PLAYER COUNT PER MEMBER -------------------- #
+
     @commands.command(  brief="Changes the global max player count per Discord member",
                         usage="<integer>",
                         description="Changes the global max player count per Discord member")
@@ -37,7 +38,7 @@ class SuperCommands(commands.Cog, command_attrs=dict(hidden=True)):
                 ctx.send("Could not update global player limit!")
                 
 
-    """# SEND AN ANNOUNCEMENT ABOUT THE BOT TO EVERY CHANNEL WITH A MENTION
+    # SEND AN ANNOUNCEMENT ABOUT THE BOT TO EVERY CHANNEL WITH A MENTION
     @commands.command(  brief="Sends an announcement to every server & channel connected to this bot",
                         usage="<announcement>",
                         description="Sends an announcement in bold text to every server & channel connected to this bot. "
@@ -45,24 +46,24 @@ class SuperCommands(commands.Cog, command_attrs=dict(hidden=True)):
     @commands.cooldown(1, 15, commands.BucketType.guild)
     async def sendannouncement(self, ctx, *, announcement):
         if ctx.author.id == 134858274909585409:
-            all_servers = await util.open_json(util.servers_path)
+            all_servers = await db.get_all_servers(ctx.author)
             for k,v in all_servers.items():
                 try:
                     server = self.bot.get_guild(int(k))
                     # if not channel in this server then skip server
-                    if v["chan_id"]:
-                        rs_chan = server.get_channel(v["chan_id"])
+                    if v["channel"]:
+                        rs_chan = server.get_channel(v["channel"])
                         # get mention role, if not then use @here
-                        if v["rs_role_id"]:
-                            rs_role = server.get_role(v["rs_role_id"])
-                            rs_role_men = rs_role.mention
+                        if v["role"]:
+                            rs_role = server.get_role(v["role"])
+                            rs_role_men = rs_role.mention # CHANGE
                         else:
                             rs_role_men = "@here"
                         # send message!
                         await rs_chan.send(f'**{announcement}** {rs_role_men}')
-                        logger.info(f'Sent announcement in guild id:{k} | name: {v["serv_name"]} | channel: {rs_chan.name} | rs role: {rs_role_men}')
+                        logger.info(f'Sent announcement in guild id:{k} | name: {server.name} | channel: {rs_chan.name} | rs role: {rs_role_men}')
                     else:
-                        logger.exception(f'Could not send announcement in guild id:{k} -- No channel specified')
+                        logger.info(f'Could not send announcement in guild id:{k} -- No channel specified')
                 except Exception as e:
                     logger.exception(f'Could not send announcement in guild id:{k} -- {e}')
             logger.info(f"Done sending announcement: {announcement}")
@@ -76,21 +77,21 @@ class SuperCommands(commands.Cog, command_attrs=dict(hidden=True)):
     @commands.cooldown(1, 15, commands.BucketType.guild)
     async def sendthought(self, ctx, *, thought):
         if ctx.author.id == 134858274909585409:
-            all_servers = await util.open_json(util.servers_path)
+            all_servers = await db.get_all_servers(ctx.author)
             for k,v in all_servers.items():
                 try:
                     server = self.bot.get_guild(int(k))
                     # if not channel in this server then skip server
-                    if v["chan_id"]:
-                        rs_chan = server.get_channel(v["chan_id"])
+                    if v["channel"]:
+                        rs_chan = server.get_channel(v["channel"])
                         # send message!
                         await rs_chan.send(f'{thought}')
-                        logger.info(f'Sent thought in guild id:{k} | name: {v["serv_name"]} | channel: {rs_chan.name}')
+                        logger.info(f'Sent thought in guild id:{k} | name: {server.name} | channel: {rs_chan.name}')
                     else:
-                        logger.exception(f'Could not send thought in guild id:{k} -- No channel specified')
+                        logger.info(f'Could not send thought in guild id:{k} -- No channel specified')
                 except Exception as e:
                     logger.exception(f'Could not send thought in guild id:{k} -- {e}')
-            logger.info(f"Done sending thought: {thought}")"""
+            logger.info(f"Done sending thought: {thought}")
             
             
 
