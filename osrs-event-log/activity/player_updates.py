@@ -9,15 +9,19 @@ import common.util as util
 import math
 
 
-# -------------- VARIABLES ------------- #
+# ---------------------------------------------------------------------------- #
+#                                   VARIABLES                                  #
+# ---------------------------------------------------------------------------- #
+
 non_monster_bosses =  [   "Barrows Chests", "Chambers of Xeric", "Theatre of Blood",
                         "The Gauntlet", "The Corrupted Gauntlet", "Wintertodt",
                         "Chambers of Xeric: Challenge Mode"
                     ]
 
-# -------------------------------------- #
-# ---------- HELPER METHODS ------------ #
-# -------------------------------------- #
+# ---------------------------------------------------------------------------- #
+#                                HELPER METHODS                                #
+# ---------------------------------------------------------------------------- #
+
 def clue_sort(title):
     if '(all)' in title:
         return 'Total'
@@ -35,9 +39,10 @@ def clue_sort(title):
         return 'Master'
 
 
-# -------------------------------------------#
-# ---------- PLAYER UPDATE CLASS ------------#
-# -------------------------------------------#
+# ---------------------------------------------------------------------------- #
+#                              PLAYER UPDATE CLASS                             #
+# ---------------------------------------------------------------------------- #
+
 class PlayerUpdate:
     def __init__(self, old_data, messages):
         self.old_data = old_data
@@ -53,9 +58,8 @@ class PlayerUpdate:
         self.custom_messages = messages
 
 
-    # ---------- CLASS METHODS ------------ #
+# ------------------------------ Post Update(s) ------------------------------ #
 
-    # --- POST UPDATE(S) --- #
     async def post_update(self, bot, server, channel, rs_role, memID):
         # gather all server-specific variables we need
         logger.debug(f"rs_name: {self.rs_name}, skill_updates: {len(self.skills)}, minigame_updates: {len(self.minigames)}, milestones: {len(self.milestones)}...")
@@ -108,7 +112,7 @@ class PlayerUpdate:
         return
 
 
-    # --- POST UPDATE(S) --- #
+    # Mention Member in Server?
     def get_mention_member(self, member, server):
         if self.old_data['servers'][str(server.id)]['mention'] == True:
             self.mention_member = member.mention
@@ -131,9 +135,12 @@ class PlayerUpdate:
             return False
 
 
-    # ---------- UPDATE CREATION METHODS ------------ #
+# ---------------------------------------------------------------------------- #
+#                            UPDATE CREATION METHODS                           #
+# ---------------------------------------------------------------------------- #
 
-    # --- SKILLS --- #
+# ---------------------------------- SKILLS ---------------------------------- #
+
     def updateSkill(self, new_data, title, new_entry):
         logger.debug("in PlayerUpdate-updateSkill...")
 
@@ -168,7 +175,8 @@ class PlayerUpdate:
             logger.debug(f"appended NEW update for {title} to skills list...")
 
 
-    # --- MINIGAMES --- #
+# --------------------------------- MINIGAMES -------------------------------- #
+
     def update_minigame(self, new_data, title, new_entry):
         logger.debug("in PlayerUpdate-update_minigame...")
 
@@ -253,9 +261,12 @@ class PlayerUpdate:
                     logger.debug(f"appended update for {title} to minigames list...")
             
 
-    # ---------- MESSAGE & MILESTONE CHECKING METHODS ------------ #
+# ---------------------------------------------------------------------------- #
+#                     MESSAGE & MILESTONE CHECKING METHODS                     #
+# ---------------------------------------------------------------------------- #
 
-    # --- OVERALL --- #
+# ---------------------------------- OVERALL --------------------------------- #
+
     def make_overall_update(self, old_data, new_data):
         logger.debug("assigning Overall...")
         lvl_new = util.format_int(new_data['level'])
@@ -280,7 +291,8 @@ class PlayerUpdate:
         else: self.overall_update = f"```Total level: {new_data['level']} | Total Overall XP: {new_data['xp']}```"
 
 
-    # --- SKILL --- #
+# ----------------------------------- SKILL ---------------------------------- #
+
     def make_skill_update(self, old_data, new_data, title, xp_diff):
         logger.debug(f"assigning {title}...")
         new_lvl = new_data['level']
@@ -304,7 +316,8 @@ class PlayerUpdate:
             logger.debug(f"appended update for {title} to skills list...")
 
     
-    # --- XP UPDATE --- #
+# --------------------------------- XP UPDATE -------------------------------- #
+
     def check_xp_update(self, old_data, new_data, title, xp_new, xp_old, xp_diff):
         logger.debug(f"checking for xp milestones...")
         # check for overall or skill
@@ -331,7 +344,8 @@ class PlayerUpdate:
         logger.debug(f"done checking XP...")
 
 
-    # --- CLUE UPDATE --- #
+# -------------------------------- CLUE UPDATE ------------------------------- #
+
     def make_clue_update(self, old_data, new_data, title, count_new, count_old, count_diff, clue_lvl):
         # check for clue milestones
         found_milestone = False
@@ -375,7 +389,8 @@ class PlayerUpdate:
         logger.debug(f"done checking Clues...")
 
 
-    # --- BOSS UPDATE --- #
+# -------------------------------- BOSS UPDATE ------------------------------- #
+
     def make_boss_update(self, old_data, new_data, title, kill_new, kill_old, kill_diff, action_1, action_2):
         logger.debug(f"assigning Boss: {title}...")
         # check for boss milestones
