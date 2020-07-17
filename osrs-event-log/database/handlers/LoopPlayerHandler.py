@@ -16,6 +16,8 @@ class LoopPlayerHandler:
         self.server_info_all = await self.get_server_info_all()
         
     async def remove_cache(self):
+        # Write new player info to Db before clear
+        await h.db_write(h.DB_RUNESCAPE_PATH, self.data_runescape)
         self.data_discord = None
         self.data_runescape = None
         self.server_info_all = None

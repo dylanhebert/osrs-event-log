@@ -108,10 +108,10 @@ class UserCommands(commands.Cog, name="General Commands"):
 
 # ------------------- LIST PLAYERS IN LOOP FOR THIS SERVER ------------------- #
 
-    @commands.command(  brief="See a list of players currently in the Activity Log",
-                        description="See a list of players currently in the Activity Log within this server.")
+    @commands.command(  brief="See a list of all players currently in the Activity Log",
+                        description="See a list of all players currently in the Activity Log within this server.")
     @commands.cooldown(1, 10, commands.BucketType.guild)
-    async def players(self, ctx):
+    async def allaccounts(self, ctx):
         players_list = []
         members_players = await db.get_server_players(ctx.guild)
         for k,v in members_players.items():
@@ -130,7 +130,7 @@ class UserCommands(commands.Cog, name="General Commands"):
 
 # ------- TOGGLES WHETHER TO MENTION THE PLAYER OR NOT FOR EVERY UPDATE ------ #
 
-    @commands.command(  brief="Toggles whether or not to @ you on Discord for every update",
+    @commands.command(  brief=";togglemention {OSRS-Name} | Toggles whether or not to @ you on Discord for every update",
                         usage="<OSRS-Name>",
                         description="Toggles whether or not to @ you on Discord for every update. "
                                     "This is toggled on by default. "
