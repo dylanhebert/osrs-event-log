@@ -46,5 +46,5 @@ class LoopPlayerHandler:
                     "mention": self.data_discord[f'player:{rs_name}#server:{server}#mention']
                 })
         logger.info(f"Finished GET PLAYER LOOPER INFO - Player: {rs_name}")
-        logger.debug(player_servers_all)
+        # logger.debug(player_servers_all)
         return player_servers_all
