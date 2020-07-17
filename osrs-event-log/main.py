@@ -54,7 +54,8 @@ bot = commands.Bot(
 initial_extensions =    [
                         'cogs.cmds.user',
                         'cogs.cmds.admin',
-                        'cogs.cmds.super'
+                        'cogs.cmds.super',
+                        'cogs.looper'
                         ]
 
 # load extensions

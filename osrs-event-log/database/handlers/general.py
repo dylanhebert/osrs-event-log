@@ -8,10 +8,20 @@ from common import exceptions as ex
 from . import helpers as h
 
 
-# ------------------------------- Get Bot Token ------------------------------ #
+# ----------------------------- SIMPLE GET THINGS ---------------------------- #
 
 def get_bot_token():
     return h.BOT_TOKEN
+
+async def get_db_discord():
+    return await h.db_open(h.DB_DISCORD_PATH)
+
+async def get_db_runescape():
+    return await h.db_open(h.DB_RUNESCAPE_PATH)
+
+def get_custom_messages():
+    return h.db_open_non_async(h.MESSAGES_PATH)
+
 
 # ------------------------------- Verify Files ------------------------------- #
 

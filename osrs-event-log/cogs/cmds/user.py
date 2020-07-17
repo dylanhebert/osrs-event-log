@@ -64,6 +64,34 @@ class UserCommands(commands.Cog, name="General Commands"):
         except Exception as e:
             return await ctx.send(e)
         
+        
+# --------------- PLAYER TRANSFERS PLAYER INFO TO ANOTHER NAME --------------- #
+
+    @commands.command(  brief=";transfer {OSRS-Name}>>{new-name} | Transfer/rename an account's info",
+                        usage="{old-name}>>{new-name}",
+                        description="Mainly used if you rename one of your accounts. Tranfers all info for an old account to a new one.")
+    @commands.cooldown(1, 5, commands.BucketType.guild)
+    async def transfer(self, ctx, *, game_names):
+        split_names = game_names.split(">>")
+        old_rs_name = util.name_to_rs(split_names[0])
+        new_rs_name = util.name_to_rs(split_names[1])
+        await ctx.send("*Checking both names...*")
+        player_dict = await util.check_player_validity(new_rs_name)
+        # If player is valid to be added
+        if player_dict != None:
+            try:
+                await db.rename_player(ctx.guild, ctx.author, old_rs_name, new_rs_name, player_dict)
+                await ctx.send(f'**{ctx.author.name}** has transferred an account in the Activity Log: *{old_rs_name}* >> *{new_rs_name}*\n'
+                            f'All of the old preferences and records have been moved over!\n')
+            except Exception as e:
+                return await ctx.send(e)
+        # Player is not valid to be added
+        else:
+            await ctx.send("**This player's RS name can't be accessed!** Here are some reasons why:\n"
+                            " -This Runescape character doesn't exist\n"
+                            " -They don't have any high enough levels on the Hiscores\n"
+                            " -Hiscores are not responding. Try again later")
+        
     
 # ------------------- MEMBER LISTS ACCOUNTS FOR THEMSELVES ------------------- #
 

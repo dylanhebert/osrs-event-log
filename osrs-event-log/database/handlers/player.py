@@ -109,7 +109,7 @@ async def remove_player(Server, Member, rs_name, force_rm):
 
 # ------------------------------- Rename Player ------------------------------ #
 
-async def rename_player(Server, Member, old_rs_name, new_rs_name):
+async def rename_player(Server, Member, old_rs_name, new_rs_name, stats_dict):
     """Rename a player in a specific server\n
     Move all info from old player to new player\n
     Returns False if player could not be renamed"""
@@ -124,7 +124,7 @@ async def rename_player(Server, Member, old_rs_name, new_rs_name):
     except Exception as e: raise e
 
     # Check if this server is in this player, try removing server from player
-    try: await h.player_remove_server(db_dis, Server, rs_name)
+    try: await h.player_remove_server(db_dis, Server, old_rs_name)
     except Exception as e: raise e
 
     # Get list of existing players for this member in this server
@@ -159,7 +159,7 @@ async def rename_player(Server, Member, old_rs_name, new_rs_name):
         await h.db_write(h.DB_RUNESCAPE_PATH, db_rs)
         logger.info(f"Completely removed player from all DBs | RS name : {old_rs_name}")
     await h.db_write(h.DB_DISCORD_PATH, db_dis)
-    db_rs[new_rs_name] = {'skills': {}, 'minigames': {}}  # <-- this should already be built
+    db_rs[new_rs_name] = stats_dict
     await h.db_write(h.DB_RUNESCAPE_PATH, db_rs)
     logger.info(f"RENAMED PLAYER: Old: {old_rs_name} | New: {new_rs_name} | Updated by: {Member.name} | ID: {Member.id} | Server: {Server.name} | ID: {Server.id}")
     return True

@@ -7,11 +7,14 @@ import asyncio
 from common.logger import logger
 import common.util as util
 import math
+import database.handlers as db
 
 
 # ---------------------------------------------------------------------------- #
 #                                   VARIABLES                                  #
 # ---------------------------------------------------------------------------- #
+
+custom_messages = db.get_custom_messages()
 
 non_monster_bosses =  [   "Barrows Chests", "Chambers of Xeric", "Theatre of Blood",
                         "The Gauntlet", "The Corrupted Gauntlet", "Wintertodt",
@@ -44,9 +47,9 @@ def clue_sort(title):
 # ---------------------------------------------------------------------------- #
 
 class PlayerUpdate:
-    def __init__(self, old_data, messages):
+    def __init__(self, rs_name, old_data):
         self.old_data = old_data
-        self.rs_name = util.name_to_discord(old_data['rs_name'])
+        self.rs_name = util.name_to_discord(rs_name)
         self.mention_member = None
         self.mention_role = None
         self.overall_update = None
@@ -55,16 +58,15 @@ class PlayerUpdate:
         self.milestones = []
         self.clue_all_total = None
         self.duplicate_server_post = False  # fix for duplicate 'Overall' entries & logging when a player is in multiple servers
-        self.custom_messages = messages
+        self.custom_messages = custom_messages
 
 
 # ------------------------------ Post Update(s) ------------------------------ #
 
-    async def post_update(self, bot, server, channel, rs_role, memID):
+    async def post_update(self, bot, server, channel, rs_role, player_server):
         # gather all server-specific variables we need
         logger.debug(f"rs_name: {self.rs_name}, skill_updates: {len(self.skills)}, minigame_updates: {len(self.minigames)}, milestones: {len(self.milestones)}...")
-        member = server.get_member(memID)
-        self.get_mention_member(member,server)  # build our mention string
+        self.get_mention_member(server, player_server)  # build our mention string
         self.get_mention_role(rs_role)  # build our mention string
 
         # MILESTONE UPDATES
@@ -113,8 +115,9 @@ class PlayerUpdate:
 
 
     # Mention Member in Server?
-    def get_mention_member(self, member, server):
-        if self.old_data['servers'][str(server.id)]['mention'] == True:
+    def get_mention_member(self, server, player_server):
+        member = server.get_member(player_server['member'])
+        if player_server['mention'] == True:
             self.mention_member = member.mention
         else:
             self.mention_member = member.name
