@@ -4,69 +4,60 @@
 # - See README.md for setup instructions
 #
 
+# IDEAS:
+# - recentmilestones: shows a rundown of the last 5-10 milestones
+# - add pause feature per server?
+
+
 import json
 import discord
 from discord.ext import commands
+import asyncio
 import time
 import datetime
 import os
 import sys, traceback
 from common.logger import logger
-import common.utils as fs
+import data.handlers as db
 
-# Check if we have players/servers .json files, create them if not
-def checkDataJson(file_name):
-    if os.path.exists(file_name):
-        logger.info(f'Found {file_name}...')
-        pass
-    else:
-        data = {}
-        with open(file_name, 'w') as outfile:  
-            json.dump(data, outfile)
-        logger.info(f'Created new {file_name}...')
 # Our data .jsons
-checkDataJson('data/servers.json')
-checkDataJson('data/players.json')
-
-# Get bot Token
-with open('mycreds.json','r') as f:
-    botInfo = json.load(f)
-botToken = botInfo['BOT_TOKEN']
+db.verify_files('db_discord.json')
+db.verify_files('db_runescape.json')
 
 # Set prefix
 def get_prefix(bot, message):
-    prefixes = [';']
+    prefixes = ['=']
     if not message.guild:
-        return ';'
+        return '='
     return commands.when_mentioned_or(*prefixes)(bot, message)
 
 # Set help command
-customHelp = commands.DefaultHelpCommand(
+custom_help = commands.DefaultHelpCommand(
     width=140,
     sort_commands=False,
     no_category="Other Commands"
     )
 
 # Set bot status
-gamePlaying = discord.Streaming(
-    name=';join <osrs-name>',
+game_playing = discord.Streaming(
+    name=';add <osrs-name>',
     url='https://www.youtube.com/watch?v=FADpdNyXzek')
 
-# create bot object
+# Create bot object
 bot = commands.Bot(
     command_prefix = get_prefix,
-    help_command = customHelp,
+    help_command = custom_help,
     description = 'OSRS Activity Log by Green Donut')
 
-# define extensions
+# Define extensions
 initial_extensions =    [
-                        'cogs.looper',
                         'cogs.cmds.user',
                         'cogs.cmds.admin',
-                        'cogs.cmds.super'
+                        'cogs.cmds.super',
+                        'cogs.looper'
                         ]
 
-# load extensions
+# Load extensions
 if __name__ == '__main__':
     for extension in initial_extensions:
         try:
@@ -75,19 +66,19 @@ if __name__ == '__main__':
         except Exception as e:
             logger.exception(f'Failed to load extension {extension}: {e}')
 
-# bot main start
+# Bot main start
 @bot.event
 async def on_ready():
     logger.info(f'\n** BOT STARTED: {bot.user.name} - {bot.user.id} **')
-    await bot.change_presence(activity = gamePlaying)
+    await bot.change_presence(activity = game_playing)
 
-# bot disconnection, log it!
+# Bot disconnection, log it!
 @bot.event
 async def on_disconnect():
     logger.warning(f'\n** BOT DISCONNECTED: {bot.user.name} - {bot.user.id} **')
     
 
-# error and cooldown handling
+# Error and cooldown handling
 '''@bot.event
 async def on_command_error(ctx, error):
     channel = ctx.message.channel
@@ -98,27 +89,26 @@ async def on_command_error(ctx, error):
 	    #await ctx.send(f"you can use this command in {int(error.retry_after)} seconds")
         pass'''
 
-# bot joining server
+# Bot joining server
 @bot.event
 async def on_guild_join(guild):
-    sysChan = False
+    sys_chan = False
     if guild.system_channel != None:
-        sysChan = True
+        sys_chan = True
         await guild.system_channel.send(f'Thanks for having me, {guild.name}\n'
                                 'Set a channel for me to post in with **;posthere**\n'
                                 'Set a role for me to mention for big announcements with **;rsrole**\n'
-                                'Add your OSRS name to the Event Log List with **;join <your OSRS name>**\n'
-                                'If you change your OSRS name, use the command again with your new name')  
+                                'Add your OSRS name to the Activity Log with **;add <your OSRS name>**')  
     logger.info('\n---------------------------------------\n'
             f'Joined {guild.name} with {guild.member_count} users!\n'
-            f' System channel = {sysChan}\n'
+            f' System channel = {sys_chan}\n'
             '---------------------------------------')
-    await fs.addServerDB(guild.id,guild.name)
+    await db.add_server(guild)
 
-# bot leaving server
+# Bot leaving server
 @bot.event
 async def on_guild_remove(guild):
-    await fs.delServerDB(guild.id,guild.name)
+    await db.remove_server(guild)
 
 
-bot.run(botToken, bot=True)
+bot.run(db.get_bot_token(), bot=True)
