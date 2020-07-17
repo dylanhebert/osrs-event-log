@@ -10,7 +10,7 @@ import asyncio
 import re
 from common.logger import logger
 import common.util as util
-import database.handlers as db
+import data.handlers as db
 
 
 class UserCommands(commands.Cog, name="General Commands"):
@@ -102,8 +102,9 @@ class UserCommands(commands.Cog, name="General Commands"):
         try:
             player_list = await db.get_member_entry(ctx.guild, ctx.author, 'players')
             await ctx.send(f"**{ctx.author.name}** - *{'*  **|**  *'.join(player_list)}*")
-        except Exception:
-            return await ctx.send(f'**{ctx.author.name}** does not have any RS accounts on this server!')
+        except Exception as e:
+            logger.exception(f'Error fetching all accounts: {e}')
+            return await ctx.send(f'Error fetching all accounts!')
 
 
 # ------------------- LIST PLAYERS IN LOOP FOR THIS SERVER ------------------- #

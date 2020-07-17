@@ -13,9 +13,9 @@ from concurrent.futures.thread import ThreadPoolExecutor
 from bs4 import BeautifulSoup
 from common.logger import logger
 import common.util as util
-import database.handlers as db
-from database.handlers.LoopPlayerHandler import LoopPlayerHandler
-from activity.player_updates import PlayerUpdate
+import data.handlers as db
+from data.handlers.LoopPlayerHandler import LoopPlayerHandler
+from activity.PlayerUpdate import PlayerUpdate
 
 
 # --------------------------------- VARIABLES -------------------------------- #
@@ -204,37 +204,36 @@ class MainLooper(commands.Cog):
         self.bot = bot
 
         # create the background task and run it in the background
-        # self.bot.bg_task = self.bot.loop.create_task(self.looperTask())
+        self.bot.bg_task = self.bot.loop.create_task(self.looperTask())
 
     async def on_ready(self):
         logger.debug('MainLooper Cog Ready')
 
-    @commands.command()
-    @commands.cooldown(1, 5, commands.BucketType.guild)
-    async def testscores(self, ctx):
-        if ctx.author.id == 134858274909585409:
-            logger.debug('running testscores')
+    async def looperTask(self):
+        await self.bot.wait_until_ready()
+        await asyncio.sleep(1.5)
+        # --- START LOOPER ---
+        logger.info('OSRS Event Log loop started!')
+        while not self.bot.is_closed():
+            logger.info('Starting player loop...')
             try:
                 await run_osrs_loop(self.bot)
-            except Exception as e:
-                logger.exception(e)
+            except Exception as e:  # catch any error in looper here
+                logger.exception(f'Unknown error running main loop: {e}')
+            logger.debug(f'Now sleeping for {TIME_LOOP} minutes...')
+            await asyncio.sleep(await util.time_mins( TIME_LOOP ))
 
-    # async def looperTask(self):
-    #     await self.bot.wait_until_ready()
-    #     await asyncio.sleep(1.5)
-    #     # --- START LOOPER ---
-    #     logger.info('OSRS Event Log loop started!')
-    #     while not self.bot.is_closed():
-    #         logger.info('Starting player loop...')
+
+    # @commands.command()
+    # @commands.cooldown(1, 5, commands.BucketType.guild)
+    # async def testscores(self, ctx):
+    #     if ctx.author.id == 134858274909585409:
+    #         logger.debug('running testscores')
     #         try:
     #             await run_osrs_loop(self.bot)
-    #         except Exception as e:  # catch any error in looper here
-    #             logger.exception(f'Unknown error running main loop: {e}')
-    #         logger.debug(f'Now sleeping for {TIME_LOOP} minutes...')
-    #         await asyncio.sleep(await util.time_mins( TIME_LOOP ))
-
-            
-            
+    #         except Exception as e:
+    #             logger.exception(e)
+           
 
 def setup(bot):
     bot.add_cog(MainLooper(bot))

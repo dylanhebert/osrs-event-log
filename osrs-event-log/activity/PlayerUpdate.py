@@ -1,4 +1,4 @@
-# OSRS Activity Log Bot: player_updates.py
+# OSRS Activity Log Bot: PlayerUpdate.py
 # - PlayerUpdate class that builds messages to be sent into a Discord channel
 #
 
@@ -7,7 +7,7 @@ import asyncio
 from common.logger import logger
 import common.util as util
 import math
-import database.handlers as db
+import data.handlers as db
 
 
 # ---------------------------------------------------------------------------- #

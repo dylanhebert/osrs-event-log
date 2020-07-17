@@ -10,7 +10,7 @@ import asyncio
 import re
 from common.logger import logger
 import common.util as util
-import database.handlers as db
+import data.handlers as db
 
 
 class SuperCommands(commands.Cog, command_attrs=dict(hidden=True)):

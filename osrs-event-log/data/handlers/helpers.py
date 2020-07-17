@@ -23,7 +23,7 @@ BOT_INFO_ALL = db_open_non_async(DIR_PATH + "/bot_config.json")
 BOT_TOKEN = BOT_INFO_ALL['BOT_TOKEN']
 MAX_PLAYERS_PER_MEMBER = BOT_INFO_ALL['MAX_PLAYERS_PER_MEMBER']
 
-DATA_PATH = "database/"
+DATA_PATH = "data/"
 FULL_DATA_PATH = DIR_PATH + "/" + DATA_PATH
 DB_DISCORD_PATH = FULL_DATA_PATH + "db_discord.json"
 DB_RUNESCAPE_PATH = FULL_DATA_PATH + "db_runescape.json"

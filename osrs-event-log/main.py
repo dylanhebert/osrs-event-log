@@ -7,7 +7,6 @@
 # IDEAS:
 # - recentmilestones: shows a rundown of the last 5-10 milestones
 # - add pause feature per server?
-# - put max alt account number in bot_config file
 
 
 import json
@@ -19,7 +18,7 @@ import datetime
 import os
 import sys, traceback
 from common.logger import logger
-import database.handlers as db
+import data.handlers as db
 
 # Our data .jsons
 db.verify_files('db_discord.json')
@@ -44,13 +43,13 @@ game_playing = discord.Streaming(
     name=';add <osrs-name>',
     url='https://www.youtube.com/watch?v=FADpdNyXzek')
 
-# create bot object
+# Create bot object
 bot = commands.Bot(
     command_prefix = get_prefix,
     help_command = custom_help,
     description = 'OSRS Activity Log by Green Donut')
 
-# define extensions
+# Define extensions
 initial_extensions =    [
                         'cogs.cmds.user',
                         'cogs.cmds.admin',
@@ -58,7 +57,7 @@ initial_extensions =    [
                         'cogs.looper'
                         ]
 
-# load extensions
+# Load extensions
 if __name__ == '__main__':
     for extension in initial_extensions:
         try:
@@ -67,19 +66,19 @@ if __name__ == '__main__':
         except Exception as e:
             logger.exception(f'Failed to load extension {extension}: {e}')
 
-# bot main start
+# Bot main start
 @bot.event
 async def on_ready():
     logger.info(f'\n** BOT STARTED: {bot.user.name} - {bot.user.id} **')
     await bot.change_presence(activity = game_playing)
 
-# bot disconnection, log it!
+# Bot disconnection, log it!
 @bot.event
 async def on_disconnect():
     logger.warning(f'\n** BOT DISCONNECTED: {bot.user.name} - {bot.user.id} **')
     
 
-# error and cooldown handling
+# Error and cooldown handling
 '''@bot.event
 async def on_command_error(ctx, error):
     channel = ctx.message.channel
@@ -90,7 +89,7 @@ async def on_command_error(ctx, error):
 	    #await ctx.send(f"you can use this command in {int(error.retry_after)} seconds")
         pass'''
 
-# bot joining server
+# Bot joining server
 @bot.event
 async def on_guild_join(guild):
     sys_chan = False
@@ -106,7 +105,7 @@ async def on_guild_join(guild):
             '---------------------------------------')
     await db.add_server(guild)
 
-# bot leaving server
+# Bot leaving server
 @bot.event
 async def on_guild_remove(guild):
     await db.remove_server(guild)
