@@ -148,7 +148,7 @@ class UserCommands(commands.Cog, name="General Commands"):
             else:
                 ment_not = ''
                 ment_str = ctx.author.mention
-            await ctx.send(f'**{ment_str}** *WILL{ment_not}* be mentioned in their updates for this server')
+            await ctx.send(f'**{ment_str}** *WILL{ment_not}* be mentioned for *{name_rs}* updates in this server')
         except Exception as e:
             return await ctx.send(e)
 
