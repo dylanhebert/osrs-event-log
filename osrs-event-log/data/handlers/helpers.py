@@ -28,6 +28,7 @@ FULL_DATA_PATH = DIR_PATH + "/" + DATA_PATH
 DB_DISCORD_PATH = FULL_DATA_PATH + "db_discord.json"
 DB_RUNESCAPE_PATH = FULL_DATA_PATH + "db_runescape.json"
 MESSAGES_PATH = FULL_DATA_PATH + "custom_messages.json"
+SOTW_PATH = FULL_DATA_PATH + "sotw/"
 
 
 

@@ -1,0 +1,12 @@
+{
+    "pick_day": 2,
+    "pick_hour": 19,
+    "current_skill": "Attack",
+    "recent_skills": ["Defence", "Herblore", "Hunter"],
+    "next_deadline": "07-15",
+    "all_skills": ["Attack", "Defence", "Strength", "Hitpoints", 
+        "Ranged", "Prayer", "Magic", "Cooking", "Woodcutting", 
+        "Fletching", "Fishing", "Firemaking", "Crafting", "Smithing", 
+        "Mining", "Herblore", "Agility", "Thieving", "Slayer", "Farming", 
+        "Runecraft", "Hunter", "Construction"]
+}
