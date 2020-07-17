@@ -41,8 +41,8 @@ async def db_open(path):
 async def db_write(path, db):
     """Writes a python dict/list as a json file"""
     with open(path,"w") as f:
-        # json.dump(db, f, indent=4, sort_keys=False)
-        json.dump(db, f)
+        json.dump(db, f, indent=4, sort_keys=False)
+        # json.dump(db, f)
         
 
 

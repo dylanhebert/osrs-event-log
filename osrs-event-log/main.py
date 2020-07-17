@@ -26,9 +26,9 @@ db.verify_files('db_runescape.json')
 
 # Set prefix
 def get_prefix(bot, message):
-    prefixes = ['=']
+    prefixes = [';']
     if not message.guild:
-        return '='
+        return ';'
     return commands.when_mentioned_or(*prefixes)(bot, message)
 
 # Set help command
