@@ -101,7 +101,7 @@ async def check_player_validity(name):
 #------------------------------
 
 # REQUEST WEB PAGE (AIOHTTP)
-async def getPage(name):
+async def get_page(name):
     try:
         async with aiohttp.ClientSession(timeout=TIMEOUT) as session:
             try:
