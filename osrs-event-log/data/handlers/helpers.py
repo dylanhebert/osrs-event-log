@@ -28,7 +28,6 @@ FULL_DATA_PATH = DIR_PATH + "/" + DATA_PATH
 DB_DISCORD_PATH = FULL_DATA_PATH + "db_discord.json"
 DB_RUNESCAPE_PATH = FULL_DATA_PATH + "db_runescape.json"
 MESSAGES_PATH = FULL_DATA_PATH + "custom_messages.json"
-SOTW_PATH = FULL_DATA_PATH + "sotw/"
 
 
 
@@ -76,6 +75,7 @@ async def player_add_server(db_dis, Server, rs_name):
         logger.debug(f'{rs_name} is an existing player name...')
     except KeyError:
         db_dis[f'player:{rs_name}#all_servers'] = [Server.id]
+        db_dis[f'player:{rs_name}#sotw_xp'] = 0
         logger.debug(f'{rs_name} is a brand new player name...')
 
 

@@ -91,7 +91,7 @@ async def thread_player(bot, rs_name, rs_data):
     logger.debug(f"{rs_name}: found player...")
     overall_xp_changed = False
     # Create player-update object
-    Update = PlayerUpdate(rs_name, rs_data)
+    Update = PlayerUpdate(rs_name, rs_data, player_discord_info)
     # Start looping through website rows
     for tr in scores.find_all('tr')[3:]:
         # find Overall row, skip if weve already found it
@@ -136,11 +136,11 @@ async def thread_player(bot, rs_name, rs_data):
                 if skill_dict['xp'] != oldXP:
                     logger.debug(f"{rs_name}: skill xp changed, sending to Update...")
                     overall_xp_changed = True
-                    Update.updateSkill(skill_dict, skill, False)
+                    await Update.update_skill(skill_dict, skill, False)
             else:  # skill didnt exist before on player's hiscores
                 logger.debug(f"{rs_name}: skill doesnt exist, sending to Update...")
                 overall_xp_changed = True
-                Update.updateSkill(skill_dict, skill, True)
+                await Update.update_skill(skill_dict, skill, True)
             # update skill to skills dict
             rs_data['skills'][skill] = skill_dict
 
@@ -182,13 +182,12 @@ async def thread_player(bot, rs_name, rs_data):
                     else:
                         rs_role = server.get_role(server_info['role'])
                     await Update.post_update(bot, server, event_channel, rs_role, player_server)
-                    #await asyncio.sleep(.3)
                 # Any kind of error posting to server
                 except Exception as e:
                     logger.exception(f"Error with server in player: {player_server['server']} -- {e}")
             logger.debug(f"{rs_name}: Posting update...")
         else:
-            logger.debug(f"{rs_name}: No good criteria for update...")
+            logger.debug(f"{rs_name}: No good criteria for update...")            
 
     logger.debug(f"{rs_name}: Done with player!")
     

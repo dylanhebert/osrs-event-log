@@ -7,6 +7,8 @@
 # IDEAS:
 # - recentmilestones: shows a rundown of the last 5-10 milestones
 # - add pause feature per server?
+# - algorithm to space out all player hiscores scrapes within 15-30 mins
+# - - make sure we can edit json while loop is happening
 
 
 import json

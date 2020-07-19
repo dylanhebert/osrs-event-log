@@ -49,7 +49,9 @@ async def add_player(Server, Member, rs_name, stats_dict):
     db_dis[f'server:{Server.id}#all_players'].append(rs_name)
     db_dis[f'{player_path}#member'] = Member.id
     db_dis[f'{player_path}#mention'] = True
-    db_dis[f'{player_path}#weekly_skill'] = {}
+    db_dis[f'{player_path}#sotw_opt'] = True
+    db_dis[f'{player_path}#sotw_xp'] = 0
+    db_dis[f'{player_path}#sotw_history'] = {}
     await h.db_write(h.DB_DISCORD_PATH, db_dis)
 
     # Edit Runescape DB
@@ -92,11 +94,14 @@ async def remove_player(Server, Member, rs_name, force_rm):
     db_dis[f'server:{Server.id}#all_players'].remove(rs_name)
     del db_dis[f'{player_path}#member']
     del db_dis[f'{player_path}#mention']
-    del db_dis[f'{player_path}#weekly_skill']
+    del db_dis[f'{player_path}#sotw_opt']
+    del db_dis[f'{player_path}#sotw_history']
 
     # Check if there are no more instances of this player in any server
     if len(db_dis[f'player:{rs_name}#all_servers']) == 0:
+        # Delete entries that apply to all instances of this player
         del db_dis[f'player:{rs_name}#all_servers']
+        del db_dis[f'{player_path}#sotw_xp']
         # Remove player from Runescape DB
         db_rs = await h.db_open(h.DB_RUNESCAPE_PATH)  # open Runescape DB
         del db_rs[rs_name]
@@ -143,17 +148,21 @@ async def rename_player(Server, Member, old_rs_name, new_rs_name, stats_dict):
     # Replace old entries with new, updated entries
     db_dis[f'{new_player_path}#member'] = db_dis[f'{old_player_path}#member']
     db_dis[f'{new_player_path}#mention'] = db_dis[f'{old_player_path}#mention']
-    db_dis[f'{new_player_path}#weekly_skill'] = db_dis[f'{old_player_path}#weekly_skill']
+    db_dis[f'{new_player_path}#sotw_opt'] = db_dis[f'{old_player_path}#sotw_opt']
+    db_dis[f'{new_player_path}#sotw_history'] = db_dis[f'{old_player_path}#sotw_history']
     # Remove old entries (MAY CHANGE LATER)
     del db_dis[f'{old_player_path}#member']
     del db_dis[f'{old_player_path}#mention']
-    del db_dis[f'{old_player_path}#weekly_skill']
+    del db_dis[f'{old_player_path}#sotw_opt']
+    del db_dis[f'{old_player_path}#sotw_history']
 
     # Edit Runescape DB
     # Check if there are no more instances of old player in any server
     db_rs = await h.db_open(h.DB_RUNESCAPE_PATH)  # open Runescape DB
     if len(db_dis[f'player:{old_rs_name}#all_servers']) == 0:
+        # Delete entries that apply to all instances of this player
         del db_dis[f'player:{old_rs_name}#all_servers']
+        del db_dis[f'player:{old_rs_name}#sotw_xp']
         # Remove old player from Runescape DB
         del db_rs[old_rs_name]
         await h.db_write(h.DB_RUNESCAPE_PATH, db_rs)
@@ -179,5 +188,32 @@ async def toggle_player_entry(Server, Member, rs_name, entry):
     new_toggle = not db[f'player:{rs_name}#server:{Server.id}#{entry}']
     db[f'player:{rs_name}#server:{Server.id}#{entry}'] = new_toggle
     await h.db_write(h.DB_DISCORD_PATH, db)
-    logger.info(f"TOGGLED PLAYER ENTRY - Player: {rs_name} | Member: {Member.name} | ID: {Member.id} | Server: {Server.name} | ID: {Server.id}")
+    logger.info(f"FINISHED TOGGLE PLAYER ENTRY - Player: {rs_name} | Member: {Member.name} | ID: {Member.id} | Server: {Server.name} | ID: {Server.id}")
     return new_toggle
+
+
+# ----------------------- Update a global player entry ----------------------- #
+
+async def update_player_entry_global(rs_name, entry, new_val):
+    """Update a player's global entry"""
+    logger.info('------------------------------')
+    logger.info(f"Initialized UPDATE GLOBAL PLAYER ENTRY - Player: {rs_name} | Entry: {entry} | New Value: {new_val}")
+    db = await h.db_open(h.DB_DISCORD_PATH)
+    db[f'player:{rs_name}#{entry}'] = new_val
+    await h.db_write(h.DB_DISCORD_PATH, db)
+    logger.info(f"FINISHED UPDATE GLOBAL PLAYER ENTRY - Player: {rs_name} | Entry: {entry} | New Value: {new_val}")
+    return new_toggle
+
+
+# ---------------------- Add to a player's global entry ---------------------- #
+
+async def add_to_player_entry_global(rs_name, entry, add_val):
+    """Add to a player's global entry"""
+    logger.info('------------------------------')
+    logger.info(f"Initialized ADD TO GLOBAL PLAYER ENTRY - Player: {rs_name} | Entry: {entry} | Add Value: {add_val}")
+    db = await h.db_open(h.DB_DISCORD_PATH)
+    new_val = db[f'player:{rs_name}#{entry}'] + add_val
+    db[f'player:{rs_name}#{entry}'] = new_val
+    await h.db_write(h.DB_DISCORD_PATH, db)
+    logger.info(f"FINISHED ADD TO GLOBAL PLAYER ENTRY - Player: {rs_name} | Entry: {entry} | New Value: {new_val}")
+    return new_val

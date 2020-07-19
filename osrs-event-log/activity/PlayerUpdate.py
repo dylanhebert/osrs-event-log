@@ -47,9 +47,10 @@ def clue_sort(title):
 # ---------------------------------------------------------------------------- #
 
 class PlayerUpdate:
-    def __init__(self, rs_name, old_data):
+    def __init__(self, rs_name, old_data, player_discord_info):
         self.old_data = old_data
         self.rs_name = util.name_to_discord(rs_name)
+        self.player_discord_info = player_discord_info
         self.mention_member = None
         self.mention_role = None
         self.overall_update = None
@@ -59,6 +60,7 @@ class PlayerUpdate:
         self.clue_all_total = None
         self.duplicate_server_post = False  # fix for duplicate 'Overall' entries & logging when a player is in multiple servers
         self.custom_messages = custom_messages
+        self.new_sotw_xp = None
 
 
 # ------------------------------ Post Update(s) ------------------------------ #
@@ -117,6 +119,9 @@ class PlayerUpdate:
     # Mention Member in Server?
     def get_mention_member(self, server, player_server):
         member = server.get_member(player_server['member'])
+        # If we ONLY have sotw update then donut mention member
+        if len(self.skills) == 1 and self.new_sotw_xp and not self.minigames and not self.milestones:
+            self.mention_member = member.name
         if player_server['mention'] == True:
             self.mention_member = member.mention  # CHANGE FOR TESTING
         else:
@@ -144,8 +149,8 @@ class PlayerUpdate:
 
 # ---------------------------------- SKILLS ---------------------------------- #
 
-    def updateSkill(self, new_data, title, new_entry):
-        logger.debug("in PlayerUpdate-updateSkill...")
+    async def update_skill(self, new_data, title, new_entry):
+        logger.debug("in PlayerUpdate-update_skill...")
 
         # skill was already on hiscores
         if not new_entry:  
@@ -168,6 +173,11 @@ class PlayerUpdate:
             # check for any significant XP updates
             if xp_new >= 10000000:
                 self.check_xp_update(old_data, new_data, title, xp_new, xp_old, xp_diff)
+                           
+            # Check if skill is SOTW, add xp to current SOTW xp
+            if title == db.SOTW_CONFIG['current_skill']:
+                self.new_sotw_xp = await db.add_to_player_entry_global(util.name_to_rs(self.rs_name), 'sotw_xp', xp_diff)
+                self.skills.append(f'```Skill of the Week - Current {title} XP: {util.format_int_str(self.new_sotw_xp)}```')
 
         # skill is new to hiscores
         else:
