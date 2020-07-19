@@ -77,6 +77,8 @@ class PlayerUpdate:
             if self.overall_update != None and not self.skills:
                 if self.duplicate_server_post == False:
                     self.milestones.append(self.overall_update)
+                    if self.new_sotw_xp:
+                        self.milestones.append(f'```Skill of the Week - Current {db.SOTW_CONFIG["current_skill"]} XP: {util.format_int_str(self.new_sotw_xp)}```')
                     logger.debug(f"joined overall for milestone...")
             all_milestones = "".join(self.milestones)
             full_message = f'**- {self.mention_role} {self.mention_member} -**\n{all_milestones}'
@@ -90,6 +92,8 @@ class PlayerUpdate:
         all_minigames = ""
         # skill updates
         if self.skills:
+            if self.new_sotw_xp:
+                self.skills.append(f'```Skill of the Week - Current {db.SOTW_CONFIG["current_skill"]} XP: {util.format_int_str(self.new_sotw_xp)}```')
             # add overall info to bottom of skills in update
             if self.overall_update != None:
                 if self.duplicate_server_post == False:
@@ -120,8 +124,8 @@ class PlayerUpdate:
     def get_mention_member(self, server, player_server):
         member = server.get_member(player_server['member'])
         # If we ONLY have sotw update then donut mention member
-        if len(self.skills) == 1 and self.new_sotw_xp and not self.minigames and not self.milestones:
-            self.mention_member = member.name
+        # if len(self.skills) == 1 and self.new_sotw_xp and not self.minigames and not self.milestones:
+        #     self.mention_member = member.name
         if player_server['mention'] == True:
             self.mention_member = member.mention  # CHANGE FOR TESTING
         else:
@@ -177,7 +181,6 @@ class PlayerUpdate:
             # Check if skill is SOTW, add xp to current SOTW xp
             if title == db.SOTW_CONFIG['current_skill']:
                 self.new_sotw_xp = await db.add_to_player_entry_global(util.name_to_rs(self.rs_name), 'sotw_xp', xp_diff)
-                self.skills.append(f'```Skill of the Week - Current {title} XP: {util.format_int_str(self.new_sotw_xp)}```')
 
         # skill is new to hiscores
         else:
