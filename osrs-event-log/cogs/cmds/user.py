@@ -153,6 +153,17 @@ class UserCommands(commands.Cog, name="General Commands"):
             return await ctx.send(e)
 
 
+    @commands.command(  brief="Show all basic Skill of the Week information",
+                        description="Show all basic Skill of the Week information")
+    @commands.cooldown(1, 5, commands.BucketType.guild)
+    async def sotw(self, ctx):
+        try:
+            await ctx.send(await db.get_sotw_info(ctx.guild))
+        except Exception as e:
+            logger.exception(f'Error with this command.')
+            return await ctx.send(f'Error with this command. Im new ok')
+
+
     # SIT
     @commands.command(brief="ok", hidden=True)
     @commands.cooldown(1, 2, commands.BucketType.guild)

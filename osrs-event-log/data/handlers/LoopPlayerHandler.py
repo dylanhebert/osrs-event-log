@@ -48,3 +48,4 @@ class LoopPlayerHandler:
         logger.info(f"Finished GET PLAYER LOOPER INFO - Player: {rs_name}")
         # logger.debug(player_servers_all)
         return player_servers_all
+
