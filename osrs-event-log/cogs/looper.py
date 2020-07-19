@@ -203,7 +203,7 @@ class MainLooper(commands.Cog):
         self.bot = bot
 
         # create the background task and run it in the background
-        # self.bot.bg_task = self.bot.loop.create_task(self.looperTask())
+        self.bot.bg_task = self.bot.loop.create_task(self.looperTask())
 
     async def on_ready(self):
         logger.debug('MainLooper Cog Ready')
@@ -223,15 +223,15 @@ class MainLooper(commands.Cog):
             await asyncio.sleep(await util.time_mins( TIME_LOOP ))
 
 
-    @commands.command()
-    @commands.cooldown(1, 5, commands.BucketType.guild)
-    async def testscores(self, ctx):
-        if ctx.author.id == 134858274909585409:
-            logger.debug('running testscores')
-            try:
-                await run_osrs_loop(self.bot)
-            except Exception as e:
-                logger.exception(e)
+    # @commands.command()
+    # @commands.cooldown(1, 5, commands.BucketType.guild)
+    # async def testscores(self, ctx):
+    #     if ctx.author.id == 134858274909585409:
+    #         logger.debug('running testscores')
+    #         try:
+    #             await run_osrs_loop(self.bot)
+    #         except Exception as e:
+    #             logger.exception(e)
            
 
 def setup(bot):

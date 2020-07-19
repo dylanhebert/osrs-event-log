@@ -123,7 +123,7 @@ class PlayerUpdate:
         if len(self.skills) == 1 and self.new_sotw_xp and not self.minigames and not self.milestones:
             self.mention_member = member.name
         if player_server['mention'] == True:
-            self.mention_member = member.name  # CHANGE FOR TESTING
+            self.mention_member = member.mention  # CHANGE FOR TESTING
         else:
             self.mention_member = member.name
 
