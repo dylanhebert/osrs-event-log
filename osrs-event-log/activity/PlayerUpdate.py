@@ -124,7 +124,7 @@ class PlayerUpdate:
     def get_mention_member(self, server, player_server):
         member = server.get_member(player_server['member'])
         if player_server['mention'] == True:
-            self.mention_member = member.name  # CHANGE FOR TESTING
+            self.mention_member = member.mention  # CHANGE FOR TESTING
         else:
             self.mention_member = member.name
 
