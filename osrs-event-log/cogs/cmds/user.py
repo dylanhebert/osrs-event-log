@@ -156,9 +156,25 @@ class UserCommands(commands.Cog, name="General Commands"):
     @commands.command(  brief="Show all basic Skill of the Week information",
                         description="Show all basic Skill of the Week information")
     @commands.cooldown(1, 5, commands.BucketType.guild)
-    async def sotw(self, ctx):
+    async def skillweek(self, ctx):
         try:
             await ctx.send(await db.get_sotw_info(ctx.guild))
+        except Exception as e:
+            logger.exception(f'Error with this command.')
+            return await ctx.send(f'Error with this command. Im new ok')
+        
+        
+    @commands.command(  brief="Show all SOTW history for this server",
+                        description="Show all SOTW history for this server")
+    @commands.cooldown(1, 15, commands.BucketType.guild)
+    async def skillweekhistory(self, ctx):
+        try:
+            history_list = await db.get_sotw_history(ctx.guild)
+            if history_list:
+                for week in history_list:
+                    await ctx.send(week)
+            else:
+                await ctx.send('This server has no Skill of the Week history!')
         except Exception as e:
             logger.exception(f'Error with this command.')
             return await ctx.send(f'Error with this command. Im new ok')

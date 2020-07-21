@@ -4,7 +4,6 @@
 
 import discord
 from discord.ext import commands
-import time
 import datetime
 import asyncio
 import aiohttp
@@ -35,6 +34,7 @@ async def run_osrs_loop(bot):
     logger.debug('Started main loop method...')
     # Build cache for handler obj
     await PLAYER_HANDLER.build_cache()
+    logger.debug('Built PLAYER_HANDLER cache...')
     # Thread scraping and enfore a limit
     try:
         tasks = [
@@ -45,7 +45,7 @@ async def run_osrs_loop(bot):
     finally:
         # Clear our cached DBs
         await PLAYER_HANDLER.remove_cache()
-        logger.info('Done looping all players! Cleared data cache.')
+        logger.debug('Done looping all players! Cleared data cache.')
     return
 
 
@@ -190,7 +190,64 @@ async def thread_player(bot, rs_name, rs_data):
             logger.debug(f"{rs_name}: No good criteria for update...")            
 
     logger.debug(f"{rs_name}: Done with player!")
+
+# ----------------------------- END ACTIVITY LOG ----------------------------- #
     
+    
+# ---------------------------------------------------------------------------- #
+#                             RUN SKILL OF THE WEEK                            #
+# ---------------------------------------------------------------------------- #
+
+# RUN MAIN LOOP
+async def run_sotw_loop(bot):
+    logger.debug('Checking times...')
+    # Check time now
+    now_time = datetime.datetime.now()
+    # Check for deadline + an hour before reminder & progress times
+    pick_time_event = await db.check_sotw_times(now_time)
+    if pick_time_event:
+        # gather all_servers that are opted in for this next stuff...
+        if pick_time_event == 'progress_time':
+            await message_sotw_servers_progress(bot)
+            logger.info('Sent SOTW progress to all servers!')
+        elif pick_time_event == 'pre_time':
+            await message_sotw_servers_pre(bot)
+            logger.info('Sent SOTW pre-time to all servers!')
+        elif pick_time_event == 'pick_time':
+            await message_sotw_servers_reset(bot, now_time)
+            logger.info('Sent SOTW RESET to all servers!')
+    logger.debug('Done checking times!')
+    
+    
+# POST PROGRESS TO ALL ENABLED SERVERS
+async def message_sotw_servers_progress(bot):
+    all_servers = await db.get_sotw_servers(progress=True)
+    for serv_dict in all_servers:
+        Server = bot.get_guild(serv_dict['id'])
+        await util.message_server(Server, serv_dict, await db.get_sotw_info(Server), False)
+            
+
+# POST PRE MESSAGE TO ALL ENABLED SERVERS
+async def message_sotw_servers_pre(bot):
+    all_servers = await db.get_sotw_servers(progress=False)
+    for serv_dict in all_servers:
+        Server = bot.get_guild(serv_dict['id'])
+        await util.message_server(Server, serv_dict, await db.get_sotw_info(Server, pre_time=True), False)
+        
+
+# POST FINAL RANKS TO ALL ENABLED SERVERS & REST SOTW
+async def message_sotw_servers_reset(bot, now_time):
+    final_server_messages = await db.build_sotw_final(now_time)
+    logger.debug('Built all server final messages...')
+    await util.message_separate_servers(bot, final_server_messages, False)
+    logger.info('Messaged all final rankings!')
+    new_sotw_message = await db.change_new_sotw(now_time)
+    logger.debug('Changed to new SOTW...')
+    await util.message_all_servers(bot, final_server_messages['all_servers'], new_sotw_message, True)
+    logger.info('Messaged all servers the new SOTW!')
+
+
+# --------------------------- END SKILL OF THE WEEK -------------------------- #
 
 
 # ---------------------------------------------------------------------------- #
@@ -203,35 +260,38 @@ class MainLooper(commands.Cog):
         self.bot = bot
 
         # create the background task and run it in the background
-        self.bot.bg_task = self.bot.loop.create_task(self.looperTask())
+        # self.bot.bg_task = self.bot.loop.create_task(self.looper_task())
 
     async def on_ready(self):
         logger.debug('MainLooper Cog Ready')
 
-    async def looperTask(self):
+    async def main_loop(self):
+        logger.info('Starting main loop...')
+        # Run player loop
+        try: await run_osrs_loop(self.bot)
+        except Exception as e: logger.exception(f'Unknown error running main loop: {e}')
+        # Run Skill of the Week
+        try: await run_sotw_loop(self.bot)
+        except Exception as e: logger.exception(f'Unknown error running SOTW loop: {e}')
+
+    async def looper_task(self):
         await self.bot.wait_until_ready()
         await asyncio.sleep(1.5)
         # --- START LOOPER ---
         logger.info('OSRS Event Log loop started!')
         while not self.bot.is_closed():
-            logger.info('Starting player loop...')
-            try:
-                await run_osrs_loop(self.bot)
-            except Exception as e:  # catch any error in looper here
-                logger.exception(f'Unknown error running main loop: {e}')
+            await self.main_loop()
             logger.debug(f'Now sleeping for {TIME_LOOP} minutes...')
             await asyncio.sleep(await util.time_mins( TIME_LOOP ))
 
 
-    # @commands.command()
-    # @commands.cooldown(1, 5, commands.BucketType.guild)
-    # async def testscores(self, ctx):
-    #     if ctx.author.id == 134858274909585409:
-    #         logger.debug('running testscores')
-    #         try:
-    #             await run_osrs_loop(self.bot)
-    #         except Exception as e:
-    #             logger.exception(e)
+    @commands.command()
+    @commands.cooldown(1, 5, commands.BucketType.guild)
+    async def testscores(self, ctx):
+        if ctx.author.id == 134858274909585409:
+            logger.debug('Running testscores...')
+            await self.main_loop()
+            logger.debug('Done with testscores!')
            
 
 def setup(bot):

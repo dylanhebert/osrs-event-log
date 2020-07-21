@@ -7,6 +7,7 @@ import aiohttp
 from common.logger import logger
 from bs4 import BeautifulSoup
 import pathlib
+import discord
 
 # --- VARIABLES ---
 # paths to json files
@@ -158,3 +159,46 @@ async def get_player_scores(name_rs, page):
             player_dict['minigames'][skill] = skill_dict  # update clue/boss to minigames dict
     logger.info(f"{name_rs}: Successfully created dict for {name_rs}!")
     return player_dict
+
+
+async def message_server(Server, serv_dict, message, mention):
+    """ Needs dict:\n
+    {
+        "id": [guild.id],
+        "channel": [channel.id] or None,
+        "role": [role.id] or None
+    }
+    """
+    try:
+        # If not channel in this server then skip server
+        if serv_dict["channel"]:
+            rs_chan = Server.get_channel(serv_dict["channel"])
+            # Get mention role, if not then use @here, empty if not mentioning
+            rs_role_men = ''
+            if mention:
+                if serv_dict["role"]:
+                    rs_role = Server.get_role(serv_dict["role"])
+                    rs_role_men = rs_role.mention # CHANGE FOR TESTING
+                else:
+                    rs_role_men = "@here"
+            # Send message!
+            await rs_chan.send(f'{message}\n{rs_role_men}')
+            logger.info(f"Sent message in guild id: {serv_dict['id']} | name: {Server.name} | channel: {rs_chan.name} | Mention: {mention}")
+        else:
+            logger.info(f"Could not send message in guild id: {serv_dict['id']} -- No channel specified")
+    except Exception as e:
+        logger.exception(f"Could not send message in guild id: {serv_dict['id']} -- {e}")
+
+
+async def message_all_servers(bot, all_servers, message, mention):
+    for serv_dict in all_servers:
+        Server = bot.get_guild(serv_dict['id'])
+        await message_server(Server, serv_dict, message, mention)
+        
+        
+async def message_separate_servers(bot, servers_messages, mention):
+    for serv_dict in servers_messages['all_servers']:
+        Server = bot.get_guild(serv_dict['id'])
+        message = servers_messages['all_messages'][str(serv_dict['id'])]
+        await message_server(Server, serv_dict, message, mention)
+        

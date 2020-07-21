@@ -77,8 +77,8 @@ class PlayerUpdate:
             if self.overall_update != None and not self.skills:
                 if self.duplicate_server_post == False:
                     self.milestones.append(self.overall_update)
-                    if self.new_sotw_xp:
-                        self.milestones.append(f'```Skill of the Week - Current {db.SOTW_CONFIG["current_skill"]} XP: {util.format_int_str(self.new_sotw_xp)}```')
+                    # Append SOTW info if needed
+                    self.check_sotw_update('milestones')
                     logger.debug(f"joined overall for milestone...")
             all_milestones = "".join(self.milestones)
             full_message = f'**- {self.mention_role} {self.mention_member} -**\n{all_milestones}'
@@ -92,8 +92,8 @@ class PlayerUpdate:
         all_minigames = ""
         # skill updates
         if self.skills:
-            if self.new_sotw_xp:
-                self.skills.append(f'```Skill of the Week - Current {db.SOTW_CONFIG["current_skill"]} XP: {util.format_int_str(self.new_sotw_xp)}```')
+            # Append SOTW info if needed
+            self.check_sotw_update('skills')
             # add overall info to bottom of skills in update
             if self.overall_update != None:
                 if self.duplicate_server_post == False:
@@ -123,9 +123,6 @@ class PlayerUpdate:
     # Mention Member in Server?
     def get_mention_member(self, server, player_server):
         member = server.get_member(player_server['member'])
-        # If we ONLY have sotw update then donut mention member
-        # if len(self.skills) == 1 and self.new_sotw_xp and not self.minigames and not self.milestones:
-        #     self.mention_member = member.name
         if player_server['mention'] == True:
             self.mention_member = member.mention  # CHANGE FOR TESTING
         else:
@@ -145,6 +142,17 @@ class PlayerUpdate:
             return True
         else:
             return False
+        
+    # --- CHECK FOR SOTW APPEND --- #
+    def check_sotw_update(self, list_append):
+        if self.new_sotw_xp:
+            sotw_str = f'```Skill of the Week - Current {db.SOTW_CONFIG["current_skill"]} XP: {util.format_int_str(self.new_sotw_xp)}```'
+            if list_append == 'skills':
+                self.skills.append(sotw_str)
+                return
+            if list_append == 'milestones':
+                self.milestones.append(sotw_str)
+                return
 
 
 # ---------------------------------------------------------------------------- #

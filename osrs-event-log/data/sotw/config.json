@@ -1,7 +1,23 @@
 {
-    "pick_day": 2,
-    "pick_hour": 19,
     "current_skill": "Magic",
-    "recent_skills": ["Defence", "Construction", "Hunter"],
-    "next_deadline": "07-27"
+    "recent_skills": [
+        "Defence",
+        "Construction",
+        "Hunter",
+        "Herblore"
+    ],
+    "pick_next": "07-21-20",
+    "pick_hour": 19,
+    "pick_weekday": 2,
+    "pick_imminent": false,
+    "progress_hours": [
+        {
+            "hour": 10,
+            "done": false
+        },
+        {
+            "hour": 22,
+            "done": false
+        }
+    ]
 }
