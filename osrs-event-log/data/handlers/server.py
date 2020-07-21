@@ -20,6 +20,8 @@ async def add_server(Server):
         db[f'server:{Server.id}#all_players'] = []
         db[f'server:{Server.id}#channel'] = None
         db[f'server:{Server.id}#role'] = None
+        db[f'server:{Server.id}#sotw_opt'] = True
+        db[f'server:{Server.id}#sotw_progress'] = True
         logger.debug('New server...')
     db['active_servers'].append(Server.id)
     await h.db_write(h.DB_DISCORD_PATH, db)
@@ -80,10 +82,12 @@ async def get_all_servers(Member):
     logger.info(f'Initialized GET ALL SERVERS - Name: {Member.name} | ID: {Member.id}')
     db = await h.db_open(h.DB_DISCORD_PATH)
     # Loop through db to get servers
-    all_servers = {}
+    all_servers = []
     for server in db['active_servers']:
-        all_servers[str(server)] = {}
-        all_servers[str(server)]['channel'] = db[f'server:{server}#channel']
-        all_servers[str(server)]['role'] = db[f'server:{server}#role']
+        serv_dict = {}
+        serv_dict['id'] = server
+        serv_dict['channel'] = db[f'server:{server}#channel']
+        serv_dict['role'] = db[f'server:{server}#role']
+        all_servers.append(serv_dict)
     logger.info(f"GET ALL SERVERS - Name: {Member.name} | ID: {Member.id}")
     return all_servers

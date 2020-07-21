@@ -51,7 +51,7 @@ async def add_player(Server, Member, rs_name, stats_dict):
     db_dis[f'{player_path}#mention'] = True
     db_dis[f'{player_path}#sotw_opt'] = True
     db_dis[f'{player_path}#sotw_xp'] = 0
-    db_dis[f'{player_path}#sotw_history'] = {}
+    db_dis[f'{player_path}#sotw_history'] = []
     await h.db_write(h.DB_DISCORD_PATH, db_dis)
 
     # Edit Runescape DB

@@ -8,7 +8,8 @@
 # - recentmilestones: shows a rundown of the last 5-10 milestones
 # - add pause feature per server?
 # - algorithm to space out all player hiscores scrapes within 15-30 mins
-# - - make sure we can edit json while loop is happening
+# - everyone in every server collectively votes for next skill of the week?
+# - push back and add sotw player update when player has valid skill update
 
 
 import json
@@ -28,9 +29,9 @@ db.verify_files('db_runescape.json')
 
 # Set prefix
 def get_prefix(bot, message):
-    prefixes = [';']
+    prefixes = ['=']
     if not message.guild:
-        return ';'
+        return '='
     return commands.when_mentioned_or(*prefixes)(bot, message)
 
 # Set help command
