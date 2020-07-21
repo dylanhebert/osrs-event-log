@@ -75,12 +75,15 @@ async def ranks_from_top_players(top_players, join_to_str=True, give_awards=Fals
     return ranks_list
 
 # Build the Final String for ranks
-async def build_final_rank_str(ranks_list, final=False):
-    if final:
-        return f"Skill of the Week: **{SOTW_CONFIG['current_skill']}**  |  **Final Rankings**\n" + ranks_list
+async def build_final_rank_str(ranks_list, skill, old_date=None):
+    if old_date:
+        # Bring in an old date, may be checking history
+        deadline = datetime.datetime.strptime(old_date, SOTW_BASIC_FMT)
+        return f"Skill of the Week: **{skill}**  |  **Final Rankings**  |  *{deadline.strftime('%A, %B %d, %Y')}*\n" + ranks_list
     else:
+        # Progress report or command called
         deadline = datetime.datetime.strptime(f"{SOTW_CONFIG['pick_next']} {SOTW_CONFIG['pick_hour']}", SOTW_COMPARE_FMT)
-        return f"Skill of the Week: **{SOTW_CONFIG['current_skill']}**  |  Deadline: **{deadline.strftime('%A, %B %d at %-I%p')} CST**\n" + ranks_list
+        return f"Skill of the Week: **{skill}**  |  Deadline: **{deadline.strftime('%A, %B %d at %-I%p')} CST**\n" + ranks_list
 
 
 
@@ -94,12 +97,26 @@ async def get_sotw_info(Server, pre_time=False):
     # Create full ranking string, top 10 people
     top_players = await get_sotw_top_players(db, Server.id)
     ranks_list = await ranks_from_top_players(top_players)
-    final_str = await build_final_rank_str(ranks_list)
+    final_str = await build_final_rank_str(ranks_list, skill=SOTW_CONFIG['current_skill'])
     # Add notice if we're posting progress for pre_time
     if pre_time:
         final_str = "**LAST CHANCE!** This Skill of the Week is almost over!" + MESSAGE_DIVIDER + final_str
     logger.info(f"FINISHED GET SOTW INFO - Server: {Server.name} | ID: {Server.id}")
     return final_str
+
+
+async def get_sotw_history(Server):
+    """Get all basic SOTW history for the server"""
+    logger.info('------------------------------')
+    logger.info(f'Initialized GET SOTW HISTORY - Server: {Server.name} | ID: {Server.id}')
+    db = await h.db_open(h.DB_DISCORD_PATH)
+    history_list = []
+    # Loop through all weeks in server
+    for week in db[f'server:{Server.id}#sotw_history']:
+        ranks_list = await ranks_from_top_players(week['players'], give_awards=True)
+        history_list.append(await build_final_rank_str(ranks_list, skill=week['skill'], old_date=week['date']))
+    logger.info(f"FINISHED GET SOTW HISTORY - Server: {Server.name} | ID: {Server.id}")
+    return history_list
 
 
 # ----------------------------- Check SOTW Times ----------------------------- #
@@ -118,7 +135,7 @@ async def check_sotw_times(now_time):
     if not SOTW_CONFIG['pick_imminent']:
         if now_time.strftime(SOTW_COMPARE_FMT) == f"{SOTW_CONFIG['pick_next']} {SOTW_CONFIG['pick_hour'] - PRE_PICK_HOURS}":
             SOTW_CONFIG['pick_imminent'] = True
-            await update_sotw_config()
+            await update_sotw_config(SOTW_CONFIG)
             logger.info('Pre Time! Enabled pick_imminent')
             return 'pre_time'
     # If it's time to post progress
@@ -127,14 +144,14 @@ async def check_sotw_times(now_time):
             # Valid progress hour
             if now_time.hour == post_hour['hour']:
                 post_hour['done'] = True
-                await update_sotw_config()
+                await update_sotw_config(SOTW_CONFIG)
                 logger.info(f"Progress time! Hour: {post_hour['hour']}")
                 return 'progress_time'                
         else:
             # Past hour that was done, reset it for tomorrow
             if now_time.hour != post_hour['hour']:
                 post_hour['done'] = False
-                await update_sotw_config()
+                await update_sotw_config(SOTW_CONFIG)
                 logger.info(f"Reset Done parameter for hour: {post_hour['hour']}")
     logger.debug(f'No time matches!')
     return None
@@ -162,7 +179,9 @@ async def build_sotw_final(now_time):
             # Get top players
             top_players = await get_sotw_top_players(db, server)
             ranks_list = await ranks_from_top_players(top_players, give_awards=True)
-            final_str = "**Congratulations** to the winners!" + MESSAGE_DIVIDER + await build_final_rank_str(ranks_list, final=True) + MESSAGE_DIVIDER
+            final_str = ("**Congratulations** to the winners!" + MESSAGE_DIVIDER + 
+                    await build_final_rank_str(ranks_list, skill=SOTW_CONFIG['current_skill'], old_date=now_time.strftime(SOTW_BASIC_FMT)) 
+                    + MESSAGE_DIVIDER)
             logger.debug('Got top players...')
             # New history record for server
             new_history = {
@@ -213,17 +232,19 @@ async def change_new_sotw(now_time):
     # Make new deadline a week later from now
     new_deadline = (now_time+datetime.timedelta(days=DAYS_BETWEEN_SOTW))
     SOTW_CONFIG['pick_next'] = new_deadline.strftime(SOTW_BASIC_FMT)
-    await h.db_write(SOTW_CONFIG_PATH, SOTW_CONFIG)
+    await update_sotw_config(SOTW_CONFIG)
     new_sotw_message = f"The new Skill of the Week is **{current_skill}**! The deadline is on *{new_deadline.strftime('%A, %B %d')}*. Get skilling!"
     logger.info(f"FINISHED CHANGE NEW SOTW - New SOTW: {current_skill} | New deadline: {new_deadline.strftime(SOTW_BASIC_FMT)}")
     return new_sotw_message
 
 
 # NEEDS WORK
-async def update_sotw_config():
+async def update_sotw_config(config_new):
     """Update the entire SOTW config with current config in cache"""
     logger.info('------------------------------')
     logger.info(f'Initialized UPDATE SOTW CONFIG')
+    global SOTW_CONFIG
+    SOTW_CONFIG = config_new
     await h.db_write(SOTW_CONFIG_PATH, SOTW_CONFIG)
     logger.info(f'FINISHED UPDATE SOTW CONFIG')
 
