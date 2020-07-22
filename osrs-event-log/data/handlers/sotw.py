@@ -23,7 +23,7 @@ SOTW_BASIC_FMT = "%m-%d-%y"         # String format for basic SOTW displaying an
 SOTW_COMPARE_FMT = "%m-%d-%y %H"    # String format for comparing times
 PRE_PICK_HOURS = 1                  # Hours before pick time to show hiscores once more
 TOP_PLAYERS_COUNT = 10              # Number of players to show on SOTW info and get SOTW histories
-DAYS_BETWEEN_SOTW = 8               # SHOULD BE 7, Days to the next SOTW reset
+DAYS_BETWEEN_SOTW = 7               # SHOULD BE 7, Days to the next SOTW reset
 
 RANK_AWARDS = {
     1: 'Rune Trophy',
