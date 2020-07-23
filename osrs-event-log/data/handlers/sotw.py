@@ -15,7 +15,7 @@ import random
 
 SOTW_PATH = h.FULL_DATA_PATH + "sotw/"
 SOTW_POOL = SOTW_PATH + "all_skills.json"
-SOTW_CONFIG_PATH = SOTW_PATH + "config.json"
+SOTW_CONFIG_PATH = SOTW_PATH + "sotw_config.json"
 SOTW_CONFIG = h.db_open_non_async(SOTW_CONFIG_PATH)
 logger.debug('Loaded SOTW config into cache.')
 
