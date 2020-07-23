@@ -10,7 +10,7 @@ A simple Discord bot that captures and posts activity, events, and milestones fo
 - Create a bot on [Discord's dev page](https://discord.com/developers/applications) and make note of the token and invite URL
 - Make a copy of *bot_config&#46;template&#46;json* and name it *bot_config&#46;json*
 - In *bot_config&#46;json*, set the value of "BOT_TOKEN" to your Discord bot's token
-- In data/sotw, make a copy of *sotw_config&#46;template&#46;json* and name it *sotw_config&#46;json*
+- In *data/sotw*, make a copy of *sotw_config&#46;template&#46;json* and name it *sotw_config&#46;json*
 - Run `pip install -r requirements.txt` to install dependencies
 - Run `python main.py`
 - After the bot starts, invite it to a server using the invite link
@@ -39,8 +39,8 @@ skillweekhistory - Show all SOTW history for this server
 ```
 ### **S**uper Commands
 ```
-sendannouncement {message} - Sends an announcement mentioning the RS role to every server & channel connected to this bot
-sendthought {message} - Sends a message to every server & channel connected to this bot
+sendannouncement {message} - Sends an message mentioning the RS role to every server
+sendthought {message} - Sends a message to every server
 changemaxplayers - Changes the amount of RS names a Discord member can be linked to
 ```
 
