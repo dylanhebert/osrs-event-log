@@ -11,8 +11,10 @@ A simple Discord bot that captures and posts activity, events, and milestones fo
 - Make a copy of *bot_config&#46;template&#46;json* and name it *bot_config&#46;json*
 - In *bot_config&#46;json*, set the value of "BOT_TOKEN" to your Discord bot's token
 - In *data/sotw*, make a copy of *sotw_config&#46;template&#46;json* and name it *sotw_config&#46;json*
+- If using **venv**, make sure you run `source venv/bin/activate`
 - Run `pip install -r requirements.txt` to install dependencies
-- Run `python main.py`
+- Option 1: Run `bash run.sh` (Keeps the bot running and restarts if it terminates)
+- Option 2: Run `python osrs-event-log/osrs-event-log.py`
 - After the bot starts, invite it to a server using the invite link
 - OSRS player skills & milestones will be populated into *data/db_runescape&#46;json*
 - Discord server & member/player data will be populated into *data/db_discord&#46;json*
