@@ -93,11 +93,11 @@ class PlayerUpdate:
         # skill updates
         if self.skills:
             # Append SOTW info if needed
-            self.check_sotw_update('skills')
             # add overall info to bottom of skills in update
             if self.overall_update != None:
                 if self.duplicate_server_post == False:
                     self.skills.append(self.overall_update)
+                    self.check_sotw_update('skills')
                     logger.debug(f"joined overall...")
                 else:
                     logger.debug(f"overall already joined, not appending...")
@@ -274,12 +274,12 @@ class PlayerUpdate:
                 # check if this was a special boss
                 if title in self.custom_messages['bosses']:
                     message_extra = self.custom_messages['bosses'][title]
-                    message = f"**{self.rs_name} {action_1} {title} for the first time! {message_extra}**\
+                    message = f"**{self.rs_name} {action_1} {title} enough times to be on the hiscores! {message_extra}**\
                                 ```Total {action_2} count: {util.format_int_str(new_data['score'])} | Current rank: {new_data['rank']}```"
                     self.milestones.append(message)
                     logger.debug(f"appended Boss update for {title} to milestones list...")
                 else:
-                    message = f"**{self.rs_name} {action_1} {title} for the first time**\
+                    message = f"**{self.rs_name} {action_1} {title} enough times to be on the hiscores!**\
                                 ```Total {action_2} count: {util.format_int_str(new_data['score'])} | Current rank: {new_data['rank']}```"
                     self.minigames.append(message)
                     logger.debug(f"appended update for {title} to minigames list...")
