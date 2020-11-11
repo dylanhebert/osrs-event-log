@@ -23,6 +23,11 @@ import sys, traceback
 from common.logger import logger
 import data.handlers as db
 
+# new for discord.py 1.5
+intents = discord.Intents.default()
+intents.members = True
+intents.presences = True
+
 # Our data .jsons
 db.verify_files('db_discord.json')
 db.verify_files('db_runescape.json')
@@ -50,7 +55,8 @@ game_playing = discord.Streaming(
 bot = commands.Bot(
     command_prefix = get_prefix,
     help_command = custom_help,
-    description = 'OSRS Activity Log by Green Donut')
+    description = 'OSRS Activity Log by Green Donut',
+    intents=intents)
 
 # Define extensions
 initial_extensions =    [
