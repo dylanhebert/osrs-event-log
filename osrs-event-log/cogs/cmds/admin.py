@@ -116,7 +116,7 @@ class AdminCommands(commands.Cog, name="Admin Commands"):
 
 # ---------------- ADMINS CAN REMOVE ANYONE FROM ACTIVITY LOG ---------------- #
 
-    @commands.command(  brief=";removeother <@Discord-Member> | Remove someone from the Activity Log",
+    @commands.command(  brief=";removeother <@Discord-Member> <OSRS-Name> | Remove someone from the Activity Log",
                         usage="<@Discord-Member> <OSRS-Name>",
                         description="Remove someone else from the Activity Log that is not you. "
                                     "Anyone wishing to remove themselves should use ;remove.")
