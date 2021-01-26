@@ -33,8 +33,8 @@ class LoopPlayerHandler:
         
     async def get_all_player_info(self, rs_name):
         """Gets all servers and members connected to a player"""
-        logger.info('------------------------------')
-        logger.info(f'Initialized GET PLAYER LOOPER INFO - Player: {rs_name}')
+        logger.debug('------------------------------')
+        logger.debug(f'Initialized GET PLAYER LOOPER INFO - Player: {rs_name}')
         # Loop through db to get player's servers
         player_servers_all = []
         for server in self.data_discord[f'player:{rs_name}#all_servers']:
@@ -45,7 +45,7 @@ class LoopPlayerHandler:
                     "member": self.data_discord[f'player:{rs_name}#server:{server}#member'],
                     "mention": self.data_discord[f'player:{rs_name}#server:{server}#mention']
                 })
-        logger.info(f"Finished GET PLAYER LOOPER INFO - Player: {rs_name}")
+        logger.debug(f"Finished GET PLAYER LOOPER INFO - Player: {rs_name}")
         # logger.debug(player_servers_all)
         return player_servers_all
 
