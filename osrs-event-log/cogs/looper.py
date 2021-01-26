@@ -15,12 +15,13 @@ import common.util as util
 import data.handlers as db
 from data.handlers.LoopPlayerHandler import LoopPlayerHandler
 from activity.PlayerUpdate import PlayerUpdate
+# import threading, queue
 
 
 # --------------------------------- VARIABLES -------------------------------- #
 
-TIME_LOOP = 15
-PLAYER_THREAD_LIMIT = asyncio.Semaphore( 5 )
+TIME_LOOP_MINUTES =             20  # Should be less than 1 hour to account for SOTW
+MIN_SECS_BETWEEN_PLAYERS =      20  # Also determines how many players we parse at once
 
 PLAYER_HANDLER = LoopPlayerHandler()
 
@@ -35,13 +36,38 @@ async def run_osrs_loop(bot):
     # Build cache for handler obj
     await PLAYER_HANDLER.build_cache()
     logger.debug('Built PLAYER_HANDLER cache...')
-    # Thread scraping and enfore a limit
+
+    # Space out hiscores requests
+    player_total = len(PLAYER_HANDLER.data_runescape.items())
+    logger.debug(f'Player total: {player_total}')
+    loop_secs = TIME_LOOP_MINUTES * 60
+    time_between_players = int(round(loop_secs / player_total))
+    players_per_request = 1
+    # Keep minimum amount of time between players
+    while time_between_players < MIN_SECS_BETWEEN_PLAYERS:
+        logger.debug(f'Consolidating seconds between players: {time_between_players}...')
+        time_between_players *= 2
+        players_per_request += 1
+    logger.debug(f'Final seconds between players: {time_between_players}')
+    logger.debug(f'Players per request: {players_per_request}')
+
     try:
-        tasks = [
-            asyncio.ensure_future( safe_threading(bot, rs_name, rs_data) )  # creating task starts coroutine
-            for rs_name, rs_data in PLAYER_HANDLER.data_runescape.items()
-        ]
-        await asyncio.gather(*tasks)  # await all players done
+        queue = asyncio.Queue()
+        # Add player tuples to queue
+        for rs_name, rs_data in PLAYER_HANDLER.data_runescape.items():
+            queue.put_nowait((rs_name, rs_data))
+        # Make certain amount of tasks based on players & times
+        tasks = []
+        for i in range(players_per_request):
+            task = asyncio.create_task( player_queue_worker(queue, bot, time_between_players, player_total) )
+            tasks.append(task)
+        # Wait till all player tasks are done in queue
+        await queue.join()
+        # Close tasks
+        for task in tasks:
+            task.cancel()
+        # Wait till tasks are closed
+        await asyncio.gather(*tasks, return_exceptions=True)
     finally:
         # Clear our cached DBs
         await PLAYER_HANDLER.remove_cache()
@@ -49,10 +75,26 @@ async def run_osrs_loop(bot):
     return
 
 
+# QUEUE AND LIMIT AMOUNT OF PLAYER PAGES WE SCRAPE
+async def player_queue_worker(queue, bot, time_between_players, player_total):
+    while True:
+        # time_between_players = 3  # for testing
+        player = await queue.get()
+        rs_name = player[0]
+        rs_data = player[1]
+        logger.debug(f'Got player in queue: {rs_name} | Players left in queue: {queue.qsize()}')
+        await thread_player(bot, rs_name, rs_data)
+        logger.debug(f'Sleeping player in queue: {rs_name}')
+        await asyncio.sleep(time_between_players)
+        queue.task_done()
+        logger.debug(f'Done with player in queue: {rs_name} | Players left in queue: {queue.qsize()}')
+
+
+# --- DEPRECATED ---
 # LIMIT THE NUMBER OF PLAYERS WE PARSE AT THE SAME TIME
 async def safe_threading(bot, rs_name, rs_data):
-    async with PLAYER_THREAD_LIMIT:
-        #await asyncio.sleep(5)
+    # sem = asyncio.Semaphore( 5 )
+    async with asyncio.Semaphore( 5 ):
         return await thread_player(bot, rs_name, rs_data)
 
 
@@ -200,7 +242,7 @@ async def thread_player(bot, rs_name, rs_data):
 
 # RUN MAIN LOOP
 async def run_sotw_loop(bot):
-    logger.debug('Checking times...')
+    logger.debug('Checking times for SOTW...')
     # Check time now
     now_time = datetime.datetime.now()
     # Check for deadline + an hour before reminder & progress times
@@ -216,7 +258,7 @@ async def run_sotw_loop(bot):
         elif pick_time_event == 'pick_time':
             await message_sotw_servers_reset(bot, now_time)
             logger.info('Sent SOTW RESET to all servers!')
-    logger.debug('Done checking times!')
+    logger.debug('Done checking times for SOTW!')
     
     
 # POST PROGRESS TO ALL ENABLED SERVERS
@@ -281,8 +323,8 @@ class MainLooper(commands.Cog):
         logger.info('OSRS Event Log loop started!')
         while not self.bot.is_closed():
             await self.main_loop()
-            logger.debug(f'Now sleeping for {TIME_LOOP} minutes...')
-            await asyncio.sleep(await util.time_mins( TIME_LOOP ))
+            logger.debug(f'Now sleeping for {TIME_LOOP_MINUTES} minutes...')
+            await asyncio.sleep(await util.time_mins( TIME_LOOP_MINUTES ))
 
 
     # @commands.command()
