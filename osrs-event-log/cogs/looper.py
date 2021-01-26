@@ -23,6 +23,9 @@ from activity.PlayerUpdate import PlayerUpdate
 TIME_LOOP_MINUTES =             20  # Should be less than 1 hour to account for SOTW
 MIN_SECS_BETWEEN_PLAYERS =      20  # Also determines how many players we parse at once
 
+# IN USE TEMPORARILY
+PLAYER_THREAD_LIMIT = asyncio.Semaphore( 5 )
+
 PLAYER_HANDLER = LoopPlayerHandler()
 
 
@@ -52,22 +55,29 @@ async def run_osrs_loop(bot):
     logger.debug(f'Players per request: {players_per_request}')
 
     try:
-        queue = asyncio.Queue()
-        # Add player tuples to queue
-        for rs_name, rs_data in PLAYER_HANDLER.data_runescape.items():
-            queue.put_nowait((rs_name, rs_data))
-        # Make certain amount of tasks based on players & times
+        # Using old method for now
         tasks = []
-        for i in range(players_per_request):
-            task = asyncio.create_task( player_queue_worker(queue, bot, time_between_players, player_total) )
+        for rs_name, rs_data in PLAYER_HANDLER.data_runescape.items():
+            task = asyncio.create_task( safe_threading(bot, rs_name, rs_data) )
             tasks.append(task)
-        # Wait till all player tasks are done in queue
-        await queue.join()
-        # Close tasks
-        for task in tasks:
-            task.cancel()
-        # Wait till tasks are closed
-        await asyncio.gather(*tasks, return_exceptions=True)
+        await asyncio.gather(*tasks)
+        # -- NEED TO RESOLVE CACHE ISSUE ---
+        # queue = asyncio.Queue()
+        # # Add player tuples to queue
+        # for rs_name, rs_data in PLAYER_HANDLER.data_runescape.items():
+        #     queue.put_nowait((rs_name, rs_data))
+        # # Make certain amount of tasks based on players & times
+        # tasks = []
+        # for i in range(players_per_request):
+        #     task = asyncio.create_task( player_queue_worker(queue, bot, time_between_players, player_total) )
+        #     tasks.append(task)
+        # # Wait till all player tasks are done in queue
+        # await queue.join()
+        # # Close tasks
+        # for task in tasks:
+        #     task.cancel()
+        # # Wait till tasks are closed
+        # await asyncio.gather(*tasks, return_exceptions=True)
     finally:
         # Clear our cached DBs
         await PLAYER_HANDLER.remove_cache()
@@ -75,6 +85,7 @@ async def run_osrs_loop(bot):
     return
 
 
+# --- NEED TO FIX CACHING ISSUE ---
 # QUEUE AND LIMIT AMOUNT OF PLAYER PAGES WE SCRAPE
 async def player_queue_worker(queue, bot, time_between_players, player_total):
     while True:
@@ -94,7 +105,7 @@ async def player_queue_worker(queue, bot, time_between_players, player_total):
 # LIMIT THE NUMBER OF PLAYERS WE PARSE AT THE SAME TIME
 async def safe_threading(bot, rs_name, rs_data):
     # sem = asyncio.Semaphore( 5 )
-    async with asyncio.Semaphore( 5 ):
+    async with PLAYER_THREAD_LIMIT:
         return await thread_player(bot, rs_name, rs_data)
 
 
