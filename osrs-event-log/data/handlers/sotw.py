@@ -88,12 +88,11 @@ async def build_final_rank_str(ranks_list, skill, old_date=None):
 
 # Build the Final String for stats
 async def build_final_stats_str(sort_players):
-    header_str = f"Skill of the Week: **Player Trophies**"
     try:
         ranks_list = [f"Skill of the Week: **Player Trophies**"]
         for player in sort_players:
             ranks_list.append(f"**{player['name']}** - Score Total: **{player['rank_weight']}** | Rune: **{player['rank_1']}** | Adamant: **{player['rank_2']}** | Mithril: **{player['rank_3']}**")
-        ranks_list = '\n'.join(ranks_list)
+        # ranks_list = '\n'.join(ranks_list)
     except Exception as e:
         logger.exception(e)
         ranks_list = ['Error building ranks!']
@@ -176,9 +175,9 @@ async def get_sotw_stats(Server):
     for k,v in all_server_stats.items():
         sort_players.append(v)
     sort_players = sorted(sort_players, key=itemgetter('rank_weight'), reverse=True)
-    final_str = await build_final_stats_str(sort_players)
+    final_players = await build_final_stats_str(sort_players)
     logger.info(f"FINISHED GET SOTW STATS - Server: {Server.name} | ID: {Server.id}")
-    return final_str
+    return final_players
 
 
 # ----------------------------- Check SOTW Times ----------------------------- #

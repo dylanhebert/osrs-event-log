@@ -186,8 +186,17 @@ class UserCommands(commands.Cog, name="General Commands"):
     async def skillweekstats(self, ctx):
         try:
             stats_list = await db.get_sotw_stats(ctx.guild)
+            temp_lst = []
+            counter = 0
+            limit = 10
             if stats_list:
-                await ctx.send(stats_list)
+                for stat in stats_list:
+                    temp_lst.append(stat)
+                    counter += 1
+                    if counter == limit or counter == len(stats_list):
+                        await ctx.send('\n'.join(temp_lst))
+                        limit += 10
+                        temp_lst = []
             else:
                 await ctx.send('This server has no Skill of the Week history!')
         except Exception as e:
