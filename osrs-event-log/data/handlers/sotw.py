@@ -91,7 +91,14 @@ async def build_final_stats_str(sort_players):
     try:
         ranks_list = [f"Skill of the Week: **Player Trophies**"]
         for player in sort_players:
-            ranks_list.append(f"**{player['name']}** - Score Total: **{player['rank_weight']}** | Rune: **{player['rank_1']}** | Adamant: **{player['rank_2']}** | Mithril: **{player['rank_3']}**")
+            player_str = f"**{player['name']}** - Score Total: **{player['rank_weight']}**"
+            if player['rank_1'] > 0:
+                player_str = player_str + f" | Rune: **{player['rank_1']}**"
+            if player['rank_2'] > 0:
+                player_str = player_str + f" | Adamant: **{player['rank_2']}**"
+            if player['rank_3'] > 0:
+                player_str = player_str + f" | Mithril: **{player['rank_3']}**"
+            ranks_list.append(player_str)
         # ranks_list = '\n'.join(ranks_list)
     except Exception as e:
         logger.exception(e)
