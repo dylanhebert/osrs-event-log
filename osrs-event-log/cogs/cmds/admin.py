@@ -13,6 +13,10 @@ import common.util as util
 import data.handlers as db
 
 
+# Common vars
+NON_ADMIN_MESSAGE = '**Only members with admin privilages can use this command!**'
+
+
 class AdminCommands(commands.Cog, name="Admin Commands"):
 
     def __init__(self, bot): # cog access bot
@@ -39,7 +43,7 @@ class AdminCommands(commands.Cog, name="Admin Commands"):
                 logger.exception(f'Could not update post channel in guild id:{ctx.guild.id} for channel id:{ctx.channel.id} -- {e}')
                 await ctx.send('**Error updating the post channel!**')
         else:
-            await ctx.send('**Only members with admin privilages can use this command!**')
+            await ctx.send(NON_ADMIN_MESSAGE)
 
 
 # --------------------- CHOOSE MILESTONES ROLE TO NOTIFY --------------------- #
@@ -59,7 +63,7 @@ class AdminCommands(commands.Cog, name="Admin Commands"):
                 logger.exception(f'Could not update rs role in guild id:{ctx.guild.id} for role id:{rs_role.id} -- {e}')
                 await ctx.send('**Error updating the RS Role! Check the role name!**')
         else:
-            await ctx.send('**Only members with admin privilages can use this command!**')
+            await ctx.send(NON_ADMIN_MESSAGE)
 
     
 # ------------ REMOVE STORED MILESTONES ROLE AND DEFAULT TO @here ------------ #
@@ -78,7 +82,7 @@ class AdminCommands(commands.Cog, name="Admin Commands"):
                 logger.exception(f'Could not update rs role in guild id:{ctx.guild.id} for @-here -- {e}')
                 await ctx.send('**Error resetting the RS Role!**')
         else:
-            await ctx.send('**Only members with admin privilages can use this command!**')
+            await ctx.send(NON_ADMIN_MESSAGE)
 
 
 # ----------------------- ADMINS CAN ADD ANYONE TO LOOP ---------------------- #
@@ -111,7 +115,7 @@ class AdminCommands(commands.Cog, name="Admin Commands"):
                             " -You may have to try again later")
         # Player is not admin
         else:
-            await ctx.send('**Only members with admin privilages can use this command!**')
+            await ctx.send(NON_ADMIN_MESSAGE)
 
 
 # ---------------- ADMINS CAN REMOVE ANYONE FROM ACTIVITY LOG ---------------- #
@@ -130,7 +134,22 @@ class AdminCommands(commands.Cog, name="Admin Commands"):
             except Exception as e:
                 return await ctx.send(e)
         else:
-            await ctx.send('**Only members with admin privilages can use this command!**')
+            await ctx.send(NON_ADMIN_MESSAGE)
+
+
+    # @commands.command(  brief="Toggles daily updates for SOTW for this server on or off",
+    #                     description="Toggles daily updates for SOTW for this server on or off")
+    # @commands.cooldown(1, 5, commands.BucketType.guild)
+    # async def skillweektoggleupdates(self, ctx):
+    #     if await util.is_admin(ctx.author) or ctx.author.id == 134858274909585409:
+    #         name_rs = util.name_to_rs(game_name)
+    #         try:
+    #             await db.remove_player(ctx.guild, member, name_rs, False)
+    #             await ctx.send(f'**{ctx.author.name}** has removed an account listed under **{member.name}** from the Activity Log: *{name_rs}*')
+    #         except Exception as e:
+    #             return await ctx.send(e)
+    #     else:
+    #         await ctx.send(NON_ADMIN_MESSAGE)
 
 
 def setup(bot):

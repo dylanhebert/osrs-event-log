@@ -164,15 +164,30 @@ class UserCommands(commands.Cog, name="General Commands"):
             return await ctx.send(f'Error with this command. Im new ok')
         
         
-    @commands.command(  brief="Show all SOTW history for this server",
-                        description="Show all SOTW history for this server")
-    @commands.cooldown(1, 15, commands.BucketType.guild)
-    async def skillweekhistory(self, ctx):
+    # @commands.command(  brief="Show all SOTW history for this server",
+    #                     description="Show all SOTW history for this server")
+    # @commands.cooldown(1, 15, commands.BucketType.guild)
+    # async def skillweekhistory(self, ctx):
+    #     try:
+    #         history_list = await db.get_sotw_history(ctx.guild)
+    #         if history_list:
+    #             for week in history_list:
+    #                 await ctx.send(week)
+    #         else:
+    #             await ctx.send('This server has no Skill of the Week history!')
+    #     except Exception as e:
+    #         logger.exception(f'Error with this command.')
+    #         return await ctx.send(f'Error with this command. Im new ok')
+
+
+    @commands.command(  brief="Show SOTW player stats for this server",
+                        description="Show SOTW player stats for this server")
+    @commands.cooldown(1, 60, commands.BucketType.guild)
+    async def skillweekstats(self, ctx):
         try:
-            history_list = await db.get_sotw_history(ctx.guild)
-            if history_list:
-                for week in history_list:
-                    await ctx.send(week)
+            stats_list = await db.get_sotw_stats(ctx.guild)
+            if stats_list:
+                await ctx.send(stats_list)
             else:
                 await ctx.send('This server has no Skill of the Week history!')
         except Exception as e:

@@ -86,6 +86,50 @@ async def build_final_rank_str(ranks_list, skill, old_date=None):
         return f"Skill of the Week: **{skill}**  |  Deadline: **{deadline.strftime('%A, %B %d at %-I%p')} CST**\n" + ranks_list
 
 
+# Build the Final String for stats
+async def build_final_stats_str(sort_players):
+    header_str = f"Skill of the Week: **Player Trophies**"
+    try:
+        ranks_list = [f"Skill of the Week: **Player Trophies**"]
+        for player in sort_players:
+            ranks_list.append(f"**{player['name']}** - Score Total: **{player['rank_weight']}** | Rune: **{player['rank_1']}** | Adamant: **{player['rank_2']}** | Mithril: **{player['rank_3']}**")
+        ranks_list = '\n'.join(ranks_list)
+    except Exception as e:
+        logger.exception(e)
+        ranks_list = ['Error building ranks!']
+    return ranks_list
+
+
+async def week_stats_from_players(week_players, all_server_stats):
+    try:
+        for player in week_players:
+            p_name = player['player']
+            # build init player dict if not there
+            if not p_name in all_server_stats:
+                all_server_stats[p_name] = {
+                        'name' : util.name_to_discord(p_name),
+                        'xp_all': 0,
+                        'rank_weight' : 0,
+                        'rank_1' : 0,
+                        'rank_2' : 0,
+                        'rank_3' : 0 }
+            p_stats = all_server_stats[p_name]
+            # add to total xp
+            p_stats['xp_all'] += player['xp']
+            # rank stuff
+            rank = player['rank']
+            if rank == 1:
+                p_stats['rank_1'] += 1
+                p_stats['rank_weight'] += 3
+            if rank == 2:
+                p_stats['rank_2'] += 1
+                p_stats['rank_weight'] += 2
+            if rank == 3:
+                p_stats['rank_3'] += 1
+                p_stats['rank_weight'] += 1
+    except Exception as e:
+        logger.exception(e)
+
 
 # ------------------------- Get SOTW Info for Server ------------------------- #
 
@@ -117,6 +161,24 @@ async def get_sotw_history(Server):
         history_list.append(await build_final_rank_str(ranks_list, skill=week['skill'], old_date=week['date']))
     logger.info(f"FINISHED GET SOTW HISTORY - Server: {Server.name} | ID: {Server.id}")
     return history_list
+
+
+async def get_sotw_stats(Server):
+    """Get all basic SOTW player stats for the server"""
+    logger.info('------------------------------')
+    logger.info(f'Initialized GET SOTW STATS - Server: {Server.name} | ID: {Server.id}')
+    db = await h.db_open(h.DB_DISCORD_PATH)
+    all_server_stats = {}
+    # Loop through all weeks in server
+    for week in db[f'server:{Server.id}#sotw_history']:
+        await week_stats_from_players(week['players'], all_server_stats)
+    sort_players = []
+    for k,v in all_server_stats.items():
+        sort_players.append(v)
+    sort_players = sorted(sort_players, key=itemgetter('rank_weight'), reverse=True)
+    final_str = await build_final_stats_str(sort_players)
+    logger.info(f"FINISHED GET SOTW STATS - Server: {Server.name} | ID: {Server.id}")
+    return final_str
 
 
 # ----------------------------- Check SOTW Times ----------------------------- #
