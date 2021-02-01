@@ -313,7 +313,7 @@ class MainLooper(commands.Cog):
         self.bot = bot
 
         # create the background task and run it in the background
-        # self.bot.bg_task = self.bot.loop.create_task(self.looper_task())
+        self.bot.bg_task = self.bot.loop.create_task(self.looper_task())
 
     async def on_ready(self):
         logger.debug('MainLooper Cog Ready')
@@ -327,15 +327,15 @@ class MainLooper(commands.Cog):
         try: await run_sotw_loop(self.bot)
         except Exception as e: logger.exception(f'Unknown error running SOTW loop: {e}')
 
-    # async def looper_task(self):
-    #     await self.bot.wait_until_ready()
-    #     await asyncio.sleep(1.5)
-    #     # --- START LOOPER ---
-    #     logger.info('OSRS Event Log loop started!')
-    #     while not self.bot.is_closed():
-    #         await self.main_loop()
-    #         logger.debug(f'Now sleeping for {TIME_LOOP_MINUTES} minutes...')
-    #         await asyncio.sleep(await util.time_mins( TIME_LOOP_MINUTES ))
+    async def looper_task(self):
+        await self.bot.wait_until_ready()
+        await asyncio.sleep(1.5)
+        # --- START LOOPER ---
+        logger.info('OSRS Event Log loop started!')
+        while not self.bot.is_closed():
+            await self.main_loop()
+            logger.debug(f'Now sleeping for {TIME_LOOP_MINUTES} minutes...')
+            await asyncio.sleep(await util.time_mins( TIME_LOOP_MINUTES ))
 
 
     # @commands.command()
