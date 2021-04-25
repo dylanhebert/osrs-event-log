@@ -62,6 +62,19 @@ class SuperCommands(commands.Cog, command_attrs=dict(hidden=True)):
             all_servers = await db.get_all_servers(ctx.author)
             await util.message_all_servers(self.bot, all_servers, thought, mention=False)
             logger.info(f"Done sending thought: {thought}")
+
+
+    # REMOVE BOT FROM A SERVER
+    @commands.command(  brief="Removes the bot in a certain server",
+                        usage="<server-id>",
+                        description="Removes the bot in a certain server")
+    @commands.cooldown(1, 15, commands.BucketType.guild)
+    async def removeserver(self, ctx, *, server_id):
+        if ctx.author.id == 134858274909585409:
+            Server = self.bot.get_guild(int(server_id))
+            logger.debug(f"Remove server name: {Server.name}")
+            await Server.leave()
+            logger.info(f"Done removing server: {server_id}")
             
             
 
