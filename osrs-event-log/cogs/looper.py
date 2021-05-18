@@ -208,11 +208,11 @@ async def thread_player(bot, rs_name, rs_data):
                 if skill_dict['score'] != old_score:
                     logger.debug(f"{rs_name}: minigame score changed, sending to Update...")
                     overall_xp_changed = True
-                    Update.update_minigame(skill_dict, skill, False)
+                    await Update.update_minigame(skill_dict, skill, False)
             else:  # skill didnt exist before on player's hiscores
                 logger.debug(f"{rs_name}: minigame doesnt exist, sending to Update...")
                 overall_xp_changed = True
-                Update.update_minigame(skill_dict, skill, True)
+                await Update.update_minigame(skill_dict, skill, True)
             # update clue/boss to minigames dict
             rs_data['minigames'][skill] = skill_dict  
 
@@ -304,6 +304,62 @@ async def message_sotw_servers_reset(bot, now_time):
 
 
 # ---------------------------------------------------------------------------- #
+#                             RUN BOSS OF THE WEEK                             #
+# ---------------------------------------------------------------------------- #
+
+# RUN MAIN LOOP
+async def run_botw_loop(bot):
+    logger.debug('Checking times for BOTW...')
+    # Check time now
+    now_time = datetime.datetime.now()
+    # Check for deadline + an hour before reminder & progress times
+    pick_time_event = await db.check_botw_times(now_time)
+    if pick_time_event:
+        # gather all_servers that are opted in for this next stuff...
+        if pick_time_event == 'progress_time':
+            await message_botw_servers_progress(bot)
+            logger.info('Sent BOTW progress to all servers!')
+        elif pick_time_event == 'pre_time':
+            await message_botw_servers_pre(bot)
+            logger.info('Sent BOTW pre-time to all servers!')
+        elif pick_time_event == 'pick_time':
+            await message_botw_servers_reset(bot, now_time)
+            logger.info('Sent BOTW RESET to all servers!')
+    logger.debug('Done checking times for BOTW!')
+    
+    
+# POST PROGRESS TO ALL ENABLED SERVERS
+async def message_botw_servers_progress(bot):
+    all_servers = await db.get_botw_servers(progress=True)
+    for serv_dict in all_servers:
+        Server = bot.get_guild(serv_dict['id'])
+        await util.message_server(Server, serv_dict, await db.get_botw_info(Server), False)
+            
+
+# POST PRE MESSAGE TO ALL ENABLED SERVERS
+async def message_botw_servers_pre(bot):
+    all_servers = await db.get_botw_servers(progress=False)
+    for serv_dict in all_servers:
+        Server = bot.get_guild(serv_dict['id'])
+        await util.message_server(Server, serv_dict, await db.get_botw_info(Server, pre_time=True), False)
+        
+
+# POST FINAL RANKS TO ALL ENABLED SERVERS & REST BOTW
+async def message_botw_servers_reset(bot, now_time):
+    final_server_messages = await db.build_botw_final(now_time)
+    logger.debug('Built all server final messages...')
+    await util.message_separate_servers(bot, final_server_messages, False)
+    logger.info('Messaged all final rankings!')
+    new_botw_message = await db.change_new_botw(now_time)
+    logger.debug('Changed to new BOTW...')
+    await util.message_all_servers(bot, final_server_messages['all_servers'], new_botw_message, True)
+    logger.info('Messaged all servers the new BOTW!')
+
+
+# --------------------------- END BOSS OF THE WEEK --------------------------- #
+
+
+# ---------------------------------------------------------------------------- #
 #                               MAINLOOPER CLASS                               #
 # ---------------------------------------------------------------------------- #
 
@@ -326,6 +382,9 @@ class MainLooper(commands.Cog):
         # Run Skill of the Week
         try: await run_sotw_loop(self.bot)
         except Exception as e: logger.exception(f'Unknown error running SOTW loop: {e}')
+        # Run Boss of the Week
+        try: await run_botw_loop(self.bot)
+        except Exception as e: logger.exception(f'Unknown error running BOTW loop: {e}')
 
     async def looper_task(self):
         await self.bot.wait_until_ready()

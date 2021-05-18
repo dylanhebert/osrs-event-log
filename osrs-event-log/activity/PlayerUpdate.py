@@ -18,7 +18,7 @@ custom_messages = db.get_custom_messages()
 
 non_monster_bosses =  [   "Barrows Chests", "Chambers of Xeric", "Theatre of Blood",
                         "The Gauntlet", "The Corrupted Gauntlet", "Wintertodt",
-                        "Chambers of Xeric: Challenge Mode"
+                        "Chambers of Xeric: Challenge Mode", "Tempoross"
                     ]
 
 # ---------------------------------------------------------------------------- #
@@ -61,6 +61,7 @@ class PlayerUpdate:
         self.duplicate_server_post = False  # fix for duplicate 'Overall' entries & logging when a player is in multiple servers
         self.custom_messages = custom_messages
         self.new_sotw_xp = None
+        self.new_botw_kills = None
 
 
 # ------------------------------ Post Update(s) ------------------------------ #
@@ -79,6 +80,8 @@ class PlayerUpdate:
                     self.milestones.append(self.overall_update)
                     # Append SOTW info if needed
                     self.check_sotw_update('milestones')
+                    # Append BOTW info if needed
+                    self.check_botw_update('milestones')
                     logger.debug(f"joined overall for milestone...")
             all_milestones = "".join(self.milestones)
             full_message = f'**- {self.mention_role} {self.mention_member} -**\n{all_milestones}'
@@ -105,6 +108,8 @@ class PlayerUpdate:
             logger.debug(f"created all_skills...")
         # minigame updates
         if self.minigames:
+            # Append BOTW info if needed
+            self.check_botw_update('bosses')
             all_minigames = "".join(self.minigames)
             logger.debug(f"created all_minigames...")
         # post updates
@@ -146,12 +151,37 @@ class PlayerUpdate:
     # --- CHECK FOR SOTW APPEND --- #
     def check_sotw_update(self, list_append):
         if self.new_sotw_xp:
-            sotw_str = f'```Skill of the Week - Current {db.SOTW_CONFIG["current_skill"]} XP: {util.format_int_str(self.new_sotw_xp)}```'
+            sotw_str = f'```c\nSkill of the Week - Current {db.SOTW_CONFIG["current_skill"]} XP: {util.format_int_str(self.new_sotw_xp)}```'
             if list_append == 'skills':
                 self.skills.append(sotw_str)
                 return
             if list_append == 'milestones':
                 self.milestones.append(sotw_str)
+                return
+
+    # --- GET CORRECT WORD FOR BOSS KILLS --- #
+    def get_boss_terms(self, boss_name):
+        # change first word depending on boss/activity
+        boss_terms = [ 'killed', 'kill' ]  # any other boss will default to this
+        if boss_name in non_monster_bosses:  # not monsters
+            if boss_name == "Wintertodt" or boss_name == "Tempoross":  # special case for skilling bosses
+                boss_terms = [ 'subdued', 'subdue' ]
+                logger.debug("nonmonster boss, skilling boss...")
+            else:  # anything else not skilling bosses
+                boss_terms = [ 'completed', 'completion' ]
+                logger.debug("nonmonster boss...")
+        return boss_terms
+
+    # --- CHECK FOR BOTW APPEND --- #
+    def check_botw_update(self, list_append):
+        if self.new_botw_kills:
+            boss_terms = self.get_boss_terms(db.BOTW_CONFIG["current_boss"])
+            botw_str = f'```c\nBoss of the Week - Current {db.BOTW_CONFIG["current_boss"]} {boss_terms[1]}s: {util.format_int_str(self.new_botw_kills)}```'
+            if list_append == 'bosses':
+                self.minigames.append(botw_str)
+                return
+            if list_append == 'milestones':
+                self.milestones.append(botw_str)
                 return
 
 
@@ -201,7 +231,7 @@ class PlayerUpdate:
 
 # --------------------------------- MINIGAMES -------------------------------- #
 
-    def update_minigame(self, new_data, title, new_entry):
+    async def update_minigame(self, new_data, title, new_entry):
         logger.debug("in PlayerUpdate-update_minigame...")
 
         # CLUES
@@ -234,7 +264,7 @@ class PlayerUpdate:
                 else:
                     total_clue_msg = ""
                 message = f"**{self.rs_name} completed {an} {clue_lvl} Clue Scroll for the first time**\
-                            ```{clue_lvl} clues completed: {util.format_int_str(new_data['score'])} | Current rank: {new_data['rank']}{total_clue_msg}```"
+                            ```c\n{clue_lvl} clues completed: {util.format_int_str(new_data['score'])} | Current rank: {new_data['rank']}{total_clue_msg}```"
                 self.minigames.append(message)
                 logger.debug(f"appended update for {title} to minigames list...")
 
@@ -246,20 +276,7 @@ class PlayerUpdate:
         # BOSS
         else:
             logger.debug("found boss...")
-            # change first word depending on boss/activity
-            if title in non_monster_bosses:  # not monsters
-                if title == "Wintertodt":  # special case for wintertodt
-                    action_1 = 'subdued'
-                    action_2 = 'subdue'
-                    logger.debug("nonmonster boss, wintertodt...")
-                else:  # anything else not wintertodt
-                    action_1 = 'completed'
-                    action_2 = 'completion'
-                    logger.debug("nonmonster boss...")
-            else:  # any other boss will default to this
-                action_1 = 'killed'
-                action_2 = 'kill'
-                logger.debug("monster boss...")
+            boss_terms = self.get_boss_terms(title)
 
             if not new_entry:  # minigame was already on hiscores
                 logger.debug("existing entry...")
@@ -267,20 +284,24 @@ class PlayerUpdate:
                 kill_new = util.format_int(new_data['score'])
                 kill_old = util.format_int(old_data['score'])
                 kill_diff = kill_new - kill_old
-                self.make_boss_update(old_data, new_data, title, kill_new, kill_old, kill_diff, action_1, action_2)
+                self.make_boss_update(old_data, new_data, title, kill_new, kill_old, kill_diff, boss_terms[0], boss_terms[1])
+
+                # Check if boss is BOTW, add xp to current BOTW xp
+                if title == db.BOTW_CONFIG['current_boss']:
+                    self.new_botw_kills = await db.add_to_player_entry_global(util.name_to_rs(self.rs_name), 'botw_kills', kill_diff)
 
             else:  # minigame is new to hiscores
                 logger.debug("new entry...")
                 # check if this was a special boss
                 if title in self.custom_messages['bosses']:
                     message_extra = self.custom_messages['bosses'][title]
-                    message = f"**{self.rs_name} {action_1} {title} enough times to be on the hiscores! {message_extra}**\
-                                ```Total {action_2} count: {util.format_int_str(new_data['score'])} | Current rank: {new_data['rank']}```"
+                    message = f"**{self.rs_name} {boss_terms[0]} {title} enough times to be on the hiscores! {message_extra}**\
+                                ```c\nTotal {boss_terms[1]} count: {util.format_int_str(new_data['score'])} | Current rank: {new_data['rank']}```"
                     self.milestones.append(message)
                     logger.debug(f"appended Boss update for {title} to milestones list...")
                 else:
-                    message = f"**{self.rs_name} {action_1} {title} enough times to be on the hiscores!**\
-                                ```Total {action_2} count: {util.format_int_str(new_data['score'])} | Current rank: {new_data['rank']}```"
+                    message = f"**{self.rs_name} {boss_terms[0]} {title} enough times to be on the hiscores!**\
+                                ```c\nTotal {boss_terms[1]} count: {util.format_int_str(new_data['score'])} | Current rank: {new_data['rank']}```"
                     self.minigames.append(message)
                     logger.debug(f"appended update for {title} to minigames list...")
             
@@ -299,20 +320,20 @@ class PlayerUpdate:
         max_lvl = 2277
         if lvl_new == max_lvl and lvl_old != max_lvl:
             message = f"**{self.rs_name} HAS ACHIEVED MAX TOTAL LEVEL {new_data['level']}! DAMN SON**\
-                        ```Overall XP: {new_data['xp']} | Overall rank: {new_data['rank']}```"
+                        ```c\nOverall XP: {new_data['xp']} | Overall rank: {new_data['rank']}```"
             self.milestones.append(message)
         # 2200 total
         elif lvl_old < 2200 and lvl_new >= 2200:
             message = f"**{self.rs_name} has achieved 2,200 total level**\
-                        ```Total level: {new_data['level']} | Overall XP: {new_data['xp']}```"
+                        ```c\nTotal level: {new_data['level']} | Overall XP: {new_data['xp']}```"
             self.milestones.append(message)
         # 2000 total
         elif lvl_old < 2000 and lvl_new >= 2000:
             message = f"**{self.rs_name} has achieved 2,000 total level**\
-                        ```Total level: {new_data['level']} | Overall XP: {new_data['xp']}```"
+                        ```c\nTotal level: {new_data['level']} | Overall XP: {new_data['xp']}```"
             self.milestones.append(message)
         # no milestones
-        else: self.overall_update = f"```Total level: {new_data['level']} | Total Overall XP: {new_data['xp']}```"
+        else: self.overall_update = f"```c\nTotal level: {new_data['level']} | Total Overall XP: {new_data['xp']}```"
 
 
 # ----------------------------------- SKILL ---------------------------------- #
@@ -329,7 +350,7 @@ class PlayerUpdate:
         else: message_extra = ''
         # make message
         message = f"**{self.rs_name} levelled up {title} to {new_lvl}{message_extra}**\
-                    ```{util.format_int_str(xp_diff)} XP gained | Total {title} XP: {new_data['xp']}```"
+                    ```c\n{util.format_int_str(xp_diff)} XP gained | Total {title} XP: {new_data['xp']}```"
         # 99 milestone
         if new_lvl == '99':
             self.milestones.append(message)
@@ -354,7 +375,7 @@ class PlayerUpdate:
         while xp_new >= threshold:
             if xp_old < threshold:
                 message = f"**{self.rs_name} has achieved {util.format_int_str(threshold)} {title} XP**\
-                            ```{util.format_int_str(xp_diff)} XP gained | Total {title} XP: {new_data['xp']}```"
+                            ```c\n{util.format_int_str(xp_diff)} XP gained | Total {title} XP: {new_data['xp']}```"
                 # 10M xp is too low for milestone notification - 2/23/20
                 if threshold == 10000000:
                     self.skills.append(message)
@@ -386,7 +407,7 @@ class PlayerUpdate:
                     message_extra = f" | Total clues completed: {util.format_int_str(self.clue_all_total)}"
                 else: message_extra = ""
                 message = f"**{self.rs_name} has completed at least {util.format_int_str(threshold)} {clue_lvl} Clue Scrolls**\
-                            ```{clue_lvl} clues completed: {new_data['score']} | Current rank: {new_data['rank']}{message_extra}```"
+                            ```c\n{clue_lvl} clues completed: {new_data['score']} | Current rank: {new_data['rank']}{message_extra}```"
                 self.milestones.append(message)
                 logger.debug(f"appended Clue update for {title} to milestones list...")
                 found_milestone = True
@@ -406,7 +427,7 @@ class PlayerUpdate:
             else:
                 total_clue_msg = ""
             message = f"**{self.rs_name} has completed {new_data['score']} {clue_lvl} Clue Scrolls**\
-                        ```New {clue_lvl} clues logged: {count_diff} | Current rank: {new_data['rank']}{total_clue_msg}```"
+                        ```c\nNew {clue_lvl} clues logged: {count_diff} | Current rank: {new_data['rank']}{total_clue_msg}```"
 
             self.minigames.append(message)
             logger.debug(f"appended update for {title} to minigames list...")
@@ -425,7 +446,7 @@ class PlayerUpdate:
         while kill_new >= threshold:
             if kill_old < threshold:
                 message = f"**{self.rs_name} has {action_1} {title} at least {util.format_int_str(threshold)} times**\
-                            ```Total {action_2} count: {new_data['score']} | Current rank: {new_data['rank']}```"
+                            ```c\nTotal {action_2} count: {new_data['score']} | Current rank: {new_data['rank']}```"
                 self.milestones.append(message)
                 logger.debug(f"appended Boss update for {title} to milestones list...")
                 found_milestone = True
@@ -440,7 +461,7 @@ class PlayerUpdate:
             # else: times = 'times'
             logger.debug("found diff...")
             try:
-                message = f"**{self.rs_name} has {action_1} {title} {new_data['score']} times**```New {action_2}s logged: {util.format_int_str(kill_diff)} | Current rank: {new_data['rank']}```"
+                message = f"**{self.rs_name} has {action_1} {title} {new_data['score']} times**```c\nNew {action_2}s logged: {util.format_int_str(kill_diff)} | Current rank: {new_data['rank']}```"
             except Exception as e:
                 logger.exception(f'Error posting boss update: {e}')
             logger.debug("made message...")

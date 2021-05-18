@@ -76,6 +76,7 @@ async def player_add_server(db_dis, Server, rs_name):
     except KeyError:
         db_dis[f'player:{rs_name}#all_servers'] = [Server.id]
         db_dis[f'player:{rs_name}#sotw_xp'] = 0
+        db_dis[f'player:{rs_name}#botw_kills'] = 0
         logger.debug(f'{rs_name} is a brand new player name...')
 
 

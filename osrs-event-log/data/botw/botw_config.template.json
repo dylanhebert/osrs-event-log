@@ -1,0 +1,19 @@
+{
+    "current_boss": "King Black Dragon",
+    "recent_bosses": [
+        "Chambers of Xeric",
+        "Theatre of Blood",
+        "The Corrupted Gauntlet",
+        "TzKal-Zuk"
+    ],
+    "pick_next": "05-21-21",
+    "pick_hour": 19,
+    "pick_weekday": 4,
+    "pick_imminent": false,
+    "progress_hours": [
+        {
+            "hour": 14,
+            "done": false
+        }
+    ]
+}

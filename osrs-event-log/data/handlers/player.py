@@ -50,6 +50,7 @@ async def add_player(Server, Member, rs_name, stats_dict):
     db_dis[f'{player_path}#member'] = Member.id
     db_dis[f'{player_path}#mention'] = True
     db_dis[f'{player_path}#sotw_opt'] = True
+    db_dis[f'{player_path}#botw_opt'] = True
     await h.db_write(h.DB_DISCORD_PATH, db_dis)
 
     # Edit Runescape DB
@@ -104,12 +105,18 @@ async def remove_player(Server, Member, rs_name, force_rm):
     del db_dis[f'{player_path}#member']
     del db_dis[f'{player_path}#mention']
     del db_dis[f'{player_path}#sotw_opt']
+    
+    # some users dont have this field
+    try: del db_dis[f'{player_path}#botw_opt']
+    except: logger.debug(f"  -{rs_name} botw_opt not found for this player. Continuing...")
+    
 
     # Check if there are no more instances of this player in any server
     if len(db_dis[f'player:{rs_name}#all_servers']) == 0:
         # Delete entries that apply to all instances of this player
         del db_dis[f'player:{rs_name}#all_servers']
         del db_dis[f'player:{rs_name}#sotw_xp']
+        del db_dis[f'player:{rs_name}#botw_kills']
         # Remove player from Runescape DB
         db_rs = await h.db_open(h.DB_RUNESCAPE_PATH)  # open Runescape DB
         try:
@@ -161,6 +168,15 @@ async def rename_player(Server, Member, old_rs_name, new_rs_name, stats_dict):
     db_dis[f'{new_player_path}#mention'] = db_dis[f'{old_player_path}#mention']
     db_dis[f'{new_player_path}#sotw_opt'] = db_dis[f'{old_player_path}#sotw_opt']
     db_dis[f'player:{new_rs_name}#sotw_xp'] = db_dis[f'player:{old_rs_name}#sotw_xp']
+    db_dis[f'player:{new_rs_name}#botw_kills'] = db_dis[f'player:{old_rs_name}#botw_kills']
+
+    # some users dont have this field
+    try:
+        db_dis[f'{new_player_path}#botw_opt'] = db_dis[f'{old_player_path}#botw_opt']
+        del db_dis[f'{old_player_path}#botw_opt']
+    except:
+        logger.debug(f"  -{old_rs_name} botw_opt not found for this player. Continuing...")
+
     # Remove old entries (MAY CHANGE LATER)
     del db_dis[f'{old_player_path}#member']
     del db_dis[f'{old_player_path}#mention']
@@ -173,6 +189,7 @@ async def rename_player(Server, Member, old_rs_name, new_rs_name, stats_dict):
         # Delete entries that apply to all instances of this player
         del db_dis[f'player:{old_rs_name}#all_servers']
         del db_dis[f'player:{old_rs_name}#sotw_xp']
+        del db_dis[f'player:{old_rs_name}#botw_kills']
         # Remove old player from Runescape DB
         del db_rs[old_rs_name]
         await h.db_write(h.DB_RUNESCAPE_PATH, db_rs)

@@ -38,7 +38,7 @@ class UserCommands(commands.Cog, name="General Commands"):
                 await db.add_player(ctx.guild, ctx.author, name_rs, player_dict)
                 await ctx.send(f'**{ctx.author.name}** has added an account to the Activity Log: *{name_rs}*\n'
                             f'Toggle on/off this bot mentioning you every update with *;togglemention {game_name}*\n'
-                            f'If you change this OSRS name, use *;transfer {game_name}>>{{new-name}}* to retain your Activity Log records')
+                            f'If you change this OSRS name, use **;transfer {game_name}>>new-name** to retain your Activity Log records')
             except Exception as e:
                 return await ctx.send(e)
         # Player is not valid to be added
@@ -181,12 +181,27 @@ class UserCommands(commands.Cog, name="General Commands"):
             return await ctx.send(e)
 
 
+# ---------------------- SHOWS CURRENT SOTW AND HISCORES --------------------- #
+
     @commands.command(  brief="Show all basic Skill of the Week information",
                         description="Show all basic Skill of the Week information")
-    @commands.cooldown(1, 5, commands.BucketType.guild)
+    @commands.cooldown(1, 10, commands.BucketType.guild)
     async def skillweek(self, ctx):
         try:
             await ctx.send(await db.get_sotw_info(ctx.guild))
+        except Exception as e:
+            logger.exception(f'Error with this command.')
+            return await ctx.send(f'Error with this command. Im new ok (boss of the week is newer tho)')
+
+
+# ---------------------- SHOWS CURRENT BOTW AND HISCORES --------------------- #
+
+    @commands.command(  brief="Show all basic Boss of the Week information",
+                        description="Show all basic Boss of the Week information")
+    @commands.cooldown(1, 10, commands.BucketType.guild)
+    async def bossweek(self, ctx):
+        try:
+            await ctx.send(await db.get_botw_info(ctx.guild))
         except Exception as e:
             logger.exception(f'Error with this command.')
             return await ctx.send(f'Error with this command. Im new ok')
@@ -208,6 +223,8 @@ class UserCommands(commands.Cog, name="General Commands"):
     #         return await ctx.send(f'Error with this command. Im new ok')
 
 
+# ----------------------- SHOW SOTW STATS FOR A SERVER ----------------------- #
+
     @commands.command(  brief="Show SOTW player stats for this server",
                         description="Show SOTW player stats for this server")
     @commands.cooldown(1, 60, commands.BucketType.guild)
@@ -227,6 +244,32 @@ class UserCommands(commands.Cog, name="General Commands"):
                         temp_lst = []
             else:
                 await ctx.send('This server has no Skill of the Week history!')
+        except Exception as e:
+            logger.exception(f'Error with this command.')
+            return await ctx.send(f'Error with this command. Im new ok')
+
+
+# ----------------------- SHOW BOTW STATS FOR A SERVER ----------------------- #
+
+    @commands.command(  brief="Show BOTW player stats for this server",
+                        description="Show BOTW player stats for this server")
+    @commands.cooldown(1, 60, commands.BucketType.guild)
+    async def bossweekstats(self, ctx):
+        try:
+            stats_list = await db.get_botw_stats(ctx.guild)
+            temp_lst = []
+            counter = 0
+            limit = 10
+            if stats_list:
+                for stat in stats_list:
+                    temp_lst.append(stat)
+                    counter += 1
+                    if counter == limit or counter == len(stats_list):
+                        await ctx.send('\n'.join(temp_lst))
+                        limit += 10
+                        temp_lst = []
+            else:
+                await ctx.send('This server has no Boss of the Week history!')
         except Exception as e:
             logger.exception(f'Error with this command.')
             return await ctx.send(f'Error with this command. Im new ok')

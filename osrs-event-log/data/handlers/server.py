@@ -23,6 +23,9 @@ async def add_server(Server):
         db[f'server:{Server.id}#sotw_opt'] = True
         db[f'server:{Server.id}#sotw_progress'] = True
         db[f'server:{Server.id}#sotw_history'] = []
+        db[f'server:{Server.id}#botw_opt'] = True
+        db[f'server:{Server.id}#botw_progress'] = True
+        db[f'server:{Server.id}#botw_history'] = []
         logger.debug('New server...')
     db['active_servers'].append(Server.id)
     await h.db_write(h.DB_DISCORD_PATH, db)
