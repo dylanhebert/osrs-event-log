@@ -66,15 +66,26 @@ async def remove_player(Server, Member, rs_name, force_rm):
     """Remove a player from a specific server\n
     Remove player from runescape.json if there are no more servers for player\n
     Returns False if player could not be removed"""
+
+    member_key_only = False
+    if isinstance(Member, int):
+        member_key_only = True
+        member_name = Member
+        member_id = Member
+        logger.debug(f'Removing player with member key only: {member_name}, {rs_name}')
+    else:
+        member_name = Member.name
+        member_id = Member.id
+
     logger.info('------------------------------')
-    logger.info(f'Initialized REMOVE PLAYER: {rs_name} | Removed by: {Member.name}')
+    logger.info(f'Initialized REMOVE PLAYER: {rs_name} | Removed by: {member_name}')
     db_dis = await h.db_open(h.DB_DISCORD_PATH)  # open Discord DB
 
     # Check if Member passed is tied to this player on this server (non-admin remove)
     if not force_rm:
         try: 
-            if not await h.player_in_server_member(db_dis, Server, Member, rs_name):
-                raise ex.DataHandlerError(f'**{Member.name}** does not use OSRS account: *{rs_name}*')
+            if not await h.player_in_server_member(db_dis, Server, member_id, rs_name):
+                raise ex.DataHandlerError(f'**{member_name}** does not use OSRS account: *{rs_name}*')
         except Exception as e: raise e
 
     # Check if this player is in this server, try removing server from player
@@ -101,11 +112,14 @@ async def remove_player(Server, Member, rs_name, force_rm):
         del db_dis[f'player:{rs_name}#sotw_xp']
         # Remove player from Runescape DB
         db_rs = await h.db_open(h.DB_RUNESCAPE_PATH)  # open Runescape DB
-        del db_rs[rs_name]
+        try:
+            del db_rs[rs_name]
+        except:
+            logger.debug(f"  -{rs_name} was not found in RS DB. Continuing...")
         await h.db_write(h.DB_RUNESCAPE_PATH, db_rs)
         logger.info(f"Completely removed player from all DBs | RS name: {rs_name}")
     await h.db_write(h.DB_DISCORD_PATH, db_dis)
-    logger.info(f"REMOVED PLAYER - RS name : {rs_name} | Linked Member ID : {linked_member} | Remover ID: {Member.id} | Server: {Server.name} | ID: {Server.id}")
+    logger.info(f"REMOVED PLAYER - RS name : {rs_name} | Linked Member ID : {linked_member} | Remover ID: {member_id} | Server: {Server.name} | ID: {Server.id}")
     return True
 
 

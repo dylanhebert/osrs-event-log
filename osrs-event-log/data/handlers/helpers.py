@@ -90,12 +90,12 @@ async def player_remove_server(db_dis, Server, rs_name):
         raise ex.DataHandlerError(f"OSRS account *{rs_name}* is not present in this server's Activity Log!")
 
 
-async def player_in_server_member(db_dis, Server, Member, rs_name):
+async def player_in_server_member(db_dis, Server, member_id, rs_name):
     """Check if a player is in a member for this server\n
     Returns True or False"""
     try:
         # This member is using this player in this server
-        if db_dis[f'player:{rs_name}#server:{Server.id}#member'] == Member.id:
+        if db_dis[f'player:{rs_name}#server:{Server.id}#member'] == member_id:
             return True
         # Another member is using this player
         else:

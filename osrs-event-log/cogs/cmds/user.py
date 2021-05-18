@@ -129,6 +129,34 @@ class UserCommands(commands.Cog, name="General Commands"):
         logger.info(f';players called in {ctx.guild.name} by {ctx.author.name}')
 
 
+# ------------- REMOVE MEMBERS AND THEIR PLAYERS THAT LEFT SERVER ------------ #
+
+    @commands.command(  brief="Cleans up users from this server's activity log that have left the server",
+                        description="Cleans up users from this server's activity log that have left the server")
+    @commands.cooldown(1, 60, commands.BucketType.guild)
+    async def cleanaccounts(self, ctx):
+        logger.info(f';cleanaccounts called in {ctx.guild.name} by {ctx.author.name}')
+        players_list = []
+        members_players = await db.get_server_players(ctx.guild)
+        for k,v in members_players.items():
+            try:
+                # only get players that are in current server
+                mem = ctx.guild.get_member(int(k))
+                logger.debug(f'  -cleanaccounts: {mem.name}: OK')
+            except:
+                for name_rs in v:
+                    try:
+                        await db.remove_player(ctx.guild, int(k), name_rs, False)
+                        players_list.append(f"**{name_rs}** - *{int(k)}*\n")
+                        logger.debug(f"  -cleanaccounts: REMOVED {k} - {name_rs}")
+                        pass
+                    except Exception as e:
+                        await ctx.send(e)
+        count = len(players_list)
+        players_list = "".join(players_list)
+        await ctx.send(f'**Removed inactive members - {ctx.guild.name} - Total Members: {count}**\n'+players_list)
+
+
 # ------- TOGGLES WHETHER TO MENTION THE PLAYER OR NOT FOR EVERY UPDATE ------ #
 
     @commands.command(  brief=";togglemention {OSRS-Name} | Toggles whether or not to @ you on Discord for every update",
