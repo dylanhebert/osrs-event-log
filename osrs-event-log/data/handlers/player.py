@@ -160,6 +160,7 @@ async def rename_player(Server, Member, old_rs_name, new_rs_name, stats_dict):
     db_dis[f'{new_player_path}#member'] = db_dis[f'{old_player_path}#member']
     db_dis[f'{new_player_path}#mention'] = db_dis[f'{old_player_path}#mention']
     db_dis[f'{new_player_path}#sotw_opt'] = db_dis[f'{old_player_path}#sotw_opt']
+    db_dis[f'player:{new_rs_name}#sotw_xp'] = db_dis[f'player:{old_rs_name}#sotw_xp']
     # Remove old entries (MAY CHANGE LATER)
     del db_dis[f'{old_player_path}#member']
     del db_dis[f'{old_player_path}#mention']
