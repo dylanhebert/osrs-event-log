@@ -318,8 +318,8 @@ class PlayerUpdate:
         lvl_old = util.format_int(old_data['level'])
         # MAX
         max_lvl = 2277
-        if lvl_new == max_lvl and lvl_old != max_lvl:
-            message = f"**{self.rs_name} HAS ACHIEVED MAX TOTAL LEVEL {new_data['level']}! DAMN SON**\
+        if lvl_new == max_lvl and lvl_old != max_lvl:  #  TOTAL LEVEL {new_data['level']}
+            message = f"**{self.rs_name} HAS MAXED!!** \U0001F44F \U0001F44F \U0001F44F \U0001F525 \U0001F602 \U0001F44C \U0001F4AF \U0001F44F \U0001F44F \U0001F44F \n*Now you can finally play the game.*\
                         ```c\nOverall XP: {new_data['xp']} | Overall rank: {new_data['rank']}```"
             self.milestones.append(message)
         # 2200 total
