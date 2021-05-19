@@ -25,7 +25,7 @@ class SuperCommands(commands.Cog, command_attrs=dict(hidden=True)):
 # -------------------- CHANGE MAX PLAYER COUNT PER MEMBER -------------------- #
 
     @commands.command(  brief="Changes the global max player count per Discord member",
-                        usage="<integer>",
+                        usage="4",
                         description="Changes the global max player count per Discord member")
     @commands.cooldown(1, 15, commands.BucketType.guild)
     async def changemaxplayers(self, ctx, *, new_count):
@@ -40,8 +40,8 @@ class SuperCommands(commands.Cog, command_attrs=dict(hidden=True)):
 
     # SEND AN ANNOUNCEMENT ABOUT THE BOT TO EVERY CHANNEL WITH A MENTION
     @commands.command(  brief="Sends an announcement to every server & channel connected to this bot",
-                        usage="<announcement>",
-                        description="Sends an announcement in bold text to every server & channel connected to this bot. "
+                        usage="Check out the new updates!",
+                        description="Sends an announcement in bold text to every server & channel connected to this bot.\n"
                                     "This will notify the saved role for each server or @here if none specified.")
     @commands.cooldown(1, 15, commands.BucketType.guild)
     async def sendannouncement(self, ctx, *, announcement):
@@ -53,8 +53,8 @@ class SuperCommands(commands.Cog, command_attrs=dict(hidden=True)):
 
     # SEND AN MESSAGE (THOUGHT) ABOUT THE BOT TO EVERY CHANNEL WITH NO MENTION
     @commands.command(  brief="Sends a message to every server & channel connected to this bot",
-                        usage="<message>",
-                        description="Sends a message to every server & channel connected to this bot. "
+                        usage="Check out the new updates!",
+                        description="Sends a message to every server & channel connected to this bot.\n"
                                     "This will NOT notify the saved role for each server.")
     @commands.cooldown(1, 15, commands.BucketType.guild)
     async def sendthought(self, ctx, *, thought):
@@ -66,7 +66,7 @@ class SuperCommands(commands.Cog, command_attrs=dict(hidden=True)):
 
     # REMOVE BOT FROM A SERVER
     @commands.command(  brief="Removes the bot in a certain server",
-                        usage="<server-id>",
+                        usage="123456789123456789",
                         description="Removes the bot in a certain server")
     @commands.cooldown(1, 15, commands.BucketType.guild)
     async def removeserver(self, ctx, *, server_id):

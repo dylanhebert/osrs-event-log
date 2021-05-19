@@ -62,6 +62,16 @@ async def update_server_entry(Server, entry, new_val):
     logger.info(f"UPDATED SERVER ENTRY - Name: {Server.name} | ID: {Server.id} | Entry: {entry} | Value: {new_val}")
 
 
+# ----------------------------- Get Server Entry ----------------------------- #
+
+async def get_server_entry(Server, entry):
+    """Get a server entry's value"""
+    logger.info('------------------------------')
+    logger.info(f'Initialized GET SERVER ENTRY - Name: {Server.name} | ID: {Server.id}')
+    db = await h.db_open(h.DB_DISCORD_PATH)
+    return db[f'server:{Server.id}#{entry}']
+
+
 # ---------------------------- Get Server Players ---------------------------- #
 
 async def get_server_players(Server):

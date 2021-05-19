@@ -88,15 +88,18 @@ async def on_disconnect():
     
 
 # Error and cooldown handling
-'''@bot.event
+@bot.event
 async def on_command_error(ctx, error):
     channel = ctx.message.channel
     if isinstance(error, commands.errors.CommandNotFound):
         #await ctx.send('idk that command')
         pass
-    elif isinstance(error, commands.errors.CommandOnCooldown):
-	    #await ctx.send(f"you can use this command in {int(error.retry_after)} seconds")
-        pass'''
+    if isinstance(error, commands.errors.MissingRequiredArgument):
+	    await ctx.send(f"You are missing the input **{error.param}** after this command")
+    if isinstance(error, commands.errors.CommandOnCooldown):
+        await ctx.send(f"You can use this command in {int(error.retry_after)} seconds")
+    else:
+        logger.exception(f'>> COMMAND ERROR: {error}')
 
 # Bot joining server
 @bot.event

@@ -11,12 +11,15 @@ import re
 from common.logger import logger
 import common.util as util
 import data.handlers as db
+import datetime
 
 
 class UserCommands(commands.Cog, name="General Commands"):
 
     def __init__(self, bot): # cog access bot
         self.bot = bot
+        self.in_channel_parse = False
+        self.cancel_channel_parse = False
 
     async def on_ready(self):
         logger.debug('UserCommands Cog Ready')
@@ -24,8 +27,8 @@ class UserCommands(commands.Cog, name="General Commands"):
 
 # --------------------- PLAYER JOINS LOG LOOP THEMSELVES --------------------- #
 
-    @commands.command(  brief=";add <OSRS-Name> | Add an account to your Activity Log",
-                        usage="<OSRS-Name>",
+    @commands.command(  brief=";add <rs-name> | Add an account to your Activity Log",
+                        usage="Zezima",
                         description="Join the Activity Log with a specified OSRS username.")
     @commands.cooldown(1, 5, commands.BucketType.guild)
     async def add(self, ctx, *, game_name):
@@ -51,9 +54,9 @@ class UserCommands(commands.Cog, name="General Commands"):
 
 # -------------- MEMBER CAN REMOVE THEMSELVES FROM ACTIVITY LOG -------------- #
 
-    @commands.command(  brief=";remove <OSRS-Name> | Remove an account from your Activity Log",
-                        usage="<OSRS-Name>",
-                        description="Remove one of your RS accounts from this server in the Activity Log's databases. "
+    @commands.command(  brief=";remove <rs-name> | Remove an account from your Activity Log",
+                        usage="Zezima",
+                        description="Remove one of your RS accounts from this server in the Activity Log's databases.\n"
                                     "You can use ;add to add another.")
     @commands.cooldown(1, 5, commands.BucketType.guild)
     async def remove(self, ctx, *, game_name):
@@ -67,8 +70,8 @@ class UserCommands(commands.Cog, name="General Commands"):
         
 # --------------- PLAYER TRANSFERS PLAYER INFO TO ANOTHER NAME --------------- #
 
-    @commands.command(  brief=";transfer {OSRS-Name}>>{new-name} | Transfer/rename an account's info",
-                        usage="{old-name}>>{new-name}",
+    @commands.command(  brief=";transfer old-name>>new-name | Transfer/rename an account's info",
+                        usage="Zezima>>Lynx Titan",
                         description="Mainly used if you rename one of your accounts. Tranfers all info for an old account to a new one.")
     @commands.cooldown(1, 5, commands.BucketType.guild)
     async def transfer(self, ctx, *, game_names):
@@ -159,12 +162,12 @@ class UserCommands(commands.Cog, name="General Commands"):
 
 # ------- TOGGLES WHETHER TO MENTION THE PLAYER OR NOT FOR EVERY UPDATE ------ #
 
-    @commands.command(  brief=";togglemention {OSRS-Name} | Toggles whether or not to @ you on Discord for every update",
-                        usage="<OSRS-Name>",
-                        description="Toggles whether or not to @ you on Discord for every update. "
-                                    "This is toggled on by default. "
+    @commands.command(  brief=";togglemention <rs-name> | Toggles whether or not to @ you on Discord for every update",
+                        usage="Zezima",
+                        description="Toggles whether or not to @ you on Discord for every update.\n"
+                                    "This is toggled on by default.\n"
                                     "You will still be notified for milestones from anyone in the server "
-                                    "unless you mute notifications for the text channel or role this bot posts to.")
+                                    "unless you mute notifications for the text channel or the role this bot notifies.")
     @commands.cooldown(1, 5, commands.BucketType.guild)
     async def togglemention(self, ctx, *, game_name):
         name_rs = util.name_to_rs(game_name)
@@ -191,7 +194,7 @@ class UserCommands(commands.Cog, name="General Commands"):
             await ctx.send(await db.get_sotw_info(ctx.guild))
         except Exception as e:
             logger.exception(f'Error with this command.')
-            return await ctx.send(f'Error with this command. Im new ok (boss of the week is newer tho)')
+            return await ctx.send(f'Error with this command. Ask my creator')
 
 
 # ---------------------- SHOWS CURRENT BOTW AND HISCORES --------------------- #
@@ -246,7 +249,7 @@ class UserCommands(commands.Cog, name="General Commands"):
                 await ctx.send('This server has no Skill of the Week history!')
         except Exception as e:
             logger.exception(f'Error with this command.')
-            return await ctx.send(f'Error with this command. Im new ok')
+            return await ctx.send(f'Error with this command. Ask my creator')
 
 
 # ----------------------- SHOW BOTW STATS FOR A SERVER ----------------------- #
@@ -274,6 +277,177 @@ class UserCommands(commands.Cog, name="General Commands"):
             logger.exception(f'Error with this command.')
             return await ctx.send(f'Error with this command. Im new ok')
 
+# -------------------------- SHOW RECENT MILESTONES -------------------------- #
+
+    def milestone_filter(self, message):
+        return message.author == self.bot.user and (f"**- @here") in message.content
+
+    def milestone_title_check(self, milestone_title, lookup_who):
+        # milestone_title = milestone_title.strip("*")
+        split_title = milestone_title.strip('*').split(' ')
+        title_potential_name = " ".join( split_title[:len(lookup_who.split(' '))] )
+        logger.debug(f'  -milestones: {title_potential_name}')
+        return lookup_who == title_potential_name
+
+    @commands.command(  brief=";milestones <rs-name> OR * | Show the most recent milestones",
+                        usage="Zezima --count 10",
+                        description="Show most recent milestones for a specific RS name or everyone in the server\n"
+                                    "Required: <rs-name> (must be a valid RS name in this server's activity log)\n"
+                                    "Optional: --count <int> (defaults to 5, large numbers can take awhile, has a limit)\n"
+                                    "Optional: --searchmore (parses more of the channel, will take a lot longer depending on count)\n"
+                                    "Use one of [all * .] instead of <rs-name> to get all players instead of 1\n"
+                                    "Cancel a running milestones command by using ;stopmilestones")
+    @commands.cooldown(1, 15, commands.BucketType.guild)
+    async def milestones(self, ctx, *milestone_inputs):
+        logger.info(f';milestones called in {ctx.guild.name} by {ctx.author.name}')
+        game_name = None
+        shorten_message_limit = 5
+        count_limit_max = 25  # must be greater than shorten_message_limit to be read
+        count_limit = 5
+        high_parse_limit = False
+
+        build_rs_name = []
+        flags_start = None
+        try:
+            for i in range(len(milestone_inputs)):
+                # check for flags
+                if milestone_inputs[i].startswith("--"):
+                    # player name should be first arg
+                    if i == 0:
+                        logger.debug(f'  -milestones: flag was found first in args: {milestone_inputs[i]}')
+                        return await ctx.send(f'A player name must be the first input!')
+                    if not flags_start: flags_start = i
+                    # get count input
+                    if milestone_inputs[i] == "--count":
+                        potential_count = milestone_inputs[i+1]
+                        if potential_count.isdigit():
+                            count_limit = int(potential_count)
+                            logger.debug(f'  -milestones: set count to {count_limit}')
+                            continue
+                        else:
+                            logger.debug(f'  -milestones: count was not set to digit: {potential_count}')
+                            return await ctx.send(f'Count input needs to be a positive whole number: **{potential_count}**')
+                    # check for no parse limit
+                    if milestone_inputs[i] == "--searchmore":
+                        high_parse_limit = True
+                        continue
+                    # if we hit here its an unknown flag, skip it
+                    logger.debug(f'  -milestones: unknown flag encountered {milestone_inputs[i]}')
+                    await ctx.send(f'Ignoring unknown flag input: **{milestone_inputs[i]}**')
+                    continue
+                # arg did not start with flag value, this should be only words of the rs-name
+                if not flags_start:
+                    build_rs_name.append(milestone_inputs[i])
+        except:
+            logger.debug(f'  -milestones: error parsing arguments. exiting command...')
+            return await ctx.send(f'Error parsing command inputs')
+
+        # exit if no name given
+        logger.debug(f'  -milestones: build_rs_name: {build_rs_name}')
+        if not build_rs_name:
+            logger.debug(f'  -milestones: no rs name given. exiting command...')
+            return await ctx.send(f'No RS name was given!')
+
+        # enforce count limits
+        if count_limit > count_limit_max:
+            count_limit = count_limit_max
+            logger.debug(f'  -milestones: count_limit ({count_limit}) exceeded and set to count_limit_max ({count_limit_max})')
+            await ctx.send(f'Resetting the count input to my max value of **{count_limit_max}**...')
+        # put together game_name and find out what we need to parse for (all or rs-name)
+        game_name = " ".join( build_rs_name )
+        logger.debug(f'  -milestones: game_name: {game_name}')
+        all_symbols = [ '.','*','all' ]
+        if any(i == game_name for i in all_symbols):
+            lookup_who = '*'
+        else:
+            lookup_who = util.name_to_discord(game_name)
+
+        # get activity log channel
+        parse_channel = None
+        try:
+            chan_id = await db.get_server_entry(ctx.guild, 'channel')
+            parse_channel = ctx.guild.get_channel(chan_id)
+        except:
+            logger.debug(f'  -milestones: could not get parse_channel')
+            return await ctx.send(f'Could not get the activity log channel')
+
+        # set what we use for channel parse limit
+        if high_parse_limit:
+            parse_limit = 10000
+            await ctx.send(f'--searchmore flag was set. This may take awhile. Use **;stopmilestones** to cancel.')
+        else:
+            parse_limit = 2000
+
+        logger.debug(f'  -milestones: lookup_who: {lookup_who}')
+        logger.debug(f'  -milestones: count: {count_limit}')
+        logger.debug(f'  -milestones: high_limit: {high_parse_limit}')
+
+        # start parsing channel history
+        count_current = 0
+        milestone_list = []
+        async with ctx.channel.typing():
+            self.in_channel_parse = True
+            async for message in parse_channel.history(limit=parse_limit).filter(self.milestone_filter):
+                # check if --stop was called
+                if self.cancel_channel_parse:
+                    self.in_channel_parse = False
+                    self.cancel_channel_parse = False
+                    logger.debug(f'  -milestones: stopped channel parse')
+                    return await ctx.send(f'Stopped channel search!')
+                split_all = message.content.split("\n", 1)
+                milestone_title = split_all[1]
+                if lookup_who == '*' or self.milestone_title_check(milestone_title, lookup_who):
+                    milestone_date = message.created_at.strftime("%m/%d/%Y")
+                    milestone_list.append(f"*{milestone_date}* - {milestone_title}")
+                    count_current += 1
+                    if count_current >= count_limit:
+                        logger.debug(f'  -milestones: reached count_limit')
+                        break
+            self.in_channel_parse = False
+                    
+            # get correct terms
+            message_for_who = lookup_who
+            if message_for_who == '*':
+                message_for_who = 'all players'
+            # if we couldnt find any milestones
+            if len(milestone_list) == 0:
+                message_for_who = lookup_who
+                if message_for_who == '*':
+                    message_for_who = 'any players'
+                return await ctx.send(f'**Could not find any recent milestones for {message_for_who}!**')
+
+            # found milestones
+            logger.debug(f'  -milestones: building final_message')
+            # shorten messages if milestone count is over the limit
+            if len(milestone_list) > shorten_message_limit:
+                logger.debug(f'  -milestones: milestone_list exceeded shorten_message_limit')
+                for i in range(len(milestone_list)):
+                    i_split = milestone_list[i].split("```", 1)
+                    milestone_list[i] = i_split[0]
+            # stagger messages to avoid char limit
+            temp_lst = []
+            stag_count = 0
+            stag_limit = 10
+            for m in milestone_list:
+                temp_lst.append(m)
+                stag_count += 1
+                if stag_count == stag_limit or stag_count == len(milestone_list):
+                    await ctx.send('\n'.join(temp_lst))
+                    stag_limit += 10
+                    temp_lst = []
+            # final_message = "\n".join(milestone_list)
+            # all done        
+            logger.debug(f'  -milestones: all done')
+            return await ctx.send(f'\n**--- End of the {count_current} most recent milestones for {message_for_who} ---**')
+
+    @commands.command(  brief=";stopmilestones | Stops a running milestones search",
+                        description="Stops a running milestones search. Does nothing if there's not a search running.")
+    @commands.cooldown(1, 5, commands.BucketType.guild)
+    async def stopmilestones(self, ctx, *milestone_inputs):
+        if self.in_channel_parse:
+            self.cancel_channel_parse = True
+            logger.debug(f'  -milestones: stopping channel parse...')
+            return await ctx.send(f'Stopping channel search...')
 
     # SIT
     @commands.command(brief="ok", hidden=True)
