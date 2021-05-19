@@ -280,7 +280,7 @@ class UserCommands(commands.Cog, name="General Commands"):
 # -------------------------- SHOW RECENT MILESTONES -------------------------- #
 
     def milestone_filter(self, message):
-        return message.author == self.bot.user and (f"**- @here") in message.content
+        return message.author == self.bot.user
 
     def milestone_title_check(self, milestone_title, lookup_who):
         # milestone_title = milestone_title.strip("*")
@@ -371,6 +371,18 @@ class UserCommands(commands.Cog, name="General Commands"):
             logger.debug(f'  -milestones: could not get parse_channel')
             return await ctx.send(f'Could not get the activity log channel')
 
+        # get rs role for server
+        try:
+            role_id = await db.get_server_entry(ctx.guild, 'role')
+            if not role_id:
+                notify_role_str = "@here"
+            else:
+                notify_role = ctx.guild.get_role(role_id)
+                notify_role_str = notify_role.mention
+        except:
+            logger.debug(f'  -milestones: could not get notify_role')
+            return await ctx.send(f'Could not get the activity log role')
+
         # set what we use for channel parse limit
         if high_parse_limit:
             parse_limit = 10000
@@ -388,21 +400,22 @@ class UserCommands(commands.Cog, name="General Commands"):
         async with ctx.channel.typing():
             self.in_channel_parse = True
             async for message in parse_channel.history(limit=parse_limit).filter(self.milestone_filter):
-                # check if --stop was called
+                # check if stopmilestones was called
                 if self.cancel_channel_parse:
                     self.in_channel_parse = False
                     self.cancel_channel_parse = False
                     logger.debug(f'  -milestones: stopped channel parse')
                     return await ctx.send(f'Stopped channel search!')
-                split_all = message.content.split("\n", 1)
-                milestone_title = split_all[1]
-                if lookup_who == '*' or self.milestone_title_check(milestone_title, lookup_who):
-                    milestone_date = message.created_at.strftime("%m/%d/%Y")
-                    milestone_list.append(f"*{milestone_date}* - {milestone_title}")
-                    count_current += 1
-                    if count_current >= count_limit:
-                        logger.debug(f'  -milestones: reached count_limit')
-                        break
+                if (f"**- {notify_role_str}") in message.content:
+                    split_all = message.content.split("\n", 1)
+                    milestone_title = split_all[1]
+                    if lookup_who == '*' or self.milestone_title_check(milestone_title, lookup_who):
+                        milestone_date = message.created_at.strftime("%m/%d/%Y")
+                        milestone_list.append(f"*{milestone_date}* - {milestone_title}")
+                        count_current += 1
+                        if count_current >= count_limit:
+                            logger.debug(f'  -milestones: reached count_limit')
+                            break
             self.in_channel_parse = False
                     
             # get correct terms
