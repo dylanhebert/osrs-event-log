@@ -23,7 +23,7 @@ BOTW_BASIC_FMT = "%m-%d-%y"         # String format for basic BOTW displaying an
 BOTW_COMPARE_FMT = "%m-%d-%y %H"    # String format for comparing times
 PRE_PICK_HOURS = 1                  # Hours before pick time to show hiscores once more
 TOP_PLAYERS_COUNT = 10              # Number of players to show on BOTW info and get BOTW histories
-DAYS_BETWEEN_BOTW = 3               # SHOULD BE 7, Days to the next BOTW reset
+DAYS_BETWEEN_BOTW = 7               # SHOULD BE 7, Days to the next BOTW reset
 
 RANK_AWARDS = {
     1: 'Rune Trophy',
