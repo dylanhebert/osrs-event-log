@@ -300,10 +300,10 @@ async def change_new_botw(now_time):
     new_boss_override = None
     # Check for a boss pick override
     BOTW_CONFIG_TEMP = await h.db_open(BOTW_CONFIG_PATH)
-    if BOTW_CONFIG_TEMP['boss_override'] and BOTW_CONFIG_TEMP['boss_override'] in boss_pool['all_bosses']:
-        new_boss_override = BOTW_CONFIG_TEMP['boss_override']
+    if BOTW_CONFIG_TEMP['pick_override'] and BOTW_CONFIG_TEMP['pick_override'] in boss_pool['all_bosses']:
+        new_boss_override = BOTW_CONFIG_TEMP['pick_override']
         BOTW_CONFIG = BOTW_CONFIG_TEMP
-    BOTW_CONFIG['boss_override'] = None
+    BOTW_CONFIG['pick_override'] = None
     del BOTW_CONFIG['recent_bosses'][0]
     BOTW_CONFIG['recent_bosses'].append(current_boss)
     # Set new boss to override if available
