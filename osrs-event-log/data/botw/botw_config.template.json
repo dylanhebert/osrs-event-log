@@ -15,5 +15,6 @@
             "hour": 14,
             "done": false
         }
-    ]
+    ],
+    "pick_override": null
 }
