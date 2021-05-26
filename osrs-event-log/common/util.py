@@ -201,4 +201,10 @@ async def message_separate_servers(bot, servers_messages, mention):
         Server = bot.get_guild(serv_dict['id'])
         message = servers_messages['all_messages'][str(serv_dict['id'])]
         await message_server(Server, serv_dict, message, mention)
+
+
+async def message_specific_server(bot, Server, all_servers, message, mention):
+    for serv_dict in all_servers:
+        if Server.id == serv_dict['id']:
+            await message_server(Server, serv_dict, message, mention)
         

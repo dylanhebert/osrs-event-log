@@ -75,7 +75,22 @@ class SuperCommands(commands.Cog, command_attrs=dict(hidden=True)):
             logger.debug(f"Remove server name: {Server.name}")
             await Server.leave()
             logger.info(f"Done removing server: {server_id}")
-            
+
+
+    # SENDS AN ANNOUNCEMENT TO A SPECIFIC SERVER
+    @commands.command(  brief="Sends an announcement to a specific server",
+                        usage="123456789123456789 This message is for your server only!",
+                        description="Sends an announcement to a specific server")
+    @commands.cooldown(1, 15, commands.BucketType.guild)
+    async def sendspecificannouncement(self, ctx, server_id, announcement):
+        if ctx.author.id == 134858274909585409:
+            try:
+                all_servers = await db.get_all_servers(ctx.author)
+                Server = self.bot.get_guild(int(server_id))
+                await util.message_specific_server(self.bot, Server, all_servers, announcement, mention=True)
+                logger.info(f"Done sending specific announcement in server: {server_id} | {announcement}")
+            except:
+                logger.info(f"ERROR sending specific announcement in server: {server_id}")
             
 
 
