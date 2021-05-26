@@ -289,20 +289,32 @@ async def change_new_sotw(now_time):
     logger.info(f"Initialized CHANGE NEW SOTW - Old SOTW: {SOTW_CONFIG['current_skill']}")
     # Update recent skills
     current_skill = SOTW_CONFIG['current_skill']
+    skill_pool = await h.db_open(SOTW_POOL)
+    new_skill_override = None
+    # Check for a skill pick override
+    SOTW_CONFIG_TEMP = await h.db_open(SOTW_CONFIG_PATH)
+    if SOTW_CONFIG_TEMP['pick_override'] and SOTW_CONFIG_TEMP['pick_override'] in skill_pool['all_skills']:
+        new_skill_override = SOTW_CONFIG_TEMP['pick_override']
+        SOTW_CONFIG = SOTW_CONFIG_TEMP
+    SOTW_CONFIG['pick_override'] = None
     del SOTW_CONFIG['recent_skills'][0]
     SOTW_CONFIG['recent_skills'].append(current_skill)
-    # Make sure new skill is not in recent skills
-    skill_pool = await h.db_open(SOTW_POOL)
-    while current_skill in SOTW_CONFIG['recent_skills']:
-        current_skill = random.choice(skill_pool['all_skills'])
-    # Got new skill
-    SOTW_CONFIG['current_skill'] = current_skill
+    # Set new skill to override if available
+    if new_skill_override:
+        SOTW_CONFIG['current_skill'] = new_skill_override
+    # No override, pick random
+    else:
+        # Make sure new skill is not in recent skills
+        while current_skill in SOTW_CONFIG['recent_skills']:
+            current_skill = random.choice(skill_pool['all_skills'])
+        # Got new skill
+        SOTW_CONFIG['current_skill'] = current_skill
     # Make new deadline a week later from now
     new_deadline = (now_time+datetime.timedelta(days=DAYS_BETWEEN_SOTW))
     SOTW_CONFIG['pick_next'] = new_deadline.strftime(SOTW_BASIC_FMT)
     await update_sotw_config(SOTW_CONFIG)
-    new_sotw_message = f"The new Skill of the Week is **{current_skill}**! The deadline is on *{new_deadline.strftime('%A, %B %d')}*. Get skilling!"
-    logger.info(f"FINISHED CHANGE NEW SOTW - New SOTW: {current_skill} | New deadline: {new_deadline.strftime(SOTW_BASIC_FMT)}")
+    new_sotw_message = f"The new Skill of the Week is **{SOTW_CONFIG['current_skill']}**! The deadline is on *{new_deadline.strftime('%A, %B %d')}*. Get skilling!"
+    logger.info(f"FINISHED CHANGE NEW SOTW - New SOTW: {SOTW_CONFIG['current_skill']} | New deadline: {new_deadline.strftime(SOTW_BASIC_FMT)}")
     return new_sotw_message
 
 
