@@ -292,6 +292,7 @@ async def build_botw_final(now_time):
 
 async def change_new_botw(now_time):
     """Change to new BOTW & build a message string with new BOTW"""
+    global BOTW_CONFIG
     logger.info('------------------------------')
     logger.info(f"Initialized CHANGE NEW BOTW - Old BOTW: {BOTW_CONFIG['current_boss']}")
     # Update recent bosses
