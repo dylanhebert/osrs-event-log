@@ -285,6 +285,7 @@ async def build_sotw_final(now_time):
 
 async def change_new_sotw(now_time):
     """Change to new SOTW & build a message string with new SOTW"""
+    global SOTW_CONFIG
     logger.info('------------------------------')
     logger.info(f"Initialized CHANGE NEW SOTW - Old SOTW: {SOTW_CONFIG['current_skill']}")
     # Update recent skills
