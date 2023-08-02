@@ -141,7 +141,7 @@ async def week_stats_from_players(week_players, all_server_stats):
 
 async def get_sotw_info(Server, pre_time=False):
     """Get all basic SOTW info for the server"""
-    logger.info('------------------------------')
+    logger.info('~~~~~~~~~~~~~~~~~~~~~~~~')
     logger.info(f'Initialized GET SOTW INFO - Server: {Server.name} | ID: {Server.id}')
     db = await h.db_open(h.DB_DISCORD_PATH)
     # Create full ranking string, top 10 people
@@ -157,7 +157,7 @@ async def get_sotw_info(Server, pre_time=False):
 
 async def get_sotw_history(Server):
     """Get all basic SOTW history for the server"""
-    logger.info('------------------------------')
+    logger.info('~~~~~~~~~~~~~~~~~~~~~~~~')
     logger.info(f'Initialized GET SOTW HISTORY - Server: {Server.name} | ID: {Server.id}')
     db = await h.db_open(h.DB_DISCORD_PATH)
     history_list = []
@@ -171,7 +171,7 @@ async def get_sotw_history(Server):
 
 async def get_sotw_stats(Server):
     """Get all basic SOTW player stats for the server"""
-    logger.info('------------------------------')
+    logger.info('~~~~~~~~~~~~~~~~~~~~~~~~')
     logger.info(f'Initialized GET SOTW STATS - Server: {Server.name} | ID: {Server.id}')
     db = await h.db_open(h.DB_DISCORD_PATH)
     all_server_stats = {}
@@ -192,7 +192,7 @@ async def get_sotw_stats(Server):
 async def check_sotw_times(now_time):
     """Checks the datetime.now with the time in SOTW config"""
     ## ADD CHECK TO MAKE SURE PICK_NEXT ISNT BEFORE NOW_TIME
-    logger.debug('------------------------------')
+    logger.debug('~~~~~~~~~~~~~~~~~~~~~~~~')
     logger.debug(f'Initialized CHECK SOTW TIMES - Time Now: {now_time}')
     # If it's time to pick new SOTW
     if now_time.strftime(SOTW_COMPARE_FMT) == f"{SOTW_CONFIG['pick_next']} {SOTW_CONFIG['pick_hour']}":
@@ -229,7 +229,7 @@ async def check_sotw_times(now_time):
 
 async def build_sotw_final(now_time):
     """Reset all servers for Skill of the week and add final rankings to players"""
-    logger.info('------------------------------')
+    logger.info('~~~~~~~~~~~~~~~~~~~~~~~~')
     logger.info(f'Initialized SOTW RESET')
     db = await h.db_open(h.DB_DISCORD_PATH)
     # Loop through db to get servers
@@ -286,7 +286,7 @@ async def build_sotw_final(now_time):
 async def change_new_sotw(now_time):
     """Change to new SOTW & build a message string with new SOTW"""
     global SOTW_CONFIG
-    logger.info('------------------------------')
+    logger.info('~~~~~~~~~~~~~~~~~~~~~~~~')
     logger.info(f"Initialized CHANGE NEW SOTW - Old SOTW: {SOTW_CONFIG['current_skill']}")
     # Update recent skills
     current_skill = SOTW_CONFIG['current_skill']
@@ -322,7 +322,7 @@ async def change_new_sotw(now_time):
 # NEEDS WORK
 async def update_sotw_config(config_new):
     """Update the entire SOTW config with current config in cache"""
-    logger.info('------------------------------')
+    logger.info('~~~~~~~~~~~~~~~~~~~~~~~~')
     logger.info(f'Initialized UPDATE SOTW CONFIG')
     global SOTW_CONFIG
     SOTW_CONFIG = config_new
@@ -332,7 +332,7 @@ async def update_sotw_config(config_new):
 
 async def get_sotw_servers(progress):
     """Gets all settings in all servers with sotw enabled"""
-    logger.debug('------------------------------')
+    logger.debug('~~~~~~~~~~~~~~~~~~~~~~~~')
     logger.debug(f'Initialized GET SOTW SERVERS - Progress report: {progress}')
     db = await h.db_open(h.DB_DISCORD_PATH)
     # Loop through db to get servers

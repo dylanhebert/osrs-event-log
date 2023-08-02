@@ -209,7 +209,7 @@ async def toggle_player_entry(Server, Member, rs_name, entry):
     logger.info(f"Initialized TOGGLE PLAYER ENTRY - Player: {rs_name} | Member: {Member.name} | ID: {Member.id} | Server: {Server.name} | ID: {Server.id}")
     db = await h.db_open(h.DB_DISCORD_PATH)
     try: 
-        if not await h.player_in_server_member(db, Server, Member, rs_name):
+        if not await h.player_in_server_member(db, Server, Member.id, rs_name):
             raise ex.DataHandlerError(f'**{Member.name}** does not use OSRS account: *{rs_name}*')
     except Exception as e: raise e
     new_toggle = not db[f'player:{rs_name}#server:{Server.id}#{entry}']

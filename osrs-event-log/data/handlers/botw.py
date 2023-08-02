@@ -141,7 +141,7 @@ async def week_stats_from_players(week_players, all_server_stats):
 
 async def get_botw_info(Server, pre_time=False):
     """Get all basic BOTW info for the server"""
-    logger.info('------------------------------')
+    logger.info('~~~~~~~~~~~~~~~~~~~~~~~~')
     logger.info(f'Initialized GET BOTW INFO - Server: {Server.name} | ID: {Server.id}')
     db = await h.db_open(h.DB_DISCORD_PATH)
     # Create full ranking string, top 10 people
@@ -157,7 +157,7 @@ async def get_botw_info(Server, pre_time=False):
 
 async def get_botw_history(Server):
     """Get all basic BOTW history for the server"""
-    logger.info('------------------------------')
+    logger.info('~~~~~~~~~~~~~~~~~~~~~~~~')
     logger.info(f'Initialized GET BOTW HISTORY - Server: {Server.name} | ID: {Server.id}')
     db = await h.db_open(h.DB_DISCORD_PATH)
     history_list = []
@@ -171,7 +171,7 @@ async def get_botw_history(Server):
 
 async def get_botw_stats(Server):
     """Get all basic BOTW player stats for the server"""
-    logger.info('------------------------------')
+    logger.info('~~~~~~~~~~~~~~~~~~~~~~~~')
     logger.info(f'Initialized GET BOTW STATS - Server: {Server.name} | ID: {Server.id}')
     db = await h.db_open(h.DB_DISCORD_PATH)
     all_server_stats = {}
@@ -192,7 +192,7 @@ async def get_botw_stats(Server):
 async def check_botw_times(now_time):
     """Checks the datetime.now with the time in BOTW config"""
     ## ADD CHECK TO MAKE SURE PICK_NEXT ISNT BEFORE NOW_TIME
-    logger.debug('------------------------------')
+    logger.debug('~~~~~~~~~~~~~~~~~~~~~~~~')
     logger.debug(f'Initialized CHECK BOTW TIMES - Time Now: {now_time}')
     # fix for somparing strings with single digit ints
     if len(str(BOTW_CONFIG['pick_hour'])) == 1:
@@ -236,7 +236,7 @@ async def check_botw_times(now_time):
 
 async def build_botw_final(now_time):
     """Reset all servers for Boss of the week and add final rankings to players"""
-    logger.info('------------------------------')
+    logger.info('~~~~~~~~~~~~~~~~~~~~~~~~')
     logger.info(f'Initialized BOTW RESET')
     db = await h.db_open(h.DB_DISCORD_PATH)
     # Loop through db to get servers
@@ -293,7 +293,7 @@ async def build_botw_final(now_time):
 async def change_new_botw(now_time):
     """Change to new BOTW & build a message string with new BOTW"""
     global BOTW_CONFIG
-    logger.info('------------------------------')
+    logger.info('~~~~~~~~~~~~~~~~~~~~~~~~')
     logger.info(f"Initialized CHANGE NEW BOTW - Old BOTW: {BOTW_CONFIG['current_boss']}")
     # Update recent bosses
     current_boss = BOTW_CONFIG['current_boss']
@@ -329,7 +329,7 @@ async def change_new_botw(now_time):
 # NEEDS WORK
 async def update_botw_config(config_new):
     """Update the entire BOTW config with current config in cache"""
-    logger.info('------------------------------')
+    logger.info('~~~~~~~~~~~~~~~~~~~~~~~~')
     logger.info(f'Initialized UPDATE BOTW CONFIG')
     global BOTW_CONFIG
     BOTW_CONFIG = config_new
@@ -339,7 +339,7 @@ async def update_botw_config(config_new):
 
 async def get_botw_servers(progress):
     """Gets all settings in all servers with botw enabled"""
-    logger.debug('------------------------------')
+    logger.debug('~~~~~~~~~~~~~~~~~~~~~~~~')
     logger.debug(f'Initialized GET BOTW SERVERS - Progress report: {progress}')
     db = await h.db_open(h.DB_DISCORD_PATH)
     # Loop through db to get servers

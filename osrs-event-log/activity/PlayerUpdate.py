@@ -17,9 +17,15 @@ import data.handlers as db
 custom_messages = db.get_custom_messages()
 
 non_monster_bosses =  [   "Barrows Chests", "Chambers of Xeric", "Theatre of Blood",
-                        "The Gauntlet", "The Corrupted Gauntlet", "Wintertodt",
-                        "Chambers of Xeric: Challenge Mode", "Tempoross"
+                        "Theatre of Blood: Hard Mode", "The Gauntlet", "The Corrupted Gauntlet", "Wintertodt",
+                        "Chambers of Xeric: Challenge Mode", "Tempoross",
+                        "Guardians of the Rift", "Tombs of Amascut", "Tombs of Amascut: Expert Mode",
+                        "LMS - Rank", "PvP Arena - Rank", "Soul Wars Zeal",
+                        "Bounty Hunter - Hunter", "Bounty Hunter - Rogue",
+                        "Bounty Hunter (Legacy) - Hunter", "Bounty Hunter (Legacy) - Rogue"
                     ]
+
+title_replacements = {  "Rifts closed" : "Guardians of the Rift" }
 
 # ---------------------------------------------------------------------------- #
 #                                HELPER METHODS                                #
@@ -84,7 +90,7 @@ class PlayerUpdate:
                     self.check_botw_update('milestones')
                     logger.debug(f"joined overall for milestone...")
             all_milestones = "".join(self.milestones)
-            full_message = f'**- {self.mention_role} {self.mention_member} -**\n{all_milestones}'
+            full_message = f'**~ {self.mention_role} {self.mention_member} ~**\n{all_milestones}'
             ### Add in code here later to work around Discord's 2k char limit ###
             await channel.send(full_message)
             if self.duplicate_server_post == False:
@@ -114,7 +120,7 @@ class PlayerUpdate:
             logger.debug(f"created all_minigames...")
         # post updates
         if all_skills or all_minigames:
-            full_message = f'**- {self.mention_member} -**\n{all_skills}{all_minigames}'
+            full_message = f'**~ {self.mention_member} ~**\n{all_skills}{all_minigames}'
             ### Add in code here later to work around Discord's 2k char limit ###
             await channel.send(full_message)
             if self.duplicate_server_post == False:
@@ -161,6 +167,9 @@ class PlayerUpdate:
 
     # --- GET CORRECT WORD FOR BOSS KILLS --- #
     def get_boss_terms(self, boss_name):
+        # check title replacements first
+        if boss_name in title_replacements:
+            boss_name = title_replacements[boss_name]
         # change first word depending on boss/activity
         boss_terms = [ 'killed', 'kill' ]  # any other boss will default to this
         if boss_name in non_monster_bosses:  # not monsters
@@ -438,6 +447,10 @@ class PlayerUpdate:
 
     def make_boss_update(self, old_data, new_data, title, kill_new, kill_old, kill_diff, action_1, action_2):
         logger.debug(f"assigning Boss: {title}...")
+        # check title replacements first
+        if title in title_replacements:
+            title = title_replacements[title]
+            logger.debug(f"changed Boss title: {title}")
         # check for boss milestones
         found_milestone = False
         threshold = 500

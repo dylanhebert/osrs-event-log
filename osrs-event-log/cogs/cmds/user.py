@@ -406,7 +406,8 @@ class UserCommands(commands.Cog, name="General Commands"):
                     self.cancel_channel_parse = False
                     logger.debug(f'  -milestones: stopped channel parse')
                     return await ctx.send(f'Stopped channel search!')
-                if (f"**- {notify_role_str}") in message.content:
+                # changed format so check both in case (**- to **~)
+                if (f"**~ {notify_role_str}") in message.content or (f"**- {notify_role_str}") in message.content:
                     split_all = message.content.split("\n", 1)
                     milestone_title = split_all[1]
                     if lookup_who == '*' or self.milestone_title_check(milestone_title, lookup_who):
