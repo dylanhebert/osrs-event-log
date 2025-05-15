@@ -31,7 +31,7 @@ RANK_AWARDS = {
     3: 'Mithril Trophy'
 }
 
-MESSAGE_DIVIDER = "\n- - - - - - - - - - - - - - - - - - - - - - - - - - -\n"
+MESSAGE_DIVIDER = "\n~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~\n"
 
 
 # --------------------- Get top BOTW players in a server --------------------- #
