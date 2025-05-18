@@ -23,10 +23,10 @@ import sys, traceback
 from common.logger import logger
 import data.handlers as db
 
-# new for discord.py 1.5
 intents = discord.Intents.default()
 intents.members = True
 intents.presences = True
+intents.message_content = True
 
 # Our data .jsons
 db.verify_files('db_discord.json')
@@ -88,14 +88,24 @@ async def on_disconnect():
     
 
 # Error and cooldown handling
-@bot.event
+# @bot.event
+# async def on_application_command_error(ctx, error):
+#     if isinstance(error, commands.CommandOnCooldown):
+#         await ctx.respond(
+#             f"You're on cooldown!", # Try again in {round(error.retry_after, 1)}s.
+#             ephemeral=True
+#         )
+#     else:
+#         raise error  # let other errors bubble up
+    
+# @bot.event
 async def on_command_error(ctx, error):
     channel = ctx.message.channel
     if isinstance(error, commands.errors.CommandNotFound):
         #await ctx.send('idk that command')
         pass
     if isinstance(error, commands.errors.MissingRequiredArgument):
-	    await ctx.send(f"You are missing the input **{error.param}** after this command")
+        await ctx.send(f"You are missing the input **{error.param}** after this command")
     if isinstance(error, commands.errors.CommandOnCooldown):
         await ctx.send(f"You can use this command in {int(error.retry_after)} seconds")
     else:
@@ -123,4 +133,4 @@ async def on_guild_remove(guild):
     await db.remove_server(guild)
 
 
-bot.run(db.get_bot_token(), bot=True)
+bot.run(db.get_bot_token())

@@ -65,11 +65,14 @@ def format_int(num):
 
 # FORMAT COMMAS IN LONG INTS #2
 def format_int_str(num):
-    if len(str(num)) >= 4:
-        num = "{:,}".format(num)
+    try:
+        num = int(num)
+    except (ValueError, TypeError):
+        return str(num)  # fallback to string if it can't be converted
+    if num >= 1000:
+        return "{:,}".format(num)
     else:
-        num = str(num)
-    return num
+        return str(num)
 
 
 # ------ BASIC ASYNC FUNCTIONS ------
