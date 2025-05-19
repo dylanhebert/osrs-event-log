@@ -22,7 +22,8 @@ non_monster_bosses =  [   "Barrows Chests", "Chambers of Xeric", "Theatre of Blo
                         "Guardians of the Rift", "Tombs of Amascut", "Tombs of Amascut: Expert Mode",
                         "LMS - Rank", "PvP Arena - Rank", "Soul Wars Zeal",
                         "Bounty Hunter - Hunter", "Bounty Hunter - Rogue",
-                        "Bounty Hunter (Legacy) - Hunter", "Bounty Hunter (Legacy) - Rogue"
+                        "Bounty Hunter (Legacy) - Hunter", "Bounty Hunter (Legacy) - Rogue",
+                        "Collections Logged"
                     ]
 
 title_replacements = {  "Rifts closed" : "Guardians of the Rift" }
@@ -176,6 +177,9 @@ class PlayerUpdate:
             if boss_name == "Wintertodt" or boss_name == "Tempoross":  # special case for skilling bosses
                 boss_terms = [ 'subdued', 'subdue' ]
                 logger.debug("nonmonster boss, skilling boss...")
+            elif boss_name == "Collections Logged":
+                boss_terms = [ 'progressed', 'collection' ]
+                logger.debug("nonmonster boss, collections logged...")
             else:  # anything else not skilling bosses
                 boss_terms = [ 'completed', 'completion' ]
                 logger.debug("nonmonster boss...")
