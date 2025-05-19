@@ -194,14 +194,23 @@ async def check_sotw_times(now_time):
     ## ADD CHECK TO MAKE SURE PICK_NEXT ISNT BEFORE NOW_TIME
     logger.debug('~~~~~~~~~~~~~~~~~~~~~~~~')
     logger.debug(f'Initialized CHECK SOTW TIMES - Time Now: {now_time}')
+    # fix for somparing strings with single digit ints
+    if len(str(SOTW_CONFIG['pick_hour'])) == 1:
+        pick_hour = f"0{SOTW_CONFIG['pick_hour']}"
+    else:
+        pick_hour = str(SOTW_CONFIG['pick_hour'])
     # If it's time to pick new SOTW
-    if now_time.strftime(SOTW_COMPARE_FMT) == f"{SOTW_CONFIG['pick_next']} {SOTW_CONFIG['pick_hour']}":
+    pick_time_str = f"{SOTW_CONFIG['pick_next']} {pick_hour}"
+    pick_time_dt = datetime.datetime.strptime(pick_time_str, SOTW_COMPARE_FMT)
+    if now_time >= pick_time_dt:
         SOTW_CONFIG['pick_imminent'] = False
         logger.info('Pick Time! Reset pick_imminent.')
         return 'pick_time'
     # Remind for 1 hour left
     if not SOTW_CONFIG['pick_imminent']:
-        if now_time.strftime(SOTW_COMPARE_FMT) == f"{SOTW_CONFIG['pick_next']} {SOTW_CONFIG['pick_hour'] - PRE_PICK_HOURS}":
+        pick_imm_str = f"{SOTW_CONFIG['pick_next']} {int(pick_hour) - PRE_PICK_HOURS}"
+        pick_imm_dt = datetime.datetime.strptime(pick_imm_str, SOTW_COMPARE_FMT)
+        if now_time >= pick_imm_dt:
             SOTW_CONFIG['pick_imminent'] = True
             await update_sotw_config(SOTW_CONFIG)
             logger.info('Pre Time! Enabled pick_imminent')
@@ -310,9 +319,15 @@ async def change_new_sotw(now_time):
             current_skill = random.choice(skill_pool['all_skills'])
         # Got new skill
         SOTW_CONFIG['current_skill'] = current_skill
-    # Make new deadline a week later from now
-    new_deadline = (now_time+datetime.timedelta(days=DAYS_BETWEEN_SOTW))
+
+    # Make new deadline the next weekday we target in config
+    target_weekday = SOTW_CONFIG["pick_weekday"]
+    days_ahead = (target_weekday - now_time.weekday() + 7) % 7
+    if days_ahead == 0:
+        days_ahead = 7  # Always get the *next* occurrence
+    new_deadline = now_time + datetime.timedelta(days=days_ahead)
     SOTW_CONFIG['pick_next'] = new_deadline.strftime(SOTW_BASIC_FMT)
+
     await update_sotw_config(SOTW_CONFIG)
     new_sotw_message = f"The new Skill of the Week is **{SOTW_CONFIG['current_skill']}**! The deadline is on *{new_deadline.strftime('%A, %B %d')}*. Get skilling!"
     logger.info(f"FINISHED CHANGE NEW SOTW - New SOTW: {SOTW_CONFIG['current_skill']} | New deadline: {new_deadline.strftime(SOTW_BASIC_FMT)}")

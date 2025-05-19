@@ -202,13 +202,17 @@ async def check_botw_times(now_time):
     logger.debug(f"now_time: {now_time.strftime(BOTW_COMPARE_FMT)}")
     logger.debug(f"pick_time: {BOTW_CONFIG['pick_next']} {pick_hour}")
     # If it's time to pick new BOTW
-    if now_time.strftime(BOTW_COMPARE_FMT) == f"{BOTW_CONFIG['pick_next']} {pick_hour}":
+    pick_time_str = f"{BOTW_CONFIG['pick_next']} {pick_hour}"
+    pick_time_dt = datetime.datetime.strptime(pick_time_str, BOTW_COMPARE_FMT)
+    if now_time >= pick_time_dt:
         BOTW_CONFIG['pick_imminent'] = False
         logger.info('Pick Time! Reset pick_imminent.')
         return 'pick_time'
     # Remind for 1 hour left
     if not BOTW_CONFIG['pick_imminent']:
-        if now_time.strftime(BOTW_COMPARE_FMT) == f"{BOTW_CONFIG['pick_next']} {int(pick_hour) - PRE_PICK_HOURS}":
+        pick_imm_str = f"{BOTW_CONFIG['pick_next']} {int(pick_hour) - PRE_PICK_HOURS}"
+        pick_imm_dt = datetime.datetime.strptime(pick_imm_str, BOTW_COMPARE_FMT)
+        if now_time >= pick_imm_dt:
             BOTW_CONFIG['pick_imminent'] = True
             await update_botw_config(BOTW_CONFIG)
             logger.info('Pre Time! Enabled pick_imminent')
@@ -317,9 +321,15 @@ async def change_new_botw(now_time):
             current_boss = random.choice(boss_pool['all_bosses'])
         # Got new boss
         BOTW_CONFIG['current_boss'] = current_boss
-    # Make new deadline a week later from now
-    new_deadline = (now_time+datetime.timedelta(days=DAYS_BETWEEN_BOTW))
+
+    # Make new deadline the next weekday we target in config
+    target_weekday = BOTW_CONFIG["pick_weekday"]
+    days_ahead = (target_weekday - now_time.weekday() + 7) % 7
+    if days_ahead == 0:
+        days_ahead = 7  # Always get the *next* occurrence
+    new_deadline = now_time + datetime.timedelta(days=days_ahead)
     BOTW_CONFIG['pick_next'] = new_deadline.strftime(BOTW_BASIC_FMT)
+
     await update_botw_config(BOTW_CONFIG)
     new_botw_message = f"The new Boss of the Week is **{BOTW_CONFIG['current_boss']}**! The deadline is on *{new_deadline.strftime('%A, %B %d')}*. Get bossing!"
     logger.info(f"FINISHED CHANGE NEW BOTW - New BOTW: {BOTW_CONFIG['current_boss']} | New deadline: {new_deadline.strftime(BOTW_BASIC_FMT)}")
