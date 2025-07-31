@@ -49,7 +49,7 @@ custom_help = commands.DefaultHelpCommand(
 # Set bot status
 game_playing = discord.Streaming(
     name=';add <osrs-name>',
-    url='https://www.youtube.com/watch?v=FADpdNyXzek')
+    url='https://www.youtube.com/watch?v=EfBMZoHbmU4')
 
 # Create bot object
 bot = commands.Bot(
