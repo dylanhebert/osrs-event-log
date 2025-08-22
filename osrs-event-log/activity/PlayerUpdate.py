@@ -91,7 +91,7 @@ class PlayerUpdate:
                     self.check_botw_update('milestones')
                     logger.debug(f"joined overall for milestone...")
             all_milestones = "".join(self.milestones)
-            full_message = f'**~ {self.mention_role} {self.mention_member} ~**\n{all_milestones}'
+            full_message = f'{all_milestones}**~ {self.mention_role} {self.mention_member} ~**'
             ### Add in code here later to work around Discord's 2k char limit ###
             await channel.send(full_message)
             if self.duplicate_server_post == False:
@@ -121,7 +121,7 @@ class PlayerUpdate:
             logger.debug(f"created all_minigames...")
         # post updates
         if all_skills or all_minigames:
-            full_message = f'**~ {self.mention_member} ~**\n{all_skills}{all_minigames}'
+            full_message = f'{all_skills}{all_minigames}**~ {self.mention_member} ~**'
             ### Add in code here later to work around Discord's 2k char limit ###
             await channel.send(full_message)
             if self.duplicate_server_post == False:
