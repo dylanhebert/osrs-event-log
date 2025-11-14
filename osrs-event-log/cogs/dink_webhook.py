@@ -5,6 +5,7 @@ from aiohttp import web
 from discord.ext import commands
 from common.logger import logger
 import data.handlers as db
+import dink_messages
 
 # If you already have helpers for DB, import them here
 # from data.handlers import get_discord_user_by_dink_hash, save_dink_event
@@ -82,7 +83,7 @@ class DinkWebhook(commands.Cog):
             return web.json_response({"error": "missing payload_json"}, status=400)
 
         # Log the raw JSON string from Dink
-        logger.debug("[DinkWebhook] Raw payload_json: %s", payload_json)
+        # logger.debug("[DinkWebhook] Raw payload_json: %s", payload_json)
 
         try:
             payload = json.loads(payload_json)
@@ -124,80 +125,19 @@ class DinkWebhook(commands.Cog):
             return
 
         message = self.format_dink_message(payload)
+        # TODO: hook into posting in correct channels
         if message:
             await channel.send(message)
 
     # FORMAT MESSAGE
     def format_dink_message(self, payload: dict) -> str:
-        event_type = payload.get("type")
-        extra = payload.get("extra", {}) or {}
         rsn = payload.get("playerName")
         dink_hash = payload.get("dinkAccountHash")
-
-        # If you have a DB mapping dink_hash -> discord_user_id, resolve it here:
-        # linked = get_discord_user_by_dink_hash(dink_hash)
-        # user_tag = f"<@{linked.discord_user_id}>" if linked else rsn
         user_tag = rsn  # placeholder
 
-        if event_type == "LOOT":
-            items = extra.get("items", [])
-            source = extra.get("source", "Unknown source")
-            total_value = sum(i["quantity"] * i["priceEach"] for i in items)
-            items_str = ", ".join(f"{i['quantity']}x {i['name']}" for i in items)
-            return (
-                f"{user_tag} got **{items_str}** from **{source}** "
-                f"(~{total_value:,} gp)"
-            )
+        # TODO: hook into normal mentioning of users like normal messages
 
-        if event_type == "KILL_COUNT":
-            boss = extra.get("boss")
-            count = extra.get("count")
-            pb = " **(PB!)**" if extra.get("isPersonalBest") else ""
-            return f"{user_tag} is now **{boss} KC {count}**{pb}"
-
-        if event_type == "PET":
-            pet = extra.get("petName", "a new pet")
-            milestone = extra.get("milestone")
-            suffix = f" ({milestone})" if milestone else ""
-            return f"{user_tag} just received **{pet}**{suffix}!"
-
-        if event_type == "GRAND_EXCHANGE":
-            extra = payload.get("extra") or {}
-            item = extra.get("item") or {}
-
-            status = (extra.get("status") or "").upper()
-            verb_map = {
-                "BOUGHT": "bought",
-                "SOLD": "sold",
-                "CANCELLED": "cancelled",
-            }
-            verb = verb_map.get(status, status.lower() or "traded")
-
-            qty = item.get("quantity") or 0
-            name = item.get("name") or "Unknown item"
-            price_each = item.get("priceEach") or 0
-            total_price = qty * price_each
-
-            market = extra.get("marketPrice")
-            target_price = extra.get("targetPrice")
-            slot = extra.get("slot")
-
-            market_str = f"{market:,} gp" if market is not None else "N/A"
-            target_str = f"{target_price:,} gp" if target_price is not None else "N/A"
-
-            return (
-                f"**{rsn} {verb} {name} on the Grand Exchange**"
-                f"```c\n"
-                f"Quantity: {qty} | Unit price: {price_each:,} gp | "
-                f"Total: {total_price:,} gp | Market: {market_str} | "
-                f"Target: {target_str} | Slot: {slot}\n"
-                f"```"
-            )
-
-        # Fallback if you haven't specialised this type yet
-        content = payload.get("content")
-        logger.debug(content)
-        return content or f"{user_tag} triggered {event_type or 'UNKNOWN'}"
+        return dink_messages.format_dink_message(payload, user_tag)
 
 
 def setup(bot: commands.Bot):
