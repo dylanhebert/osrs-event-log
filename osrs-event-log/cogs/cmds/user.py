@@ -496,7 +496,7 @@ class UserCommands(commands.Cog, name="General Commands"):
             new_dinklink = util.generate_dink_link()
             new_val = await db.update_player_dinklink(name_rs, new_dinklink)
             base_url = db.get_dink_base_url()
-            link = f'{base_url}/dink/{new_val}/webhook'
+            link = f'{base_url}/dink/{new_val}'
             await ctx.author.send(
                 f'Here is your Dink link for **{name_rs}**:\n'
                 f'```text\n{link}\n```'
