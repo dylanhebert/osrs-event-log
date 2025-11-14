@@ -31,7 +31,7 @@ class DinkWebhook(commands.Cog):
         "GROUP_STORAGE",
         "BARBARIAN_ASSAULT_GAMBLE",
         "SPEEDRUN",
-}
+    }
 
     def __init__(self, bot: commands.Bot):
         self.bot = bot
@@ -158,7 +158,7 @@ class DinkWebhook(commands.Cog):
             logger.info("[DinkWebhook] Channel not found")
             return
 
-        message = self.format_dink_message(payload)
+        message, should_notify = self.format_dink_message(payload)
         if not message:
             return
         
@@ -173,6 +173,7 @@ class DinkWebhook(commands.Cog):
         player_discord_info = await PLAYER_HANDLER.get_all_player_info(name_rs)
         if not player_discord_info:
             logger.debug(f"{name_rs}: Skipping player not in any active servers")
+            await PLAYER_HANDLER.remove_cache()
             return
         
         for player_server in player_discord_info:
@@ -190,8 +191,9 @@ class DinkWebhook(commands.Cog):
 
                 mention_member = self.get_mention_member(server, player_server)
                 mention_role = self.get_mention_role(rs_role)
-                # TODO: add checks for milestones to append mention role?
-                full_message = f'{message}' #{mention_member} - removed for now to reduce disruptions
+                full_message = message
+                if should_notify:
+                    full_message = f'{message}{mention_role} {mention_member}'
 
                 await event_channel.send(full_message)
                 logger.info(f"New Dink update posted for [{name_rs}] in server [{server.name}] ({server.id}) & channel [{event_channel.name}] ({event_channel.id}):\n{full_message}")
@@ -206,6 +208,7 @@ class DinkWebhook(commands.Cog):
         rsn = payload.get("playerName")
         dink_hash = payload.get("dinkAccountHash")
         user_tag = rsn
+        # will return a tuple
         return dink_messages.format_dink_message(payload, user_tag)
 
 

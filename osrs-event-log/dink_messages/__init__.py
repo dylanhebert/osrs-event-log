@@ -37,9 +37,17 @@ def format_dink_message(payload: dict, user_tag: str) -> str:
     formatter = _FORMATTERS.get(event_type)
 
     if formatter:
-        message = formatter(payload, user_tag)
-        logger.info(f'Dink Event: {message}')
-        return message
+        result = formatter(payload, user_tag)
+
+        # Backward-compatible behavior:
+        if isinstance(result, tuple):
+            message, notify = result
+        else:
+            message = result
+            notify = False
+
+        logger.info(f'Dink Event: {message} - will notify: {str(notify)}')
+        return message, notify
 
     # Fallback if you haven't specialised this type yet
     content = payload.get("content")

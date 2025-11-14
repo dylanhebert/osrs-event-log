@@ -46,4 +46,9 @@ def format_loot(payload: dict, user_tag: str) -> str:
         return header
 
     line = " | ".join(stats)
-    return f"{header}```c\n{line}\n```"
+    
+    notify = False
+    if total_value >= 10000000:
+        notify = True
+
+    return f"{header}```c\n{line}\n```", notify

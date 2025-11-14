@@ -38,4 +38,9 @@ def format_achievement_diary(payload: dict, user_tag: str) -> str:
         return header
 
     line = " | ".join(stats)
-    return f"{header}```c\n{line}\n```"
+
+    notify = False
+    if difficulty == "ELITE":
+        notify = True
+        
+    return f"{header}```c\n{line}\n```", notify

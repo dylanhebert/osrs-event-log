@@ -31,4 +31,9 @@ def format_clue(payload: dict, user_tag: str) -> str:
         stats.append(f"High value: {hv_list}")
 
     line = " | ".join(stats)
-    return f"{header}```c\n{line}\n```"
+
+    notify = False
+    if total_value >= 10000000:
+        notify = True
+
+    return f"{header}```c\n{line}\n```", notify

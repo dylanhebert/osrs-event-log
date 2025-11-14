@@ -1,5 +1,13 @@
 # dink_messages/quest.py
 
+SPECIAL_QUESTS = {
+    "Desert Treasure II - The Fallen Empire",
+    "Dragon Slayer II",
+    "Song of the Elves",
+    "While Guthix Sleeps",
+    "Monkey Madness II"
+}
+
 def format_quest(payload: dict, user_tag: str) -> str:
     extra = payload.get("extra") or {}
 
@@ -29,4 +37,9 @@ def format_quest(payload: dict, user_tag: str) -> str:
         return header
 
     line = " | ".join(stats)
-    return f"{header}```c\n{line}\n```"
+
+    notify = False
+    if quest in SPECIAL_QUESTS:
+        notify = True
+    
+    return f"{header}```c\n{line}\n```", notify
