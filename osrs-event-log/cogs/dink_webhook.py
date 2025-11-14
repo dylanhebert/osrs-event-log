@@ -152,11 +152,11 @@ class DinkWebhook(commands.Cog):
             logger.debug(f"[DinkWebhook] Ignored event: {event_type}")
             return
     
-        channel_id = db.get_dink_test_channel()
-        channel = self.bot.get_channel(channel_id)
-        if channel is None:
-            logger.info("[DinkWebhook] Channel not found")
-            return
+        # channel_id = db.get_dink_test_channel()
+        # channel = self.bot.get_channel(channel_id)
+        # if channel is None:
+        #     logger.info("[DinkWebhook] Channel not found")
+        #     return
 
         message, should_notify = self.format_dink_message(payload)
         if not message:
