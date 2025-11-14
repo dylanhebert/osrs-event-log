@@ -500,7 +500,7 @@ class UserCommands(commands.Cog, name="General Commands"):
             await ctx.author.send(
                 f'Here is your Dink link for **{name_rs}**:\n'
                 f'```text\n{link}\n```'
-                'Paste this URL into the Dink plugin under "Primary Webhook URLs".'
+                'Paste this URL into the Dink plugin under "Primary Webhook URLs". Be sure to enable all notification types inside the plugin!'
             )
         except discord.Forbidden:
             return await ctx.reply(
