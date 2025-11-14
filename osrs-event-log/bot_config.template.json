@@ -1,4 +1,8 @@
 {
   "BOT_TOKEN": null,
-  "MAX_PLAYERS_PER_MEMBER": 2
+  "MAX_PLAYERS_PER_MEMBER": 2,
+  "DINK_BASE_URL": "",
+  "DINK_HOST": "",
+  "DINK_PORT": "",
+  "DINK_TEST_CHANNEL": null
 }

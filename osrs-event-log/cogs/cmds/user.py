@@ -470,5 +470,47 @@ class UserCommands(commands.Cog, name="General Commands"):
         await ctx.send('**ok**')
 
 
+    @commands.command(  brief=";dinklink <rs-name> | Creates a unique URL to put into the Dink plugin",
+                        usage="Zezima",
+                        description="Creates a unique URL to put into the Dink plugin (RuneLite Plugin Hub).\n"
+                                    "This URL will get DM'd to you and SHOULD BE KEPT SECRET.\n"
+                                    "You can use this command again to reset your Dink URL.\n"
+                                    "This will enable certain real-time events to be logged alongside levels & boss kills.")
+    @commands.cooldown(1, 5, commands.BucketType.guild)
+    async def dinklink(self, ctx, *, game_name):
+        name_rs = util.name_to_rs(game_name)
+        await ctx.send("*Checking name...*")
+        player_dict = await util.check_player_validity(name_rs)
+        # If player is not valid to be added
+        if player_dict == None:
+            await ctx.send("**This player's RS name can't be accessed!** Here are some reasons why:\n"
+                            " -This Runescape character doesn't exist\n"
+                            " -They don't have any high enough levels on the Hiscores\n"
+                            " -Hiscores are not responding. Try again later")
+            return
+        if not await db.is_member_linked_to_player(ctx.guild.id, ctx.author.id, name_rs):
+            await ctx.send("**You are not linked to this Runescape account.** Please try again using a Runescape account you're currently linked to.")
+            return
+        
+        try:
+            new_dinklink = util.generate_dink_link()
+            new_val = await db.update_player_dinklink(name_rs, new_dinklink)
+            base_url = db.get_dink_base_url()
+            link = f'{base_url}/dink/{new_val}/webhook'
+            await ctx.author.send(
+                f'Here is your Dink link for **{name_rs}**:\n'
+                f'```text\n{link}\n```'
+                'Paste this URL into the Dink plugin under "Primary Webhook URLs".'
+            )
+        except discord.Forbidden:
+            return await ctx.reply(
+                "I couldn’t DM you your Dink link. Enable DMs from server members and try again."
+            )
+        except Exception as e:
+            return await ctx.send(e)
+        await ctx.send(f'**{ctx.author.name}** has requested & saved a new DinkLink for the account: *{name_rs}*. Please check your DMs for a URL to paste into the Dink plugin under "Primary Webhook URLs"')
+
+
+
 def setup(bot):
     bot.add_cog(UserCommands(bot))

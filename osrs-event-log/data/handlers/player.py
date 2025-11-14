@@ -105,6 +105,9 @@ async def remove_player(Server, Member, rs_name, force_rm):
     del db_dis[f'{player_path}#member']
     del db_dis[f'{player_path}#mention']
     del db_dis[f'{player_path}#sotw_opt']
+
+    try: del db_dis[f'{player_path}#dinklink']
+    except: logger.debug(f"  -{rs_name} dinklink not found for this player. Continuing...")
     
     # some users dont have this field
     try: del db_dis[f'{player_path}#botw_opt']
@@ -170,6 +173,9 @@ async def rename_player(Server, Member, old_rs_name, new_rs_name, stats_dict):
     db_dis[f'player:{new_rs_name}#sotw_xp'] = db_dis[f'player:{old_rs_name}#sotw_xp']
     db_dis[f'player:{new_rs_name}#botw_kills'] = db_dis[f'player:{old_rs_name}#botw_kills']
 
+    try: db_dis[f'player:{new_rs_name}#dinklink'] = db_dis[f'player:{old_rs_name}#dinklink']
+    except: logger.debug(f"  -{old_rs_name} dinklink not found for this player. Continuing...")
+
     # some users dont have this field
     try:
         db_dis[f'{new_player_path}#botw_opt'] = db_dis[f'{old_player_path}#botw_opt']
@@ -190,6 +196,10 @@ async def rename_player(Server, Member, old_rs_name, new_rs_name, stats_dict):
         del db_dis[f'player:{old_rs_name}#all_servers']
         del db_dis[f'player:{old_rs_name}#sotw_xp']
         del db_dis[f'player:{old_rs_name}#botw_kills']
+
+        try: del db_dis[f'player:{old_rs_name}#dinklink']
+        except: logger.debug(f"  -{old_rs_name} dinklink not found for this player. Continuing...")
+
         # Remove old player from Runescape DB
         del db_rs[old_rs_name]
         await h.db_write(h.DB_RUNESCAPE_PATH, db_rs)
@@ -229,7 +239,7 @@ async def update_player_entry_global(rs_name, entry, new_val):
     db[f'player:{rs_name}#{entry}'] = new_val
     await h.db_write(h.DB_DISCORD_PATH, db)
     logger.info(f"FINISHED UPDATE GLOBAL PLAYER ENTRY - Player: {rs_name} | Entry: {entry} | New Value: {new_val}")
-    return new_toggle
+    return new_val
 
 
 # ---------------------- Add to a player's global entry ---------------------- #
@@ -244,3 +254,36 @@ async def add_to_player_entry_global(rs_name, entry, add_val):
     await h.db_write(h.DB_DISCORD_PATH, db)
     logger.info(f"FINISHED ADD TO GLOBAL PLAYER ENTRY - Player: {rs_name} | Entry: {entry} | New Value: {new_val}")
     return new_val
+
+
+async def update_player_dinklink(rs_name, new_val):
+    """Update a player's global dinklink"""
+    logger.info('------------------------------')
+    logger.info(f"Initialized UPDATE GLOBAL PLAYER DINKLINK - Player: {rs_name} | New Value: {new_val}")
+    db = await h.db_open(h.DB_DISCORD_PATH)
+
+    old_dinklink = None
+    try: old_dinklink = db[f'player:{rs_name}#dinklink']
+    except: logger.debug(f"  -{rs_name} dinklink not found for this player. Continuing...")
+
+    db[f'player:{rs_name}#dinklink'] = new_val
+
+    if old_dinklink:
+        try: db['dinklinks'].remove(old_dinklink)
+        except: logger.debug(f"  -{rs_name} Could not remove dinklink from dinklinks list")
+    db['dinklinks'].append(new_val)
+
+    await h.db_write(h.DB_DISCORD_PATH, db)
+    logger.info(f"FINISHED UPDATE GLOBAL PLAYER DINKLINK - Player: {rs_name} | New Value: {new_val}")
+    return new_val
+
+
+async def is_member_linked_to_player(Server, Member, rs_name):
+    db = await h.db_open(h.DB_DISCORD_PATH)
+    try: 
+        member_id = db[f"player:{rs_name}#server:{Server}#member"]
+        if int(member_id) == int(Member):
+            return True
+    except: 
+        return False
+    return False

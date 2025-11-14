@@ -8,6 +8,7 @@ from common.logger import logger
 from bs4 import BeautifulSoup
 import pathlib
 import discord
+import secrets
 
 # --- VARIABLES ---
 # paths to json files
@@ -90,7 +91,7 @@ async def check_player_validity(name):
     page = await get_page(name)
     if page != None:
         try:
-            logger.info(f"{name} has a valid hiscores page!")
+            logger.debug(f"{name} has a valid hiscores page!")
             player_dict = await get_player_scores(name, page)
             return player_dict
         except Exception as e:
@@ -141,7 +142,7 @@ async def get_player_scores(name_rs, page):
     # check if player has no hiscore profile
     logger.debug(f'{name_rs}: contents[1]: '+scores.contents[1].name)
     if scores.contents[1].name != 'table':  # if there's no table, the player has no scores
-        logger.info(f"{name_rs} not found! Appended empty player_dict.")
+        logger.debug(f"{name_rs} not found! Appended empty player_dict.")
         return player_dict
     # player has hiscore profile
     logger.debug(f"{name_rs}: found player...")
@@ -160,7 +161,7 @@ async def get_player_scores(name_rs, page):
         else:
             skill_dict['score'] = row_entry[3].get_text()
             player_dict['minigames'][skill] = skill_dict  # update clue/boss to minigames dict
-    logger.info(f"{name_rs}: Successfully created dict for {name_rs}!")
+    logger.debug(f"{name_rs}: Successfully created dict for {name_rs}!")
     return player_dict
 
 
@@ -211,3 +212,7 @@ async def message_specific_server(bot, Server, all_servers, message, mention):
         if Server.id == serv_dict['id']:
             await message_server(Server, serv_dict, message, mention)
         
+
+def generate_dink_link():
+    key = secrets.token_urlsafe(16)  # URL-safe, reasonably short
+    return key
