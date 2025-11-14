@@ -21,9 +21,7 @@ def format_death(payload: dict, user_tag: str) -> str:
     location = extra.get("location") or {}
     region_id = location.get("regionId")
 
-    # ---- HEADER ----
-    # Example: "<user> was PKed by **Zezima**"
-    header = f"{user_tag} was PKed by **{pker}**"
+    header = f"**{user_tag} was PK'd by {pker}**"
 
     # ---- STATS ----
     stats = []

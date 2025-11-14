@@ -8,9 +8,7 @@ def format_toa_unique(payload: dict, user_tag: str) -> str:
     levels = extra.get("raidLevels")
     prob = extra.get("probability")
 
-    # ---- HEADER ----
-    # Example: "<user> rolled a **purple** at TOA!"
-    header = f"{user_tag} rolled a **purple** drop from Tombs of Amascut!"
+    header = f"**{user_tag} rolled a purple drop from Tombs of Amascut!**"
 
     # ---- IMPORTANT STATS ----
     stats = []

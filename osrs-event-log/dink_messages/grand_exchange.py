@@ -24,7 +24,7 @@ def format_grand_exchange(payload: dict, user_tag: str) -> str:
 
     # ---- HEADER ----
     # Example: "<user> bought **1x Rune essence** on the Grand Exchange"
-    header = f"{user_tag} {verb} **{qty}x {name}** on the Grand Exchange"
+    header = f"**{user_tag} {verb} {qty}x {name} on the Grand Exchange**"
 
     # ---- STATS (2–3 key stats, pipe-separated) ----
     stats: list[str] = []

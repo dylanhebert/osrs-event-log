@@ -9,9 +9,7 @@ def format_slayer(payload: dict, user_tag: str) -> str:
     kill_count = extra.get("killCount")
     monster = extra.get("monster")
 
-    # ---- HEADER ----
-    # Example: "<user> has completed a slayer task: **Kalphites**"
-    header = f"{user_tag} has completed a slayer task: **{task}**"
+    header = f"**{user_tag} completed a Slayer task: {task}**"
 
     # ---- IMPORTANT STATS (pipe-separated) ----
     stats = []

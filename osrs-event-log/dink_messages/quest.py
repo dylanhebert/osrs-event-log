@@ -19,7 +19,7 @@ def format_quest(payload: dict, user_tag: str) -> str:
 
     # ---- HEADER ----
     # Example: "<user> completed **Dragon Slayer I**"
-    header = f"{user_tag} completed **{quest}**"
+    header = f"**{user_tag} completed {quest}**"
 
     # ---- IMPORTANT STATS (pipe-separated) ----
     stats = []

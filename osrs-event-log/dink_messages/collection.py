@@ -19,7 +19,7 @@ def format_collection(payload: dict, user_tag: str) -> str:
 
     # ---- HEADER ----
     # Example: "<user> added **Zamorak chaps** to their Collection Log"
-    header = f"{user_tag} added **{item}** to their Collection Log"
+    header = f"**{user_tag} added {item} to their Collection Log**"
 
     # ---- STATS (2–3 important ones, pipe-separated) ----
     stats: list[str] = []

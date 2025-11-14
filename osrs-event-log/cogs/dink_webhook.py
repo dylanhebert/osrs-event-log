@@ -91,7 +91,7 @@ class DinkWebhook(commands.Cog):
         if not link_key:
             logger.warning("[DinkWebhook] Missing link_key in URL")
             return web.json_response({"error": "missing link key"}, status=400)
-        logger.debug(f"[DinkWebhook] Received request for key={link_key} (start of handler)")
+        # logger.debug(f"[DinkWebhook] Received request for key={link_key} (start of handler)")
 
         valid_link = await db.is_dinklink_in_use(link_key)
         if not valid_link:

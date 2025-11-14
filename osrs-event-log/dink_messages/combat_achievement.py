@@ -46,7 +46,7 @@ def format_combat_achievement(payload: dict, user_tag: str) -> str:
 
     # ---- NORMAL COMBAT TASK CASE ----
     # Header: "<user> completed a GRANDMASTER combat task: Peach Conjurer"
-    header = f"{user_tag} completed a **{tier}** combat task: **{task}**"
+    header = f"**{user_tag} completed a {tier} combat task: {task}**"
 
     stats: list[str] = []
 

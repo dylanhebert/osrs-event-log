@@ -10,9 +10,7 @@ def format_player_kill(payload: dict, user_tag: str) -> str:
     hp = extra.get("myHitpoints")
     last_hit = extra.get("myLastDamage")
 
-    # ---- HEADER ----
-    # Example: "<user> has PK'd **SomeGuy**"
-    header = f"{user_tag} has PK'd **{victim}**"
+    header = f"**{user_tag} has PK'd {victim}**"
 
     # ---- IMPORTANT STATS ----
     stats = []

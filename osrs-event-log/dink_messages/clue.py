@@ -18,7 +18,7 @@ def format_clue(payload: dict, user_tag: str) -> str:
     ]
 
     # ---- HEADER ----
-    header = f"{user_tag} completed a **{clue_type}** clue"
+    header = f"**{user_tag} completed a {clue_type} clue**"
 
     # ---- STATS ----
     stats = []

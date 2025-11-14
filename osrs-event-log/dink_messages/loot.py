@@ -18,19 +18,16 @@ def format_loot(payload: dict, user_tag: str) -> str:
         if i["quantity"] * i["priceEach"] >= 500_000
     ]
 
-    # ---- HEADER ----
-    # Example:
-    # Green Donut got **1x Some item** from **Tombs of Amascut** (~42,069 gp)
-    header = f"{user_tag} got **{items_str}** from **{source}** (~{total_value:,} gp)"
+    header = f"**{user_tag} got {items_str} from {source}**"
 
     # ---- STATS (pipe-separated) ----
     stats = []
 
-    if kc is not None:
-        stats.append(f"KC: {kc}")
-
     if total_value:
         stats.append(f"Value: {total_value:,} gp")
+
+    if kc is not None:
+        stats.append(f"KC: {kc}")
 
     # Rare chance if included in the webhook
     if rare_prob is not None:

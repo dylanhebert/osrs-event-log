@@ -31,7 +31,7 @@ def format_kill_count(payload: dict, user_tag: str):
 
     # ---- Build message ----
     if formatted_time:
-        return f"{user_tag} set a **new {boss} Personal Best!**\n```c\nKC: {count} | Time: {formatted_time}\n```"
+        return f"**{user_tag} set a new {boss} Personal Best!**\n```c\nKC: {count} | Time: {formatted_time}\n```"
     else:
-        return f"{user_tag} set a **new {boss} Personal Best!**\n```c\nKC: {count}\n```"
+        return f"**{user_tag} set a new {boss} Personal Best!**\n```c\nKC: {count}\n```"
 
