@@ -7,6 +7,7 @@ def format_grand_exchange(payload: dict, user_tag: str) -> str:
     qty = item.get("quantity", 0)
     name = item.get("name", "Unknown item")
     price_each = item.get("priceEach", 0)
+    tax = item.get("sellerTax", 0)
 
     total_price = qty * price_each
 
@@ -33,6 +34,9 @@ def format_grand_exchange(payload: dict, user_tag: str) -> str:
 
     if total_price:
         stats.append(f"Total: {total_price:,} gp")
+
+    if tax and tax > 0:
+        stats.append(f"Tax: {tax:,} gp")
 
     # if market is not None:
     #     stats.append(f"Market: {market:,} gp")
