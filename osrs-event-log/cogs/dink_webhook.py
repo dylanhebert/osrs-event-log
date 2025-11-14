@@ -6,9 +6,13 @@ from discord.ext import commands
 from common.logger import logger
 import data.handlers as db
 import dink_messages
+import common.util as util
+from data.handlers.DinkPlayerHandler import DinkPlayerHandler
 
 # If you already have helpers for DB, import them here
 # from data.handlers import get_discord_user_by_dink_hash, save_dink_event
+
+PLAYER_HANDLER = DinkPlayerHandler()
 
 class DinkWebhook(commands.Cog):
     """
@@ -36,6 +40,17 @@ class DinkWebhook(commands.Cog):
 
         # create the background task and run it in the background
         self.bot.bg_task = self.bot.loop.create_task(self.cog_load())
+
+    def get_mention_member(self, server, player_server):
+        member = server.get_member(player_server['member'])
+        if player_server['mention'] == True:
+            return member.mention  # CHANGE FOR TESTING
+        return ''
+
+    def get_mention_role(self, rs_role):
+        if rs_role == None:
+            return "@here"
+        return rs_role.mention
 
     async def cog_load(self):
         """Start the HTTP server when the cog is loaded."""
@@ -144,18 +159,53 @@ class DinkWebhook(commands.Cog):
             return
 
         message = self.format_dink_message(payload)
-        # TODO: hook into posting in correct channels
-        if message:
-            await channel.send(message)
+        if not message:
+            return
+        
+        rsn = payload.get("playerName")
+        if not rsn:
+            return
+
+        # Now we can post the update
+        await PLAYER_HANDLER.build_cache()
+
+        name_rs = util.name_to_rs(rsn)
+        player_discord_info = await PLAYER_HANDLER.get_all_player_info(name_rs)
+        if not player_discord_info:
+            logger.debug(f"{name_rs}: Skipping player not in any active servers")
+            return
+        
+        for player_server in player_discord_info:
+            try:
+                server = self.bot.get_guild(player_server['server'])
+                serv_name = server.name
+                logger.debug(f"{name_rs}: In server: {serv_name}...")
+                server_info = PLAYER_HANDLER.server_info_all[str(player_server['server'])]
+                logger.debug(f"{name_rs}: {serv_name}")
+                event_channel = server.get_channel(server_info['channel'])
+                if server_info['role'] == None:
+                    rs_role = None
+                else:
+                    rs_role = server.get_role(server_info['role'])
+
+                mention_member = self.get_mention_member(server, player_server)
+                mention_role = self.get_mention_role(rs_role)
+                # TODO: add checks for milestones to append mention role?
+                full_message = f'{message}{mention_member}'
+
+                await event_channel.send(full_message)
+                logger.info(f"New Dink update posted for [{name_rs}] in server [{server.name}] ({server.id}) & channel [{event_channel.name}] ({event_channel.id}):\n{full_message}")
+            # Any kind of error posting to server
+            except Exception as e:
+                logger.exception(f"Error with server in player: {player_server['server']} -- {e}")
+
+        await PLAYER_HANDLER.remove_cache()
 
     # FORMAT MESSAGE
     def format_dink_message(self, payload: dict) -> str:
         rsn = payload.get("playerName")
         dink_hash = payload.get("dinkAccountHash")
-        user_tag = rsn  # placeholder
-
-        # TODO: hook into normal mentioning of users like normal messages
-
+        user_tag = rsn
         return dink_messages.format_dink_message(payload, user_tag)
 
 
