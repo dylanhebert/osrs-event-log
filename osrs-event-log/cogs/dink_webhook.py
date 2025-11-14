@@ -191,7 +191,7 @@ class DinkWebhook(commands.Cog):
                 mention_member = self.get_mention_member(server, player_server)
                 mention_role = self.get_mention_role(rs_role)
                 # TODO: add checks for milestones to append mention role?
-                full_message = f'{message}{mention_member}'
+                full_message = f'{message}' #{mention_member} - removed for now to reduce disruptions
 
                 await event_channel.send(full_message)
                 logger.info(f"New Dink update posted for [{name_rs}] in server [{server.name}] ({server.id}) & channel [{event_channel.name}] ({event_channel.id}):\n{full_message}")
