@@ -137,19 +137,72 @@ class AdminCommands(commands.Cog, name="Admin Commands"):
             await ctx.send(NON_ADMIN_MESSAGE)
 
 
-    # @commands.command(  brief="Toggles daily updates for SOTW for this server on or off",
-    #                     description="Toggles daily updates for SOTW for this server on or off")
-    # @commands.cooldown(1, 5, commands.BucketType.guild)
-    # async def skillweektoggleupdates(self, ctx):
-    #     if await util.is_admin(ctx.author) or ctx.author.id == 134858274909585409:
-    #         name_rs = util.name_to_rs(game_name)
-    #         try:
-    #             await db.remove_player(ctx.guild, member, name_rs, False)
-    #             await ctx.send(f'**{ctx.author.name}** has removed an account listed under **{member.name}** from the Activity Log: *{name_rs}*')
-    #         except Exception as e:
-    #             return await ctx.send(e)
-    #     else:
-    #         await ctx.send(NON_ADMIN_MESSAGE)
+    @commands.command(  brief="Toggles the Skill of the Week system for this server on or off",
+                        description="Toggles the Skill of the Week system for this server on or off")
+    @commands.cooldown(1, 5, commands.BucketType.guild)
+    async def toggleskillweek(self, ctx):
+        if await util.is_admin(ctx.author) or ctx.author.id == 134858274909585409:
+            try:
+                new_value = await db.toggle_server_entry(ctx.guild, "sotw_opt")
+                display_val = 'ON'
+                if not new_value:
+                    display_val = 'OFF'
+                await ctx.send(f'**{ctx.author.name}** has toggled **{display_val}** Skill of the Week for **{ctx.guild.name}**')
+            except Exception as e:
+                return await ctx.send(e)
+        else:
+            await ctx.send(NON_ADMIN_MESSAGE)
+
+
+    @commands.command(  brief="Toggles the Boss of the Week system for this server on or off",
+                        description="Toggles the Boss of the Week system for this server on or off")
+    @commands.cooldown(1, 5, commands.BucketType.guild)
+    async def togglebossweek(self, ctx):
+        if await util.is_admin(ctx.author) or ctx.author.id == 134858274909585409:
+            try:
+                new_value = await db.toggle_server_entry(ctx.guild, "botw_opt")
+                display_val = 'ON'
+                if not new_value:
+                    display_val = 'OFF'
+                await ctx.send(f'**{ctx.author.name}** has toggled **{display_val}** Boss of the Week for **{ctx.guild.name}**')
+            except Exception as e:
+                return await ctx.send(e)
+        else:
+            await ctx.send(NON_ADMIN_MESSAGE)
+
+
+    @commands.command(  brief="Toggles daily progress updates for SOTW for this server on or off",
+                        description="Toggles daily progress updates for SOTW for this server on or off")
+    @commands.cooldown(1, 5, commands.BucketType.guild)
+    async def toggleskillupdates(self, ctx):
+        if await util.is_admin(ctx.author) or ctx.author.id == 134858274909585409:
+            try:
+                new_value = await db.toggle_server_entry(ctx.guild, "sotw_progress")
+                display_val = 'ON'
+                if not new_value:
+                    display_val = 'OFF'
+                await ctx.send(f'**{ctx.author.name}** has toggled **{display_val}** Skill of the Week daily updates for **{ctx.guild.name}**')
+            except Exception as e:
+                return await ctx.send(e)
+        else:
+            await ctx.send(NON_ADMIN_MESSAGE)
+
+
+    @commands.command(  brief="Toggles daily progress updates for BOTW for this server on or off",
+                        description="Toggles daily progress updates for BOTW for this server on or off")
+    @commands.cooldown(1, 5, commands.BucketType.guild)
+    async def togglebossupdates(self, ctx):
+        if await util.is_admin(ctx.author) or ctx.author.id == 134858274909585409:
+            try:
+                new_value = await db.toggle_server_entry(ctx.guild, "botw_progress")
+                display_val = 'ON'
+                if not new_value:
+                    display_val = 'OFF'
+                await ctx.send(f'**{ctx.author.name}** has toggled **{display_val}** Boss of the Week daily updates for **{ctx.guild.name}**')
+            except Exception as e:
+                return await ctx.send(e)
+        else:
+            await ctx.send(NON_ADMIN_MESSAGE)
 
 
 def setup(bot):

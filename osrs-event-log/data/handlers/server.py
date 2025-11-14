@@ -105,3 +105,17 @@ async def get_all_servers(Member):
         all_servers.append(serv_dict)
     logger.info(f"GET ALL SERVERS - Name: {Member.name} | ID: {Member.id}")
     return all_servers
+
+
+async def toggle_server_entry(Server, entry):
+    """Toggles a server entry's value between True and False"""
+    logger.info('------------------------------')
+    logger.info(f"Initialized TOGGLE SERVER ENTRY - Server: {Server.name} | ID: {Server.id} | Entry: {entry}")
+    db = await h.db_open(h.DB_DISCORD_PATH)
+    try: 
+        new_toggle = not db[f'server:{Server.id}#{entry}']
+        db[f'server:{Server.id}#{entry}'] = new_toggle
+        await h.db_write(h.DB_DISCORD_PATH, db)
+        logger.info(f"Finished TOGGLE SERVER ENTRY - Server: {Server.name} | ID: {Server.id} | Entry: {entry} = {str(new_toggle)}")
+        return new_toggle
+    except Exception as e: raise e
