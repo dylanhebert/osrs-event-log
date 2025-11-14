@@ -35,8 +35,8 @@ class DinkWebhook(commands.Cog):
         app["bot"] = self.bot
 
         # Per-player key; no global secret:
-        # PATH/dink/<key>/webhook
-        path = "/dink/{link_key}/webhook"
+        # PATH/dink/<key>
+        path = "/dink/{link_key}"
         app.router.add_post(path, self.handle_dink)
 
         self._runner = web.AppRunner(app)

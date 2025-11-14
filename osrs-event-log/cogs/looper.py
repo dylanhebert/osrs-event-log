@@ -392,7 +392,7 @@ class MainLooper(commands.Cog):
         # --- START LOOPER ---
         logger.info('OSRS Event Log loop started!')
         while not self.bot.is_closed():
-            # await self.main_loop()
+            await self.main_loop()
             logger.debug(f'Now sleeping for {TIME_LOOP_MINUTES} minutes...')
             await asyncio.sleep(await util.time_mins( TIME_LOOP_MINUTES ))
 

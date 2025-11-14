@@ -76,7 +76,7 @@ async def is_dinklink_in_use(dinklink):
 
 
 def dink_link_full_url(dinklink):
-    return f"{h.DINK_BASE_URL}/dink/{dinklink}/webhook"
+    return f"{h.DINK_BASE_URL}/dink/{dinklink}"
         
         
 # ---------------------------------- TESTING --------------------------------- #
