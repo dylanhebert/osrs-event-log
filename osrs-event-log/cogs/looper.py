@@ -116,7 +116,7 @@ async def thread_player(bot, rs_name, rs_data):
     # Check if we need to scrape this player
     player_discord_info = await PLAYER_HANDLER.get_all_player_info(rs_name)
     if not player_discord_info:  # SET TO 'NOT' WHEN ACTUALLY RUNNING!
-        logger.info(f"{rs_name}: Skipping player not in any active servers")
+        logger.debug(f"{rs_name}: Skipping player not in any active servers")
         return
     ### Changed for aiohttp integration ###
     page = await util.get_page(rs_name)
@@ -137,7 +137,7 @@ async def thread_player(bot, rs_name, rs_data):
         logger.error(f"Error getting hiscores table! Skipping {rs_name}...")
         return
     if scores.contents[1].name != 'table':  # if there's no table, the player has no scores
-        logger.info(f"{rs_name} not found! Skipping player.")
+        logger.debug(f"{rs_name} not found! Skipping player.")
         return
 
     # player has hiscore profile

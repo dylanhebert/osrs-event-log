@@ -28,7 +28,7 @@ def format_grand_exchange(payload: dict, user_tag: str) -> str:
     # ---- STATS (2–3 key stats, pipe-separated) ----
     stats: list[str] = []
 
-    if price_each:
+    if price_each and qty > 1:
         stats.append(f"Each: {price_each:,} gp")
 
     if total_price:

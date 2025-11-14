@@ -16,6 +16,19 @@ class DinkWebhook(commands.Cog):
     formatted messages into a Discord channel.
     """
 
+    IGNORED_EVENT_TYPES = {
+        "XP_MILESTONE",
+        "LEVEL"
+        "TRADE",
+        "LOGIN",
+        "LOGOUT",
+        "EXTERNAL_PLUGIN",
+        "CHAT",
+        "GROUP_STORAGE",
+        "BARBARIAN_ASSAULT_GAMBLE",
+        "SPEEDRUN",
+}
+
     def __init__(self, bot: commands.Bot):
         self.bot = bot
         self._runner: web.AppRunner | None = None
@@ -103,14 +116,14 @@ class DinkWebhook(commands.Cog):
         payload["_dink_link_key"] = link_key
 
         # Optional: log screenshot meta if present (but not bytes)
-        file = data.get("file")
-        if file is not None:
-            logger.debug(
-                "[DinkWebhook] Screenshot upload: filename=%s, content_type=%s, size=%s",
-                getattr(file, "filename", None),
-                getattr(file, "content_type", None),
-                getattr(file, "size", None),
-            )
+        # file = data.get("file")
+        # if file is not None:
+        #     logger.debug(
+        #         "[DinkWebhook] Screenshot upload: filename=%s, content_type=%s, size=%s",
+        #         getattr(file, "filename", None),
+        #         getattr(file, "content_type", None),
+        #         getattr(file, "size", None),
+        #     )
 
         await self.dispatch_dink_event(payload)
         return web.json_response({"ok": True})
@@ -118,6 +131,12 @@ class DinkWebhook(commands.Cog):
     # DISPATCH
     async def dispatch_dink_event(self, payload: dict):
         """Convert Dink payload into a message or DB event."""
+
+        event_type = payload.get("type")
+        if event_type in self.IGNORED_EVENT_TYPES:
+            logger.debug(f"[DinkWebhook] Ignored event: {event_type}")
+            return
+    
         channel_id = db.get_dink_test_channel()
         channel = self.bot.get_channel(channel_id)
         if channel is None:

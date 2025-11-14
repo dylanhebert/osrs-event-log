@@ -508,6 +508,7 @@ class UserCommands(commands.Cog, name="General Commands"):
             )
         except Exception as e:
             return await ctx.send(e)
+        logger.info(f'{ctx.author.name} ({ctx.author.id}) has requested a new dink link for rs name "{name_rs}" - {new_val}')
         await ctx.send(f'**{ctx.author.name}** has requested & saved a new DinkLink for the account: *{name_rs}*. Please check your DMs for a URL to paste into the Dink plugin under "Primary Webhook URLs"')
 
 

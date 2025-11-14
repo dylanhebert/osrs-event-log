@@ -10,6 +10,9 @@ from .clue import format_clue
 from .combat_achievement import format_combat_achievement
 from .achievement_diary import format_achievement_diary
 from .death import format_death
+from .slayer import format_slayer
+from .player_kill import format_player_kill
+from .toa_unique import format_toa_unique
 
 
 _FORMATTERS = {
@@ -23,6 +26,9 @@ _FORMATTERS = {
     "COMBAT_ACHIEVEMENT": format_combat_achievement,
     "ACHIEVEMENT_DIARY": format_achievement_diary,
     "DEATH": format_death,
+    "SLAYER": format_slayer,
+    "PLAYER_KILL": format_player_kill,
+    "TOA_UNIQUE": format_toa_unique,
 }
 
 
@@ -32,7 +38,7 @@ def format_dink_message(payload: dict, user_tag: str) -> str:
 
     if formatter:
         message = formatter(payload, user_tag)
-        logger.info(message)
+        logger.info(f'Dink Event: {message}')
         return message
 
     # Fallback if you haven't specialised this type yet
