@@ -11,6 +11,9 @@ def format_grand_exchange(payload: dict, user_tag: str) -> str:
 
     total_price = qty * price_each
 
+    if total_price < 1000000:
+        return None
+
     market = extra.get("marketPrice")
     target_price = extra.get("targetPrice")
     status = (extra.get("status") or "").upper()
@@ -49,4 +52,4 @@ def format_grand_exchange(payload: dict, user_tag: str) -> str:
         return header
 
     line = " | ".join(stats)
-    return f"{header}```c\n{line}\n```"
+    return f"{header}```c\n{line}```"

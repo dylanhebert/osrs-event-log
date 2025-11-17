@@ -42,4 +42,4 @@ def format_quest(payload: dict, user_tag: str) -> str:
     if quest in SPECIAL_QUESTS:
         notify = True
     
-    return f"{header}```c\n{line}\n```", notify
+    return f"{header}```c\n{line}```", notify

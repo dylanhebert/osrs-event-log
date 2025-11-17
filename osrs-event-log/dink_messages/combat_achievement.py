@@ -66,5 +66,5 @@ def format_combat_achievement(payload: dict, user_tag: str) -> str:
         return header
 
     line = " | ".join(stats)
-    return f"{header}```c\n{line}\n```"
+    return f"{header}```c\n{line}```"
 

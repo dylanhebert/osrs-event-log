@@ -35,4 +35,4 @@ def format_slayer(payload: dict, user_tag: str) -> str:
         return header
 
     line = " | ".join(stats)
-    return f"{header}```c\n{line}\n```"
+    return f"{header}```c\n{line}```"

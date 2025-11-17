@@ -36,4 +36,4 @@ def format_toa_unique(payload: dict, user_tag: str) -> str:
         return header
 
     line = " | ".join(stats)
-    return f"{header}```c\n{line}\n```", True
+    return f"{header}```c\n{line}```", True

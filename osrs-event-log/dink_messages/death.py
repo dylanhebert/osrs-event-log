@@ -40,4 +40,4 @@ def format_death(payload: dict, user_tag: str) -> str:
     if value_lost >= 10000000:
         notify = True
 
-    return f"{header}```c\n{line}\n```"
+    return f"{header}```c\n{line}```"

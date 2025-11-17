@@ -51,5 +51,5 @@ def format_dink_message(payload: dict, user_tag: str) -> str:
 
     # Fallback if you haven't specialised this type yet
     content = payload.get("content")
-    logger.debug(content)
+    logger.info(content)
     return content or f"{user_tag} triggered {event_type or 'UNKNOWN'}"

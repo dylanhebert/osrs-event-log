@@ -43,4 +43,4 @@ def format_achievement_diary(payload: dict, user_tag: str) -> str:
     if difficulty == "ELITE":
         notify = True
 
-    return f"{header}```c\n{line}\n```", notify
+    return f"{header}```c\n{line}```", notify

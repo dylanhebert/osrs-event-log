@@ -14,7 +14,7 @@ def format_collection(payload: dict, user_tag: str) -> str:
     rank_prog = extra.get("rankProgress", 0)
     logs_needed = extra.get("logsNeededForNextRank", 0)
 
-    dropper = extra.get("dropperName", "Unknown source")
+    dropper = extra.get("dropperName", None)
     kc = extra.get("dropperKillCount")
 
     # ---- HEADER ----
@@ -37,10 +37,10 @@ def format_collection(payload: dict, user_tag: str) -> str:
 
     # Rank progress
     rank_total = rank_prog + logs_needed if logs_needed is not None else None
-    if next_rank and rank_total:
-        stats.append(f"Rank: {current_rank} → {next_rank} ({rank_prog}/{rank_total})")
-    elif current_rank:
-        stats.append(f"Rank: {current_rank}")
+    # if next_rank and rank_total:
+    #     stats.append(f"Rank: {current_rank} → {next_rank} ({rank_prog}/{rank_total})")
+    # elif current_rank:
+    #     stats.append(f"Rank: {current_rank}")
 
     # Optional: include price if you want a 3rd stat in some cases
     if price and len(stats) < 3:
@@ -50,4 +50,4 @@ def format_collection(payload: dict, user_tag: str) -> str:
         return header
 
     line = " | ".join(stats)
-    return f"{header}```c\n{line}\n```"
+    return f"{header}```c\n{line}```"

@@ -36,4 +36,4 @@ def format_clue(payload: dict, user_tag: str) -> str:
     if total_value >= 10000000:
         notify = True
 
-    return f"{header}```c\n{line}\n```", notify
+    return f"{header}```c\n{line}```", notify

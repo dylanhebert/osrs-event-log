@@ -59,7 +59,7 @@ class DinkWebhook(commands.Cog):
         port = db.get_dink_port()
         host = db.get_dink_host()
         
-        app = web.Application()
+        app = web.Application(client_max_size=50 * 1024 ** 2)
         app["bot"] = self.bot
 
         # Per-player key; no global secret:
@@ -86,43 +86,49 @@ class DinkWebhook(commands.Cog):
     async def handle_dink(self, request: web.Request) -> web.Response:
         """Main endpoint Dink posts to. Expects multipart with payload_json."""
         
-        # 1) Validate the link key from the URL
         link_key = request.match_info.get("link_key")
+        logger.info(f"[DinkWebhook] Incoming request: method={request.method}, path={request.path}, link_key={link_key}, remote={request.remote}")
+
         if not link_key:
-            logger.warning("[DinkWebhook] Missing link_key in URL")
+            logger.info("[DinkWebhook] Missing link_key in URL")
             return web.json_response({"error": "missing link key"}, status=400)
-        # logger.debug(f"[DinkWebhook] Received request for key={link_key} (start of handler)")
+        logger.info(f"[DinkWebhook] Received request for key={link_key} (start of handler)")
 
         valid_link = await db.is_dinklink_in_use(link_key)
+        logger.info(f"[DinkWebhook] link_key={link_key} valid_link={valid_link}")
         if not valid_link:
-            logger.warning(f"[DinkWebhook] Invalid link_key={link_key}")
+            logger.info(f"[DinkWebhook] Invalid link_key={link_key}")
             return web.json_response({"error": "invalid link key"}, status=403)
         
         full_url = db.dink_link_full_url(link_key)
         
         # 2) Parse payload_json
-        data = await request.post()
+        try:
+            data = await request.post()
+        except Exception as e:
+            logger.info(f"[DinkWebhook] Error with request.post() -- {e}")
+            return
         payload_json = data.get("payload_json")
         if not payload_json:
-            logger.warning(
+            logger.info(
                 "[DinkWebhook] Missing payload_json in request. Full form: %r",
                 dict(data),
             )
             return web.json_response({"error": "missing payload_json"}, status=400)
 
         # Log the raw JSON string from Dink
-        # logger.debug("[DinkWebhook] Raw payload_json: %s", payload_json)
+        logger.info("[DinkWebhook] Raw payload_json: %s", payload_json)
 
         try:
             payload = json.loads(payload_json)
         except json.JSONDecodeError:
-            logger.exception(
+            logger.info(
                 "[DinkWebhook] invalid JSON in payload_json: %r", payload_json
             )
             return web.json_response({"error": "invalid JSON"}, status=400)
 
         # Pretty-print the parsed payload
-        # logger.debug(
+        # logger.info(
         #     "[DinkWebhook] Parsed payload:\n%s",
         #     json.dumps(payload, indent=2, sort_keys=True),
         # )
@@ -133,7 +139,7 @@ class DinkWebhook(commands.Cog):
         # Optional: log screenshot meta if present (but not bytes)
         # file = data.get("file")
         # if file is not None:
-        #     logger.debug(
+        #     logger.info(
         #         "[DinkWebhook] Screenshot upload: filename=%s, content_type=%s, size=%s",
         #         getattr(file, "filename", None),
         #         getattr(file, "content_type", None),
@@ -149,7 +155,7 @@ class DinkWebhook(commands.Cog):
 
         event_type = payload.get("type")
         if event_type in self.IGNORED_EVENT_TYPES:
-            logger.debug(f"[DinkWebhook] Ignored event: {event_type}")
+            logger.info(f"[DinkWebhook] Ignored event: {event_type}")
             return
     
         # channel_id = db.get_dink_test_channel()
@@ -160,6 +166,7 @@ class DinkWebhook(commands.Cog):
 
         message, should_notify = self.format_dink_message(payload)
         if not message:
+            logger.info("Message returned None. Skipping post.")
             return
         
         rsn = payload.get("playerName")
@@ -196,7 +203,7 @@ class DinkWebhook(commands.Cog):
                     full_message = f'{message}{mention_role} {mention_member}'
 
                 await event_channel.send(full_message)
-                logger.info(f"New Dink update posted for [{name_rs}] in server [{server.name}] ({server.id}) & channel [{event_channel.name}] ({event_channel.id}):\n{full_message}")
+                logger.info(f"New Dink update posted for [{name_rs}] in server [{server.name}] ({server.id}) & channel [{event_channel.name}] ({event_channel.id})")
             # Any kind of error posting to server
             except Exception as e:
                 logger.exception(f"Error with server in player: {player_server['server']} -- {e}")

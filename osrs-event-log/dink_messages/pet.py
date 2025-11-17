@@ -24,4 +24,4 @@ def format_pet(payload: dict, user_tag: str):
         return header, True
 
     block = " | ".join(stats)
-    return f"{header}```c\n{block}\n```", True
+    return f"{header}```c\n{block}```", True
