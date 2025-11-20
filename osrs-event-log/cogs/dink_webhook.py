@@ -22,7 +22,7 @@ class DinkWebhook(commands.Cog):
 
     IGNORED_EVENT_TYPES = {
         "XP_MILESTONE",
-        "LEVEL"
+        "LEVEL",
         "TRADE",
         "LOGIN",
         "LOGOUT",
