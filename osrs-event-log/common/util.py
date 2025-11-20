@@ -58,6 +58,8 @@ def xp_changed(old, new):
 
 # FORMAT COMMAS IN LONG INTS
 def format_int(num):
+    if num is None:
+        return 0
     if "," in num:
         num = int(num.replace(",", ""))
     else:

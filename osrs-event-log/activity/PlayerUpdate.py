@@ -206,12 +206,13 @@ class PlayerUpdate:
 
     async def update_skill(self, new_data, title, new_entry):
         logger.debug("in PlayerUpdate-update_skill...")
+        xp_new = util.format_int(new_data['xp'])
+        sotw_xp = xp_new
 
         # skill was already on hiscores
         if not new_entry:  
             old_data = self.old_data['skills'][title]
             logger.debug(f"existing entry, old lvl: {old_data['level']}, new lvl: {new_data['level']}...")
-            xp_new = util.format_int(new_data['xp'])
             xp_old = util.format_int(old_data['xp'])
             xp_diff = xp_new - xp_old
             logger.debug("calculated xp diff...")
@@ -228,10 +229,7 @@ class PlayerUpdate:
             # check for any significant XP updates
             if xp_new >= 10000000:
                 self.check_xp_update(old_data, new_data, title, xp_new, xp_old, xp_diff)
-                           
-            # Check if skill is SOTW, add xp to current SOTW xp
-            if title == db.SOTW_CONFIG['current_skill']:
-                self.new_sotw_xp = await db.add_to_player_entry_global(util.name_to_rs(self.rs_name), 'sotw_xp', xp_diff)
+            sotw_xp = xp_diff
 
         # skill is new to hiscores
         else:
@@ -239,6 +237,10 @@ class PlayerUpdate:
             message = f"**{self.rs_name} levelled up {title} to {new_data['level']}**```This is the first time this skill is on the Hiscores```"
             self.skills.append(message)
             logger.debug(f"appended NEW update for {title} to skills list...")
+
+        # Check if skill is SOTW, add xp to current SOTW xp
+        if title == db.SOTW_CONFIG['current_skill']:
+            self.new_sotw_xp = await db.add_to_player_entry_global(util.name_to_rs(self.rs_name), 'sotw_xp', sotw_xp)
 
 
 # --------------------------------- MINIGAMES -------------------------------- #
@@ -306,11 +308,11 @@ class PlayerUpdate:
                 # check if this was a special boss
                 if title in self.custom_messages['bosses']:
                     message_extra = self.custom_messages['bosses'][title]
-                    message = f"**{self.rs_name} {boss_terms[0]} {title} enough times to be on the hiscores! {message_extra}**```c\nTotal {boss_terms[1]} count: {util.format_int_str(new_data['score'])} | Current rank: {new_data['rank']}```"
+                    message = f"**{self.rs_name} {boss_terms[0]} {title} for the first time! {message_extra}**```c\nTotal {boss_terms[1]} count: {util.format_int_str(new_data['score'])} | Current rank: {new_data['rank']}```"
                     self.milestones.append(message)
                     logger.debug(f"appended Boss update for {title} to milestones list...")
                 else:
-                    message = f"**{self.rs_name} {boss_terms[0]} {title} enough times to be on the hiscores!**```c\nTotal {boss_terms[1]} count: {util.format_int_str(new_data['score'])} | Current rank: {new_data['rank']}```"
+                    message = f"**{self.rs_name} {boss_terms[0]} {title} for the first time!**```c\nTotal {boss_terms[1]} count: {util.format_int_str(new_data['score'])} | Current rank: {new_data['rank']}```"
                     self.minigames.append(message)
                     logger.debug(f"appended update for {title} to minigames list...")
             
