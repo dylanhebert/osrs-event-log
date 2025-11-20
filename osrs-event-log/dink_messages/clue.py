@@ -10,6 +10,9 @@ def format_clue(payload: dict, user_tag: str) -> str:
     # ---- TOTAL VALUE ----
     total_value = sum(i["quantity"] * i["priceEach"] for i in items)
 
+    if total_value < 250000:
+        return None
+
     # ---- HIGH-VALUE ITEMS (≥ 500k) ----
     high_value_items = [
         f"{i['quantity']}x {i['name']}"

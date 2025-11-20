@@ -24,6 +24,8 @@ def format_loot(payload: dict, user_tag: str) -> str:
     stats = []
 
     if total_value:
+        if total_value < 250000:
+            return None
         stats.append(f"Value: {total_value:,} gp")
 
     if kc is not None:
