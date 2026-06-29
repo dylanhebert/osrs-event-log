@@ -101,31 +101,42 @@ class DinkWebhook(commands.Cog):
             return web.json_response({"error": "invalid link key"}, status=403)
         
         full_url = db.dink_link_full_url(link_key)
-        
-        # 2) Parse payload_json
-        try:
-            data = await request.post()
-        except Exception as e:
-            logger.info(f"[DinkWebhook] Error with request.post() -- {e}")
-            return
-        payload_json = data.get("payload_json")
-        if not payload_json:
-            logger.info(
-                "[DinkWebhook] Missing payload_json in request. Full form: %r",
-                dict(data),
-            )
-            return web.json_response({"error": "missing payload_json"}, status=400)
 
-        # Log the raw JSON string from Dink
-        logger.info("[DinkWebhook] Raw payload_json: %s", payload_json)
+        # DIAGNOSTIC: how is Dink framing this request?
+        logger.info(
+            "[DinkWebhook] DIAG content_type=%r content_length=%r transfer_encoding=%r raw_ct_header=%r",
+            request.content_type,
+            request.content_length,
+            request.headers.get("Transfer-Encoding"),
+            request.headers.get("Content-Type"),
+        )
 
+        # 2) Parse the payload. Dink sends two different framings:
+        #   - multipart/form-data (when a screenshot is attached): payload is in
+        #     the "payload_json" form field, alongside the image "file" part.
+        #   - application/json (no screenshot attached): the body itself IS the
+        #     payload. request.post() returns {} for this, so we must read json.
         try:
-            payload = json.loads(payload_json)
+            if request.content_type == "application/json":
+                payload = await request.json()
+                logger.info("[DinkWebhook] Raw payload (json body): %s", payload)
+            else:
+                data = await request.post()
+                payload_json = data.get("payload_json")
+                if not payload_json:
+                    logger.info(
+                        "[DinkWebhook] Missing payload_json in request. Full form: %r",
+                        dict(data),
+                    )
+                    return web.json_response({"error": "missing payload_json"}, status=400)
+                logger.info("[DinkWebhook] Raw payload_json: %s", payload_json)
+                payload = json.loads(payload_json)
         except json.JSONDecodeError:
-            logger.info(
-                "[DinkWebhook] invalid JSON in payload_json: %r", payload_json
-            )
+            logger.info("[DinkWebhook] invalid JSON in request body")
             return web.json_response({"error": "invalid JSON"}, status=400)
+        except Exception as e:
+            logger.exception(f"[DinkWebhook] Error parsing request body -- {e}")
+            return web.json_response({"error": "could not parse body"}, status=400)
 
         # Pretty-print the parsed payload
         # logger.info(
