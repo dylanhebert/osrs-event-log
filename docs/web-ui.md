@@ -150,6 +150,51 @@ credential. Both are re-checked per request, so `;webpassword` and `;webrevoke`
 sign out browsers that are already open rather than only affecting future
 sign-ins.
 
+### Server names and icons
+
+The database never held guild names: the bot always had `discord.Guild` objects
+to hand. The UI has no Discord connection, so `servers.name` and
+`servers.icon_hash` (schema version 3) are filled in by the bot from listeners
+in `cogs/cmds/web.py`, on ready and on join or rename. Nothing has to be
+configured, and a rename shows up on its own.
+
+A label resolves in this order:
+
+1. `SERVER_NAMES`, if you want something friendlier than the real guild name
+2. `servers.name`, kept in step by the bot
+3. `Server 1`, `Server 2`, ...
+
+Never the raw snowflake. Until the bot has restarted once after the migration,
+every name is NULL and the UI shows ordinals; that is the designed degraded
+state, not a failure.
+
+Icon URLs are built from `(id, hash)` rather than stored, so the CDN host stays
+Discord's to change. They are the **only** external request the site makes,
+appear on authenticated pages only, and `Referrer-Policy: same-origin` keeps the
+page path from reaching Discord. A guild with no icon falls back to a monogram,
+so the layout does not shift.
+
+> **Cog listeners must be decorated.** A bare `async def on_ready` inside a Cog
+> is never called by py-cord. The undecorated `on_ready` methods in `user.py`,
+> `admin.py` and `looper.py` are dead code; the sync listeners carry
+> `@commands.Cog.listener()` for that reason.
+
+### Event text
+
+`events.message` is the exact text posted to Discord, so it arrives full of
+Discord markup: `**bold**`, ```` ```c ```` fenced blocks, mentions. The
+`discord_markup` Jinja filter renders it.
+
+**That filter emits HTML, so escaping is not optional.** Dink message text is
+built from a payload a player's RuneLite client POSTs to a public endpoint,
+authenticated only by a bearer token that two accounts already share: treat it
+as attacker-controlled. Code is extracted first so markup inside a fence stays
+literal, everything else is escaped before a single tag is added, and mentions
+become `@someone` / `@role` rather than rendering a Discord id.
+
+`web/tests/test_markup.py` covers the injection cases first and the formatting
+second, which is the right order of importance.
+
 ### Server scoping
 
 Competitions are per server, so `/competitions/<kind>` always shows exactly one
@@ -280,12 +325,27 @@ printed.
 
 ## Tests
 
-```bash
+```
 web\.venv\Scripts\python.exe -m web.tests.smoke         # every route renders
 web\.venv\Scripts\python.exe -m web.tests.test_privacy  # no secret reaches a response
-cd $APP_DIR && python tools/test_web_auth.py         # credentials + visibility
-cd $APP_DIR && python tools/test_cog_load.py         # every cog still loads
+web\.venv\Scripts\python.exe -m web.tests.test_markup   # message rendering cannot inject HTML
+
+cd $APP_DIR && python tools/test_web_auth.py            # credentials + visibility
+cd $APP_DIR && python tools/test_cog_load.py            # every cog still loads
 ```
+
+The bot-side tests must keep passing under the **bot's** virtualenv, which has
+no Flask in it. That is the check that the UI's dependencies have not crept into
+the bot's: `data/repo/` already avoids discord.py so the UI can import it, and
+the reverse has to hold too. The access rule therefore lives in
+`data/repo/webauth.py` rather than in `web/queries.py`.
+
+**Snapshot databases with SQLite's backup API, never `shutil.copy2`.** The
+database is in WAL mode, so recent commits can still be sitting in the `-wal`
+file and copying the `.db` alone yields a silently stale snapshot. That is the
+same reason the server pull uses `.backup`, and it has already bitten once here:
+a schema migration applied moments earlier was invisible to a copied fixture and
+every page 500'd with *no such column*.
 
 `test_privacy.py` is the one that matters. Code review does not enforce a
 privacy rule: one `SELECT *`, one debug template, one error page that echoes a

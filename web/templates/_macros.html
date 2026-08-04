@@ -1,0 +1,30 @@
+{#
+  Shared bits of markup.
+
+  Server icons come from Discord's CDN, built from the guild id and the icon
+  hash the bot records. They are the only external request this site makes, and
+  they appear on authenticated pages only. A guild with no icon, or one the bot
+  has not seen since the icon column was added, falls back to a monogram, so
+  the layout never shifts depending on whether an icon exists.
+#}
+
+{% macro server_icon(server, size=20) -%}
+  {%- if server.icon -%}
+    <img class="sicon" src="{{ server.icon }}" alt="" width="{{ size }}"
+         height="{{ size }}" loading="lazy" referrerpolicy="no-referrer">
+  {%- else -%}
+    <span class="sicon sicon-mono" aria-hidden="true">{{ server.monogram }}</span>
+  {%- endif -%}
+{%- endmacro %}
+
+{% macro server_tab(server, href, active=False) -%}
+  <a class="{{ 'on' if active }}" href="{{ href }}">
+    {{ server_icon(server) }}{{ server.label }}
+  </a>
+{%- endmacro %}
+
+{% macro server_chip(server) -%}
+  <span class="chip {{ '' if server.is_active else 'muted' }}">
+    {{ server_icon(server, 16) }}{{ server.label }}
+  </span>
+{%- endmacro %}

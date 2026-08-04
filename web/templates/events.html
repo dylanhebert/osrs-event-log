@@ -38,8 +38,13 @@
         {#
           e.message only. events.payload holds the raw Dink body, which carries
           dinkAccountHash among other things, and is never selected or rendered.
+
+          discord_markup returns HTML, and it escapes before it emits: Dink
+          message text comes from a player's RuneLite client via a public
+          endpoint, so it is treated as attacker-controlled. See
+          web/tests/test_markup.py.
         #}
-        <div class="feed-msg">{{ e.message }}</div>
+        <div class="feed-msg">{{ e.message | discord_markup }}</div>
       </li>
     {% endfor %}
   </ul>

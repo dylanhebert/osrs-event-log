@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% import "_macros.html" as ui %}
 {% block title %}Leaderboards - OSRS Event Log{% endblock %}
 
 {% block content %}
@@ -17,8 +18,9 @@
     <a class="{{ 'on' if not server }}"
        href="{{ url_for('leaderboards', skill=skill, activity=activity) }}">All servers</a>
     {% for s in nav_servers %}
-      <a class="{{ 'on' if server and s.id == server.id }}"
-         href="{{ url_for('leaderboards', skill=skill, activity=activity, server=s.id) }}">{{ s.label }}</a>
+      {{ ui.server_tab(s,
+           url_for('leaderboards', skill=skill, activity=activity, server=s.id),
+           server and s.id == server.id) }}
     {% endfor %}
   </nav>
 {% endif %}

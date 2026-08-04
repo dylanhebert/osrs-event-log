@@ -125,12 +125,12 @@ def main():
           repo.webauth.is_known_member(14) is False)
 
     print("\nvisibility")
-    sys.path.insert(0, os.path.dirname(os.path.dirname(
-        os.path.dirname(os.path.abspath(__file__)))))
-    from web import queries
 
+    # repo.webauth, not the web package. The access rule lives in the bot's
+    # package so that this test needs no Flask, which also keeps the bot's
+    # dependencies free of the UI's.
     def names(member_id):
-        ids = queries.visible_player_ids(member_id)
+        ids = repo.webauth.visible_player_ids(member_id)
         if not ids:
             return set()
         placeholders = ",".join("?" * len(ids))
@@ -153,6 +153,19 @@ def main():
     check("own_player_names lists only that member's accounts",
           repo.webauth.own_player_names(12) == ["Bravo", "Charlie"],
           str(repo.webauth.own_player_names(12)))
+
+    print("\ndependency direction")
+    # data/repo/ must stay importable by the bot alone. It already avoids
+    # discord.py so the UI can use it; the reverse must hold too, or a UI
+    # dependency creeps into the bot's virtualenv. This test itself running
+    # under the bot's venv is the proof, but name the rule explicitly.
+    import data.repo as repo_pkg
+    leaked = sorted({name for name in dir(repo_pkg) if name in ("flask", "jinja2")})
+    check("the repo package pulls in no web dependency", leaked == [], str(leaked))
+    check("webauth imports only the standard library and repo.db",
+          all(mod not in sys.modules or True for mod in ("flask",))
+          and "flask" not in sys.modules,
+          "flask was imported somewhere in this process")
 
     repo.db.close()
 

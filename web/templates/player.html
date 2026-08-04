@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% import "_macros.html" as ui %}
 {% block title %}{{ player.display_name }} - OSRS Event Log{% endblock %}
 
 {% block content %}
@@ -14,9 +15,7 @@
       polled <strong>{{ player.last_polled | ago }}</strong></span>
   </div>
   <div class="player-servers">
-    {% for s in servers %}
-      <span class="chip {{ '' if s.is_active else 'muted' }}">{{ s.label }}</span>
-    {% endfor %}
+    {% for s in servers %}{{ ui.server_chip(s) }}{% endfor %}
   </div>
 </header>
 
@@ -134,7 +133,7 @@
               <span class="tag tag-{{ e.source }}">{{ e.event_type | lower }}</span>
               <time title="{{ e.occurred_at | stamp }}">{{ e.occurred_at | ago }}</time>
             </div>
-            <div class="feed-msg">{{ e.message }}</div>
+            <div class="feed-msg">{{ e.message | discord_markup }}</div>
           </li>
         {% endfor %}
       </ul>

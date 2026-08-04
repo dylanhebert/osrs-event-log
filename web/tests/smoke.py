@@ -9,6 +9,7 @@ snapshot itself and never anything on the droplet.
 
 import os
 import shutil
+import sqlite3
 import sys
 import tempfile
 from pathlib import Path
@@ -21,6 +22,26 @@ from dotenv import load_dotenv  # noqa: E402
 load_dotenv(ROOT / "web" / ".env")
 
 
+def snapshot(source, destination):
+    """Copy a live SQLite database correctly.
+
+    NOT shutil.copy2. The database is in WAL mode, so recent commits can still
+    be sitting in the -wal file; copying the .db alone silently yields a
+    stale snapshot. That bit exactly here: a schema migration applied moments
+    earlier was invisible to the copy, and every page 500'd with
+    "no such column".
+
+    sqlite3's own backup API is the same mechanism as the `.backup` command the
+    docs use for pulling from the server, and it captures the WAL contents.
+    """
+    src = sqlite3.connect(f"file:{source}?mode=ro", uri=True)
+    dst = sqlite3.connect(str(destination))
+    with dst:
+        src.backup(dst)
+    src.close()
+    dst.close()
+
+
 def build_scratch_db():
     """Copy the snapshot somewhere writable and give one member a password.
 
@@ -30,7 +51,7 @@ def build_scratch_db():
     """
     source = Path(os.environ["OSRS_DB_PATH"])
     tmp = Path(tempfile.mkdtemp(prefix="osrs-ui-smoke-")) / "smoke.db"
-    shutil.copy2(source, tmp)
+    snapshot(source, tmp)
 
     sys.path.insert(0, str(ROOT / "osrs-event-log"))
     from data import repo

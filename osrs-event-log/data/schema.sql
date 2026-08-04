@@ -78,7 +78,28 @@ CREATE TABLE servers (
     -- is removed and re-added keeps its settings, which is why removal is a
     -- flag rather than a delete.
     is_active       INTEGER NOT NULL DEFAULT 1,
-    removed_at      TEXT
+    removed_at      TEXT,
+    -- Guild display name, kept in step by the bot (schema version 3). The JSON
+    -- never held this: the bot always had discord.Guild objects to hand, so it
+    -- had no reason to store one. The web UI has no Discord connection at all,
+    -- so without this column its only honest label for a server is an ordinal.
+    --
+    -- NULL until the bot has been up once since this column was added, and for
+    -- any server it can no longer see. Read paths must cope with NULL rather
+    -- than assume a name is present.
+    --
+    -- Deliberately LAST in the table. ALTER TABLE ADD COLUMN appends, so
+    -- putting it anywhere else here would leave a freshly created database with
+    -- a different column order from a migrated one, for no gain.
+    name            TEXT,
+    -- Discord's icon hash for the guild, e.g. 'a1b2c3...'; 'a_'-prefixed means
+    -- animated and is served as .gif rather than .png.
+    --
+    -- The HASH, not a URL. The URL is derivable from (id, hash) and pinning one
+    -- would bake in a CDN host that is Discord's to change. NULL means the
+    -- guild has no icon, or the bot has not seen it since this column existed;
+    -- the UI falls back to a monogram either way.
+    icon_hash       TEXT
 );
 
 

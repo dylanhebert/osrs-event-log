@@ -53,6 +53,32 @@ def remove(server_id):
     return True
 
 
+def sync_identity(server_id, name, icon_hash=None):
+    """Record a guild's display name and icon hash. Called by the bot only.
+
+    UPDATE, never INSERT. A row in `servers` means the guild ran setup, and the
+    bot is typically in guilds that have not; creating rows here would invent
+    servers the bot was never configured for and change what active_ids() and
+    the looper see.
+
+    Returns True if a row was actually updated.
+    """
+    cur = db.execute(
+        "UPDATE servers SET name = ?, icon_hash = ? WHERE id = ?"
+        # Skip the write when nothing moved. This runs on every on_ready, and a
+        # no-op UPDATE would still dirty a page and wake the WAL for nothing.
+        "  AND (name IS NOT ? OR icon_hash IS NOT ?)",
+        (name, icon_hash, server_id, name, icon_hash))
+    return cur.rowcount > 0
+
+
+def identity(server_id):
+    """{'name', 'icon_hash'} for a guild, both possibly None."""
+    row = db.one("SELECT name, icon_hash FROM servers WHERE id = ?", (server_id,))
+    return {"name": None, "icon_hash": None} if row is None else \
+        {"name": row["name"], "icon_hash": row["icon_hash"]}
+
+
 def active_ids():
     return [r["id"] for r in db.query(
         "SELECT id FROM servers WHERE is_active = 1 ORDER BY id")]

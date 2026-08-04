@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% import "_macros.html" as ui %}
 {% block title %}My accounts - OSRS Event Log{% endblock %}
 
 {#
@@ -45,7 +46,7 @@
       {% for link in a.links %}
         <tr>
           <td>
-            {{ link.label }}
+            {{ ui.server_icon(link, 16) }}{{ link.label }}
             {% if not link.is_active %}<span class="chip warn">bot removed</span>{% endif %}
           </td>
           <td>{{ 'yes' if link.mention else 'no' }}</td>

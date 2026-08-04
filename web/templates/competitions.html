@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% import "_macros.html" as ui %}
 {% block title %}{{ conf.label }} - OSRS Event Log{% endblock %}
 
 {% block content %}
@@ -7,8 +8,8 @@
 {% if nav_servers | length > 1 %}
   <nav class="tabs">
     {% for s in nav_servers %}
-      <a class="{{ 'on' if s.id == server.id }}"
-         href="{{ url_for('competitions', kind=kind, server=s.id) }}">{{ s.label }}</a>
+      {{ ui.server_tab(s, url_for('competitions', kind=kind, server=s.id),
+                       s.id == server.id) }}
     {% endfor %}
   </nav>
 {% endif %}

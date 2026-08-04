@@ -38,7 +38,26 @@ code {
   padding: .85rem 1.5rem; background: var(--panel);
   border-bottom: 1px solid var(--line); flex-wrap: wrap;
 }
-.brand { font-weight: 650; color: var(--ink); letter-spacing: .2px; }
+.brand {
+  font-weight: 650; color: var(--ink); letter-spacing: .2px;
+  display: inline-flex; align-items: center; gap: .5rem;
+}
+/* Shipped at 2x (152x190) and drawn at 26px tall so it stays crisp on
+   high-DPI screens. width:auto keeps the chathead's own proportions. */
+.crier { height: 26px; width: auto; display: block; }
+
+/* Discord guild icons. Fixed box either way, so a server with an icon and one
+   without do not shift the row they sit in. */
+.sicon {
+  width: 1.15em; height: 1.15em; border-radius: 50%;
+  vertical-align: -.25em; margin-right: .35em; object-fit: cover;
+  flex: none;
+}
+.sicon-mono {
+  display: inline-flex; align-items: center; justify-content: center;
+  background: var(--accent-dim); color: var(--ink);
+  font-size: .68em; font-weight: 650; line-height: 1;
+}
 .nav { display: flex; gap: 1.1rem; flex: 1; flex-wrap: wrap; }
 .nav a, .nav-right { color: var(--ink-dim); }
 .nav a:hover, .nav-right:hover { color: var(--ink); text-decoration: none; }
@@ -138,8 +157,25 @@ h2 { font-size: 1.05rem; margin: 0 0 .75rem; color: var(--ink); }
   display: flex; gap: .6rem; align-items: center; flex-wrap: wrap;
   color: var(--ink-dim); font-size: .8rem; margin-bottom: .2rem;
 }
-.feed-msg { white-space: pre-wrap; font-size: .92rem; }
+/* Rendered Discord markup. NOT pre-wrap: the renderer turns newlines into
+   <br> itself, so pre-wrap here would double every line break. */
+.feed-msg { font-size: .92rem; }
 .feed.wide .feed-msg { max-width: 70ch; }
+.feed-msg strong { color: var(--ink); font-weight: 650; }
+/* The bot's stat lines arrive as ```c fenced blocks. Rendered as a quiet inset
+   strip rather than a heavy code block: it is data, not source. */
+.feed-msg pre {
+  margin: .35rem 0 0; padding: .4rem .6rem;
+  background: var(--panel-2); border-left: 2px solid var(--accent-dim);
+  border-radius: 4px; overflow-x: auto;
+}
+.feed-msg pre code {
+  background: none; padding: 0; border-radius: 0;
+  font-size: .85rem; color: var(--ink-dim);
+  font-variant-numeric: tabular-nums; white-space: pre-wrap;
+}
+.feed-msg code { font-size: .88rem; }
+.feed-msg del { color: var(--ink-dim); }
 
 .rank { margin: 0; padding-left: 1.2rem; }
 .rank li { padding: .2rem 0; }

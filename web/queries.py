@@ -35,6 +35,8 @@ web/tests/test_privacy.py enforces all of this against real rendered pages.
 
 from . import config  # noqa: F401  (sys.path)
 
+from flask import g  # noqa: E402
+
 from data import repo  # noqa: E402
 
 # Guard against a stray SELECT * creeping in later. Cheap, and the failure it
@@ -50,21 +52,11 @@ def _placeholders(values):
 # Visibility
 # --------------------------------------------------------------------------- #
 
-def visible_player_ids(member_id):
-    """Every player in every active server this member belongs to.
-
-    This is the whole access rule: "see all stats for everyone you share a
-    server with". Recomputed per request, so removing someone from a server
-    revokes their view immediately.
-    """
-    rows = repo.db.query(
-        "SELECT DISTINCT ps.player_id FROM player_servers ps"
-        " WHERE ps.server_id IN ("
-        "   SELECT ps2.server_id FROM player_servers ps2"
-        "   JOIN servers s ON s.id = ps2.server_id"
-        "   WHERE ps2.member_id = ? AND s.is_active = 1)",
-        (member_id,))
-    return [r["player_id"] for r in rows]
+# The access rule itself lives in data/repo/webauth.py, next to the rest of it
+# (visible_server_ids, own_player_names). A permission boundary split across two
+# packages is one nobody can read in one sitting, and keeping it there lets the
+# bot's own test suite exercise it without importing Flask.
+visible_player_ids = repo.webauth.visible_player_ids
 
 
 def narrow_to_server(player_ids, server_id):
@@ -85,19 +77,73 @@ def narrow_to_server(player_ids, server_id):
 def server_label(server_id, names, ordinal):
     """A display name for a guild.
 
-    Real guild ids are semi-private and this repo is public, so names come from
-    the SERVER_NAMES environment variable. Unmapped servers get a stable
-    ordinal, never the raw snowflake.
+    Best available first:
+
+      1. SERVER_NAMES, so a friendlier label than the real guild name can be
+         set without touching the database
+      2. servers.name, which the bot keeps in step, so a new or renamed server
+         needs no configuration at all
+      3. an ordinal
+
+    Never the raw snowflake. Guild ids are semi-private and this repo is public,
+    so a label is always either chosen or fetched by the bot.
     """
-    return names.get(server_id) or f"Server {ordinal}"
+    override = names.get(server_id)
+    if override:
+        return override
+    return _identity(server_id)["name"] or f"Server {ordinal}"
+
+
+def _identity(server_id):
+    """Guild name and icon hash, cached for the life of the request.
+
+    Read repeatedly while rendering a page (nav, tabs, per player). It is a
+    handful of rows that cannot change mid-request, so caching beats
+    re-querying on every label.
+    """
+    cache = getattr(g, "_server_identity", None)
+    if cache is None:
+        cache = g._server_identity = {}
+    if server_id not in cache:
+        cache[server_id] = repo.servers.identity(server_id)
+    return cache[server_id]
+
+
+def server_icon_url(server_id, size=64):
+    """Discord CDN URL for a guild's icon, or None.
+
+    Built from (id, hash) rather than stored, so the CDN host stays Discord's to
+    change. An 'a_' prefix means an animated icon, served as .gif; anything else
+    is .png.
+
+    This is the only external request the site makes. It is emitted on
+    authenticated pages only, to a member of that guild, and Referrer-Policy is
+    same-origin so no page path reaches Discord.
+    """
+    icon_hash = _identity(server_id)["icon_hash"]
+    if not icon_hash:
+        return None
+    extension = "gif" if str(icon_hash).startswith("a_") else "png"
+    return (f"https://cdn.discordapp.com/icons/{server_id}/{icon_hash}"
+            f".{extension}?size={size}")
+
+
+def server_view(server_id, names, ordinal):
+    label = server_label(server_id, names, ordinal)
+    return {
+        "id": server_id,
+        "label": label,
+        "icon": server_icon_url(server_id),
+        # Shown instead of an icon when there is none.
+        "monogram": label[:1].upper(),
+    }
 
 
 def visible_servers(member_id, names):
-    """[{'id', 'label'}] for the member's active servers, in a stable order."""
+    """The member's active servers, in a stable order."""
     ids = repo.webauth.visible_server_ids(member_id)
     all_active = repo.servers.active_ids()
-    return [{"id": sid, "label": server_label(sid, names, all_active.index(sid) + 1)}
-            for sid in ids]
+    return [server_view(sid, names, all_active.index(sid) + 1) for sid in ids]
 
 
 # --------------------------------------------------------------------------- #
@@ -240,11 +286,15 @@ def player_server_labels(player_id, names):
     out = []
     for row in rows:
         sid = row["server_id"]
-        ordinal = all_active.index(sid) + 1 if sid in all_active else 0
-        out.append({"id": sid,
-                    "label": server_label(sid, names, ordinal) if ordinal
-                    else "a server the bot has left",
-                    "is_active": bool(row["is_active"])})
+        if sid in all_active:
+            view = server_view(sid, names, all_active.index(sid) + 1)
+        else:
+            # The bot was removed from this guild, so there is nothing current
+            # to name it by and its stored name may be stale.
+            view = {"id": sid, "label": "a server the bot has left",
+                    "icon": None, "monogram": "?"}
+        view["is_active"] = bool(row["is_active"])
+        out.append(view)
     return out
 
 
@@ -294,15 +344,18 @@ def own_account_links(player_id, member_id, names):
     out = []
     for row in rows:
         sid = row["server_id"]
-        ordinal = all_active.index(sid) + 1 if sid in all_active else 0
-        out.append({
-            "label": server_label(sid, names, ordinal) if ordinal
-            else "a server the bot has left",
+        if sid in all_active:
+            view = server_view(sid, names, all_active.index(sid) + 1)
+        else:
+            view = {"id": sid, "label": "a server the bot has left",
+                    "icon": None, "monogram": "?"}
+        view.update({
             "is_active": bool(row["is_active"]),
             "mention": bool(row["mention"]),
             "sotw_opt": bool(row["sotw_opt"]),
             "botw_opt": bool(row["botw_opt"]),
         })
+        out.append(view)
     return out
 
 

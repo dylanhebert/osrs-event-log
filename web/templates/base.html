@@ -5,11 +5,19 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="robots" content="noindex, nofollow">
   <title>{% block title %}OSRS Event Log{% endblock %}</title>
+  <link rel="icon" href="{{ url_for('static', filename='img/favicon.ico') }}" sizes="any">
+  <link rel="icon" type="image/png" href="{{ url_for('static', filename='img/icon-32.png') }}" sizes="32x32">
+  <link rel="apple-touch-icon" href="{{ url_for('static', filename='img/icon-180.png') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}">
 </head>
 <body>
 <header class="topbar">
-  <a class="brand" href="{{ url_for('home') }}">OSRS Event Log</a>
+  <a class="brand" href="{{ url_for('home') }}">
+    {# The Varrock town crier: the bot announces things, so does he. #}
+    <img class="crier" src="{{ url_for('static', filename='img/crier.png') }}"
+         alt="" width="152" height="190">
+    OSRS Event Log
+  </a>
   {% if signed_in %}
     <nav class="nav">
       <a href="{{ url_for('players') }}">Players</a>

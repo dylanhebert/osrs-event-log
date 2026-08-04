@@ -136,6 +136,28 @@ def is_known_member(member_id):
         (member_id,)) is not None
 
 
+def visible_player_ids(member_id):
+    """Every player in every active server this member belongs to.
+
+    THE ACCESS RULE. Everything the web UI shows a signed-in member derives
+    from this list, and it is recomputed per request rather than cached in the
+    session, so removing someone from a server revokes their view immediately.
+
+    It lives here rather than in the web package because the other half of the
+    rule (visible_server_ids, own_player_names) already does, and a permission
+    boundary split across two packages is one nobody can read in one sitting.
+    It also keeps the bot's own tests able to exercise it without importing
+    Flask.
+    """
+    return [r["player_id"] for r in db.query(
+        "SELECT DISTINCT ps.player_id FROM player_servers ps"
+        " WHERE ps.server_id IN ("
+        "   SELECT ps2.server_id FROM player_servers ps2"
+        "   JOIN servers s ON s.id = ps2.server_id"
+        "   WHERE ps2.member_id = ? AND s.is_active = 1)",
+        (member_id,))]
+
+
 def visible_server_ids(member_id):
     """The active servers a member belongs to. The permission boundary.
 

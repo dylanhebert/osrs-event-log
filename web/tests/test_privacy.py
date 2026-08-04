@@ -40,7 +40,16 @@ def scratch_copy():
     happens not to have one, so the test cannot pass vacuously."""
     source = Path(os.environ["OSRS_DB_PATH"])
     tmp = Path(tempfile.mkdtemp(prefix="osrs-ui-privacy-")) / "privacy.db"
-    shutil.copy2(source, tmp)
+    # sqlite3's backup API, not shutil.copy2: the database is in WAL mode and
+    # copying the .db alone leaves recent commits behind in the -wal, giving a
+    # silently stale snapshot. Same mechanism as the `.backup` used to pull
+    # from the server.
+    src = sqlite3.connect(f"file:{source}?mode=ro", uri=True)
+    dst = sqlite3.connect(str(tmp))
+    with dst:
+        src.backup(dst)
+    src.close()
+    dst.close()
 
     sys.path.insert(0, str(ROOT / "osrs-event-log"))
     from data import repo
@@ -184,8 +193,15 @@ def main():
 
     print(f"\n2. crawling {len(paths)} pages signed in")
     checked = 0
+    broken = []
     for path in paths:
         response = client.get(path)
+        # A page that failed to render contains no secrets for trivial reasons,
+        # so without this the whole crawl can pass while the site is down. This
+        # is not hypothetical: a stale test snapshot once 500'd every page here
+        # and the leak check still reported clean.
+        if response.status_code != 200:
+            broken.append((path, response.status_code))
         haystack = response.get_data(as_text=True) + "\n" + str(dict(response.headers))
         for secret, source in secrets.items():
             if secret and str(secret) in haystack:
@@ -200,6 +216,11 @@ def main():
         checked += 1
     print(f"  {'ok  ' if not failures else 'FAIL'} {checked} pages, "
           f"{len(secrets)} secrets each")
+    print(f"  {'ok  ' if not broken else 'FAIL'} every crawled page returned 200"
+          f"{'' if not broken else f' ({len(broken)} did not: {broken[:3]})'}")
+    if broken:
+        failures.append(f"{len(broken)} pages did not render, so the leak check "
+                        f"above proved nothing for them")
 
     # ---------------------------------------------------------------- #
     # 3. The canaries must be findable in the database, or step 2 proved

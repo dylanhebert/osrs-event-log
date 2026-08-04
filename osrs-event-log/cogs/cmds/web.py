@@ -22,8 +22,66 @@ class WebCommands(commands.Cog, name="Web UI"):
     def __init__(self, bot):
         self.bot = bot
 
+    # ---------------------------------------------------------------- #
+    # Guild identity sync
+    # ---------------------------------------------------------------- #
+    # The database has never held guild names or icons: the bot always had
+    # discord.Guild objects to hand, so it never needed them. The web UI has no
+    # Discord connection at all, so without these it can only label a server by
+    # an ordinal. These listeners keep servers.name and servers.icon_hash in
+    # step, which is why the UI needs no hand-maintained id-to-name mapping and
+    # why a rename shows up on its own.
+    #
+    # NOTE for anyone adding listeners elsewhere in this bot: a bare
+    # `async def on_ready` inside a Cog is NEVER called. py-cord only registers
+    # cog listeners that carry @commands.Cog.listener(). The undecorated
+    # on_ready methods in user.py, admin.py and looper.py are dead code.
+
+    @commands.Cog.listener()
     async def on_ready(self):
         logger.debug('WebCommands Cog Ready')
+        await self.sync_guild_identities()
+
+    @commands.Cog.listener()
+    async def on_guild_join(self, guild):
+        self.sync_one(guild)
+
+    @commands.Cog.listener()
+    async def on_guild_update(self, before, after):
+        # Fires on a rename or an icon change.
+        self.sync_one(after)
+
+    def sync_one(self, guild):
+        """Best-effort. A failure here must never affect anything else."""
+        try:
+            icon = getattr(guild, 'icon', None)
+            return repo.servers.sync_identity(
+                guild.id, guild.name, getattr(icon, 'key', None))
+        except Exception as e:
+            logger.exception(f'could not sync guild identity for {guild.id} -- {e}')
+            return False
+
+    async def sync_guild_identities(self):
+        """Refresh every known guild's name and icon.
+
+        on_ready fires again after a reconnect, so this runs repeatedly. It is
+        a handful of rows and sync_identity() skips the write when nothing has
+        changed, so the steady-state cost is a few SELECTs.
+
+        Wrapped so that a broken database can never stop the bot coming up.
+        Names and icons are cosmetic; posting to Discord is not.
+        """
+        try:
+            updated = 0
+            for guild in self.bot.guilds:
+                if self.sync_one(guild):
+                    updated += 1
+            if updated:
+                logger.info(f'Guild identity sync updated {updated} server(s)')
+            else:
+                logger.debug('Guild identity sync: nothing changed')
+        except Exception as e:
+            logger.exception(f'guild identity sync failed -- {e}')
 
     @commands.command(  brief="Get a password for the web UI, sent by DM",
                         description="Sends you a password for the read-only web "
