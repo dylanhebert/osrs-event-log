@@ -55,7 +55,14 @@ sheet = Image.new("RGBA", (cols * CELL, rows * CELL), (0, 0, 0, 0))
 positions = {}
 for index, (css_class, path) in enumerate(entries):
     icon = Image.open(path).convert("RGBA")
-    icon.thumbnail((CELL, CELL), Image.LANCZOS)
+    # Scale to FILL the cell, up or down. Image.thumbnail() only ever shrinks,
+    # which left the small wiki skill icons (many are 17-25px) sitting tiny
+    # inside a 40px cell and rendering at half the size they should. The <img>
+    # tags this replaced used object-fit: contain, which scales up to fill the
+    # box, so matching that is what keeps the icons the size they were.
+    scale = CELL / max(icon.size)
+    icon = icon.resize((max(1, round(icon.width * scale)),
+                        max(1, round(icon.height * scale))), Image.LANCZOS)
     col, row = index % cols, index // cols
     x = col * CELL + (CELL - icon.width) // 2
     y = row * CELL + (CELL - icon.height) // 2
