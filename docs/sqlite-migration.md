@@ -103,15 +103,48 @@ python tools/test_repo_parity.py
 python tools/test_zero_delta.py    # T2
 python tools/test_golden_diff.py   # T3
 python tools/test_events.py
+python tools/test_super_user.py
 ```
 
 | test | proves |
 |---|---|
-| **T1 round-trip** | JSON → SQLite → JSON reproduces the input exactly. 674 keys, 69 players, 3,626 values. This is also the rollback guarantee. |
-| **repo parity** | The repo layer answers what the JSON said — 8,793 stat values, links, membership, standings. |
+| **T1 round-trip** | JSON → SQLite → JSON reproduces the input exactly. This is also the rollback guarantee. |
+| **repo parity** | The repo layer answers what the JSON said — every stat value, link, membership and standing. |
 | **T2 zero-delta** | Replaying every player against their own stored data produces **0 changes and 0 messages**. Directly proves the migration cannot spam. |
 | **T3 golden diff** | A pristine pre-migration tree and the working tree, fed identical frozen payloads, emit **byte-identical** Discord messages. |
 | **events** | Recording works, and a broken database cannot stop a message reaching Discord. |
+| **super user** | The owner-only check fails closed when `SUPER_USER_ID` is missing. |
+
+### T5, the one that hits the network
+
+```bash
+python tools/test_live_readonly.py --data-dir fixtures/live-YYYY-MM-DD
+python tools/test_live_readonly.py --limit 10     # smaller sample first
+```
+
+Everything above replays stored or synthetic data. T5 fetches real hiscores for
+every pollable player and runs the real comparison against real migrated state,
+posting nothing and writing nothing. It is the only check that exercises
+fetch → parse → compare end to end against what Jagex returns today, which is
+where a parser assumption would surface.
+
+It fails if more than half the successfully-fetched players report changes —
+that is the spam signature, not a busy week.
+
+A healthy run looks like this (measured on current state, and matching the
+pre-migration baseline on fetch failures):
+
+```
+70 polled
+55 skipped, Overall xp unchanged
+ 3 walked every skill, nothing differed
+12 fetch failed (404 / not on the hiscores)
+ 0 with real updates
+ 0 messages, 0 errors
+```
+
+Zero updates is normal right after the live bot has polled. It also means T5
+does not exercise the milestone paths — T3 and `tools/scenarios.py` cover those.
 
 ### T3 is the one that matters most
 
@@ -184,6 +217,7 @@ $APP_VENV/bin/python tools/migrate_json_to_sqlite.py --db data/osrs.db
 # 5. verify on the real data before starting
 $APP_VENV/bin/python tools/test_roundtrip.py
 $APP_VENV/bin/python tools/test_zero_delta.py
+$APP_VENV/bin/python tools/test_live_readonly.py
 
 # 6. start
 sudo systemctl start osrs-event-log
