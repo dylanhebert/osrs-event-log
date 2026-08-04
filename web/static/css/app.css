@@ -58,6 +58,22 @@ code {
   background: var(--accent-dim); color: var(--ink);
   font-size: .68em; font-weight: 650; line-height: 1;
 }
+
+/* Discord member avatars. Same fixed-box treatment as guild icons so a member
+   with an avatar and one without occupy identical space. */
+.member { display: inline-flex; align-items: center; gap: .4em; }
+.avatar {
+  width: 1.3em; height: 1.3em; border-radius: 50%;
+  object-fit: cover; flex: none;
+}
+.avatar-mono {
+  display: inline-flex; align-items: center; justify-content: center;
+  background: var(--accent-dim); color: var(--ink);
+  font-size: .62em; font-weight: 650; line-height: 1;
+}
+.me-head { display: flex; align-items: center; gap: .5rem; }
+.me-head .avatar { width: 1.1em; height: 1.1em; }
+.player-owner { margin-top: .4rem; }
 .nav { display: flex; gap: 1.1rem; flex: 1; flex-wrap: wrap; }
 .nav a, .nav-right { color: var(--ink-dim); }
 .nav a:hover, .nav-right:hover { color: var(--ink); text-decoration: none; }

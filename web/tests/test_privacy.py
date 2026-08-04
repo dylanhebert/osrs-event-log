@@ -21,11 +21,19 @@ is the whole basis of the "aggregates only" public view.
 
 import json
 import os
+import re
 import shutil
 import sqlite3
 import sys
 import tempfile
 from pathlib import Path
+
+# Discord avatar URLs, the only place a member id is permitted to appear.
+# Anchored on the CDN host and the /avatars/ path so it cannot accidentally
+# excuse an id sitting anywhere else on the page.
+_AVATAR_URL = re.compile(
+    r"https://cdn\.discordapp\.com/avatars/\d+/[A-Za-z0-9_]+"
+    r"\.(?:png|gif)(?:\?size=\d+)?")
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
@@ -85,6 +93,18 @@ def scratch_copy():
         " JOIN servers s ON s.id = ps.server_id"
         " WHERE s.is_active = 1 AND ps.member_id IS NOT NULL"
         " GROUP BY ps.member_id ORDER BY COUNT(*) DESC LIMIT 1")
+
+    # Give every linked member an avatar, so the crawl actually renders avatar
+    # URLs. Without this every row is NULL, the UI draws monograms, and the
+    # narrowed member-id rule would never be exercised on a real page.
+    # Names must NOT contain the member id: the point is to exercise the avatar
+    # URL, and an id embedded in a display name is a genuine leak that this
+    # test should keep catching. (It did, on the first attempt at this seeding.)
+    for index, linked in enumerate(repo.members.linked_member_ids(), 1):
+        repo.members.sync(linked, f"canaryuser{index}", f"Canary Member {index}",
+                          "canaryavatarhash")
+    canaries["avatar_member"] = str(member_id)
+
     password, _ = repo.webauth.issue(member_id)
     token_hash = repo.db.scalar(
         "SELECT token_hash FROM web_credentials WHERE member_id = ?", (member_id,))
@@ -202,7 +222,15 @@ def main():
         # and the leak check still reported clean.
         if response.status_code != 200:
             broken.append((path, response.status_code))
-        haystack = response.get_data(as_text=True) + "\n" + str(dict(response.headers))
+        body = response.get_data(as_text=True)
+        # THE ONE SANCTIONED EXCEPTION. A Discord avatar lives at
+        # cdn.discordapp.com/avatars/<user_id>/<hash>, so rendering one puts
+        # that id in the page. Strip those URLs before checking, so a member id
+        # inside an avatar URL is allowed and a member id ANYWHERE ELSE still
+        # fails. Without this narrowing the check would either have to be
+        # dropped (losing all its value) or block the feature.
+        body = _AVATAR_URL.sub("[avatar]", body)
+        haystack = body + "\n" + str(dict(response.headers))
         for secret, source in secrets.items():
             if secret and str(secret) in haystack:
                 # The value itself is NOT printed. D10 in the migration notes:
@@ -234,6 +262,16 @@ def main():
         if not present:
             failures.append(f"canary {label} was not collected; test is vacuous")
 
+    # The avatar exemption only means anything if avatars actually rendered.
+    owner_page = client.get(f"/players/{visible[0]}").get_data(as_text=True)
+    me_page = client.get("/me").get_data(as_text=True)
+    rendered = ("cdn.discordapp.com/avatars/" in owner_page
+                or "cdn.discordapp.com/avatars/" in me_page)
+    print(f"  {'ok  ' if rendered else 'FAIL'} avatar URLs actually rendered, so "
+          f"the exemption was exercised")
+    if not rendered:
+        failures.append("no avatar URL rendered; the exemption test is vacuous")
+
     # And prove the crawler would actually catch a leak, by checking that the
     # canary dink key IS present in the database it just crawled.
     conn = sqlite3.connect(f"file:{scratch}?mode=ro", uri=True)
@@ -245,6 +283,30 @@ def main():
           f"visible player ({stored} row)")
     if not stored:
         failures.append("canary dink key never made it into the database")
+
+    # ---------------------------------------------------------------- #
+    # 3b. The avatar exemption must be narrow.
+    # ---------------------------------------------------------------- #
+    print("\n3b. the avatar exemption excuses avatar URLs and nothing else")
+    fake_id = "112233445566778899"
+    cases = [
+        (f'<img src="https://cdn.discordapp.com/avatars/{fake_id}/abc123.png?size=64">',
+         False, "inside an avatar URL: allowed"),
+        (f'<img src="https://cdn.discordapp.com/avatars/{fake_id}/abc123.gif">',
+         False, "inside an animated avatar URL: allowed"),
+        (f"<span>{fake_id}</span>", True, "as page text: caught"),
+        (f'<a href="/members/{fake_id}">x</a>', True, "in a link: caught"),
+        (f'<img src="https://evil.example.com/avatars/{fake_id}/a.png">',
+         True, "on another host: caught"),
+        (f'<img src="https://cdn.discordapp.com/icons/{fake_id}/abc.png">',
+         True, "in a guild icon URL: caught"),
+    ]
+    for markup, should_catch, label in cases:
+        caught = fake_id in _AVATAR_URL.sub("[avatar]", markup)
+        ok = caught == should_catch
+        print(f"  {'ok  ' if ok else 'FAIL'} {label}")
+        if not ok:
+            failures.append(f"avatar exemption wrong for: {label}")
 
     # ---------------------------------------------------------------- #
     # 4. Authenticated responses must not be shared-cacheable.

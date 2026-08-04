@@ -23,6 +23,26 @@
   </a>
 {%- endmacro %}
 
+{#
+  A Discord member's avatar and name.
+
+  The avatar URL contains that member's Discord user id, which is the one place
+  an id is allowed to reach a page. It is only ever rendered on an
+  authenticated page, to someone who shares a server with them and can already
+  read the same id in Discord. Everywhere else, ids stay in the database.
+#}
+{% macro member_badge(member, size=20) -%}
+  <span class="member">
+    {%- if member.avatar -%}
+      <img class="avatar" src="{{ member.avatar }}" alt="" width="{{ size }}"
+           height="{{ size }}" loading="lazy" referrerpolicy="no-referrer">
+    {%- else -%}
+      <span class="avatar avatar-mono" aria-hidden="true">{{ member.monogram }}</span>
+    {%- endif -%}
+    {{ member.name }}
+  </span>
+{%- endmacro %}
+
 {% macro server_chip(server) -%}
   <span class="chip {{ '' if server.is_active else 'muted' }}">
     {{ server_icon(server, 16) }}{{ server.label }}

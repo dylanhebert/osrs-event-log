@@ -9,7 +9,7 @@
 #}
 
 {% block content %}
-<h1>My accounts</h1>
+<h1 class="me-head">{{ ui.member_badge(me, 32) }}</h1>
 <p class="muted">
   {{ accounts | length }} account{{ '' if accounts | length == 1 else 's' }} in the
   log across {{ nav_servers | length }}

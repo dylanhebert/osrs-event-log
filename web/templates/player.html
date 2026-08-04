@@ -17,6 +17,12 @@
   <div class="player-servers">
     {% for s in servers %}{{ ui.server_chip(s) }}{% endfor %}
   </div>
+  {% if owners %}
+    <div class="player-owner muted small">
+      {{ 'Played by' if owners | length == 1 else 'Linked to' }}
+      {% for o in owners %}{{ ui.member_badge(o, 18) }}{% if not loop.last %}, {% endif %}{% endfor %}
+    </div>
+  {% endif %}
 </header>
 
 {% if not skills %}

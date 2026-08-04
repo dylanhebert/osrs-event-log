@@ -209,6 +209,28 @@ CREATE TABLE web_credentials (
 CREATE UNIQUE INDEX idx_web_credentials_hash ON web_credentials(token_hash);
 
 
+-- Discord member identity, so the web UI can show who owns an account
+-- (schema version 4). Like servers.name, this exists only because the UI has no
+-- Discord connection of its own; the bot has Member objects to hand and never
+-- needed it stored.
+--
+-- DELIBERATELY NOT EVERY MEMBER OF EVERY GUILD. The bot only records members
+-- that already appear in player_servers, i.e. people who have put an account
+-- into the log. Storing the rest would mean holding profile data about people
+-- who have nothing to do with this bot, to no purpose.
+--
+-- avatar_hash is Discord's hash, not a URL: the URL is derivable and pinning
+-- one would bake in a CDN host that is Discord's to change. NULL means no
+-- custom avatar or not yet seen, and the UI falls back to a monogram.
+CREATE TABLE discord_members (
+    member_id     INTEGER PRIMARY KEY,
+    username      TEXT,               -- the @handle
+    display_name  TEXT,               -- server nickname or global display name
+    avatar_hash   TEXT,
+    updated_at    TEXT NOT NULL
+) WITHOUT ROWID;
+
+
 -- ---------------------------------------------------------------------------
 -- Reference
 -- ---------------------------------------------------------------------------

@@ -7,10 +7,11 @@ other half.
     v2  web_credentials       sign-in credentials, hash only
     v3  servers.name          guild display name, so the UI can label a server
         servers.icon_hash     guild icon, so it can show one
+    v4  discord_members       who owns an account: name and avatar hash
 
-It is idempotent and additive: it creates one table, one index and two nullable
-columns, rewrites no existing row, and drops nothing. Safe to run more than once
-and safe to run while the bot is up, though the deploy window is tidier. See
+It is idempotent and additive: it creates tables, an index and nullable columns,
+rewrites no existing row, and drops nothing. Safe to run more than once and safe
+to run while the bot is up, though the deploy window is tidier. See
 docs/web-ui.md.
 
     python tools/migrate_add_web_auth.py --report          # writes nothing
@@ -23,7 +24,9 @@ import sqlite3
 import sys
 from datetime import datetime, timezone
 
-SCHEMA_VERSION = 3
+SCHEMA_VERSION = 4
+
+NEW_TABLES = ["web_credentials", "discord_members"]
 
 DDL = [
     """
@@ -37,6 +40,15 @@ DDL = [
     """
     CREATE UNIQUE INDEX IF NOT EXISTS idx_web_credentials_hash
         ON web_credentials(token_hash)
+    """,
+    """
+    CREATE TABLE IF NOT EXISTS discord_members (
+        member_id     INTEGER PRIMARY KEY,
+        username      TEXT,
+        display_name  TEXT,
+        avatar_hash   TEXT,
+        updated_at    TEXT NOT NULL
+    ) WITHOUT ROWID
     """,
 ]
 
@@ -89,26 +101,27 @@ def main(argv=None):
     conn.execute("PRAGMA foreign_keys = ON")
     try:
         version = current_version(conn)
-        has_table = table_exists(conn, "web_credentials")
+        missing_tables = [t for t in NEW_TABLES if not table_exists(conn, t)]
         missing_columns = [(t, c, d) for t, c, d in NEW_COLUMNS
                            if not column_exists(conn, t, c)]
 
         print(f"database        {args.db}")
         print(f"schema_version  {version}")
-        print(f"web_credentials {'present' if has_table else 'MISSING'}")
+        for table in NEW_TABLES:
+            print(f"{table:<23} {'MISSING' if table in missing_tables else 'present'}")
         for table, column, _ in NEW_COLUMNS:
             present = not any(c == column for _, c, _ in missing_columns)
-            print(f"{table}.{column:<15} {'present' if present else 'MISSING'}")
+            print(f"{table + '.' + column:<23} {'present' if present else 'MISSING'}")
 
-        todo = (not has_table) or missing_columns or version < SCHEMA_VERSION
+        todo = missing_tables or missing_columns or version < SCHEMA_VERSION
         if not todo:
             print(f"\nNothing to do: already at version {SCHEMA_VERSION}.")
             return 0
 
         if args.report:
             print("\n--report, would apply:")
-            if not has_table:
-                print("  CREATE TABLE web_credentials + its unique index")
+            for table in missing_tables:
+                print(f"  CREATE TABLE {table}")
             for table, column, decl in missing_columns:
                 print(f"  ALTER TABLE {table} ADD COLUMN {column} {decl}")
             if version < SCHEMA_VERSION:
@@ -131,13 +144,23 @@ def main(argv=None):
         print(f"\nOK: schema_version {SCHEMA_VERSION}.")
         print(f"     web_credentials rows: "
               f"{conn.execute('SELECT COUNT(*) FROM web_credentials').fetchone()[0]}")
+
         named = conn.execute(
             "SELECT COUNT(*) FROM servers WHERE name IS NOT NULL").fetchone()[0]
         total = conn.execute("SELECT COUNT(*) FROM servers").fetchone()[0]
         print(f"     servers with a name: {named} of {total}")
-        if named < total:
-            print("     The bot fills these in on its next start. Until then the"
-                  " UI labels them by ordinal.")
+
+        known = conn.execute("SELECT COUNT(*) FROM discord_members").fetchone()[0]
+        linked = conn.execute(
+            "SELECT COUNT(DISTINCT ps.member_id) FROM player_servers ps"
+            " JOIN servers s ON s.id = ps.server_id"
+            " WHERE s.is_active = 1 AND ps.member_id IS NOT NULL").fetchone()[0]
+        print(f"     members known:       {known} of {linked} linked")
+
+        if named < total or known < linked:
+            print("\n     The bot fills these in on its next start. Until then"
+                  " the UI shows ordinals\n     and monograms, which is the"
+                  " designed degraded state, not a failure.")
         return 0
     finally:
         conn.close()

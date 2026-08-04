@@ -130,12 +130,17 @@ def server_icon_url(server_id, size=64):
 
 def server_view(server_id, names, ordinal):
     label = server_label(server_id, names, ordinal)
+    named = label != f"Server {ordinal}"
     return {
         "id": server_id,
         "label": label,
         "icon": server_icon_url(server_id),
-        # Shown instead of an icon when there is none.
-        "monogram": label[:1].upper(),
+        # Shown instead of an icon when there is none. An initial is only
+        # useful once a server has a real name: before the bot has filled
+        # these in, every label is "Server N" and every initial would be a
+        # useless "S". Fall back to the ordinal instead, which at least tells
+        # the badges apart.
+        "monogram": label[:1].upper() if named else str(ordinal),
     }
 
 
@@ -296,6 +301,60 @@ def player_server_labels(player_id, names):
         view["is_active"] = bool(row["is_active"])
         out.append(view)
     return out
+
+
+# --------------------------------------------------------------------------- #
+# Discord member identity
+# --------------------------------------------------------------------------- #
+# THE ONE SANCTIONED EXCEPTION TO "member_id NEVER LEAVES THE DATABASE".
+#
+# A Discord avatar lives at cdn.discordapp.com/avatars/<user_id>/<hash>, so the
+# user id is unavoidably in the URL and therefore in the page. Dylan accepted
+# that trade deliberately: the page is only ever served to someone who shares a
+# Discord server with that member, and they can already read the same id in
+# Discord with developer mode on.
+#
+# The rule is narrowed, not dropped. A member id may appear ONLY inside an
+# avatar URL. web/tests/test_privacy.py still fails on an id anywhere else, so
+# it keeps its teeth.
+
+def member_avatar_url(member_id, avatar_hash, size=64):
+    """Discord CDN URL for a member's avatar, or None for the monogram."""
+    if not avatar_hash:
+        return None
+    extension = "gif" if str(avatar_hash).startswith("a_") else "png"
+    return (f"https://cdn.discordapp.com/avatars/{member_id}/{avatar_hash}"
+            f".{extension}?size={size}")
+
+
+def member_view(row):
+    """{'name', 'avatar', 'monogram'} from a discord_members row.
+
+    A member the bot has not recorded yet renders as "Unknown" with a neutral
+    monogram rather than exposing the raw id as a label.
+    """
+    name = (row["display_name"] or row["username"] or "Unknown") \
+        if row is not None else "Unknown"
+    avatar_hash = row["avatar_hash"] if row is not None else None
+    return {
+        "name": name,
+        "avatar": member_avatar_url(row["member_id"], avatar_hash)
+        if row is not None else None,
+        "monogram": name[:1].upper(),
+    }
+
+
+def player_owners(player_id):
+    """Who owns a player, as view dicts. Usually one."""
+    return [member_view(row) for row in repo.members.owners_of(player_id)]
+
+
+def my_identity(member_id):
+    """The signed-in member's own name and avatar."""
+    row = repo.members.get(member_id)
+    if row is None:
+        return member_view(None)
+    return member_view({"member_id": member_id, **row})
 
 
 # --------------------------------------------------------------------------- #

@@ -41,6 +41,7 @@ class WebCommands(commands.Cog, name="Web UI"):
     async def on_ready(self):
         logger.debug('WebCommands Cog Ready')
         await self.sync_guild_identities()
+        await self.sync_member_identities()
 
     @commands.Cog.listener()
     async def on_guild_join(self, guild):
@@ -51,6 +52,16 @@ class WebCommands(commands.Cog, name="Web UI"):
         # Fires on a rename or an icon change.
         self.sync_one(after)
 
+    @commands.Cog.listener()
+    async def on_member_update(self, before, after):
+        # Nickname or avatar changed. Only members who already own an account
+        # are recorded; everyone else in the guild is ignored.
+        try:
+            if repo.members.get(after.id) is not None:
+                self.sync_member(after)
+        except Exception as e:
+            logger.exception(f'could not sync member {after.id} -- {e}')
+
     def sync_one(self, guild):
         """Best-effort. A failure here must never affect anything else."""
         try:
@@ -60,6 +71,53 @@ class WebCommands(commands.Cog, name="Web UI"):
         except Exception as e:
             logger.exception(f'could not sync guild identity for {guild.id} -- {e}')
             return False
+
+    def sync_member(self, member):
+        """Record one Discord member's name and avatar. Best-effort."""
+        try:
+            avatar = getattr(member, 'avatar', None)
+            return repo.members.sync(
+                member.id,
+                getattr(member, 'name', None),
+                member.display_name,
+                getattr(avatar, 'key', None))
+        except Exception as e:
+            logger.exception(f'could not sync member {member.id} -- {e}')
+            return False
+
+    async def sync_member_identities(self):
+        """Record the name and avatar of everyone who owns an account.
+
+        ONLY members already linked in player_servers. The bot can see every
+        member of every guild it is in; storing all of them would mean holding
+        profile data about people who have nothing to do with this log.
+
+        Reads from the member cache rather than fetching, so it costs no API
+        calls. A member the cache does not have is skipped and picked up on a
+        later start.
+        """
+        try:
+            wanted = set(repo.members.linked_member_ids())
+            if not wanted:
+                return
+            updated = seen = 0
+            for guild in self.bot.guilds:
+                for member_id in list(wanted):
+                    member = guild.get_member(member_id)
+                    if member is None:
+                        continue
+                    seen += 1
+                    wanted.discard(member_id)
+                    if self.sync_member(member):
+                        updated += 1
+            if updated:
+                logger.info(f'Member identity sync updated {updated} of {seen}')
+            else:
+                logger.debug(f'Member identity sync: nothing changed ({seen} seen)')
+            if wanted:
+                logger.debug(f'Member identity sync: {len(wanted)} not in cache')
+        except Exception as e:
+            logger.exception(f'member identity sync failed -- {e}')
 
     async def sync_guild_identities(self):
         """Refresh every known guild's name and icon.

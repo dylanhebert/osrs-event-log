@@ -207,14 +207,37 @@ directly, so a server filter can only ever remove players, never add them. A
 server the member is not in returns 404 rather than falling back to "all",
 which would turn a guessed id into a silent, wrong-looking answer.
 
+### Member names and avatars
+
+`discord_members` (schema version 4) holds the name and avatar hash of people
+who own an account, synced by the same cog listeners. **Only members who already
+appear in `player_servers`.** The bot can see everyone in every guild it is in;
+storing the rest would mean holding profile data about people who have nothing
+to do with this log.
+
+`repo.members.prune_unlinked()` exists so that leaving the log can be made to
+drop the profile data too. It is not called automatically.
+
 ### Never rendered
 
 | column | why |
 |---|---|
 | `players.dink_link_key` | bearer tokens for the public webhook. Anyone holding one can post events as any player. |
-| `player_servers.member_id` | real Discord user ids |
+| `player_servers.member_id` | real Discord user ids, **except inside an avatar URL** |
 | `events.payload` | raw Dink bodies, which carry `dinkAccountHash` |
 | `web_credentials.token_hash` | sign-in hashes |
+
+**The one sanctioned exception.** A Discord avatar lives at
+`cdn.discordapp.com/avatars/<user_id>/<hash>`, so rendering one unavoidably puts
+that id in the page. That trade was taken deliberately: the page is only ever
+served to someone who shares a Discord server with that member, and they can
+already read the same id in Discord with developer mode on.
+
+The rule is narrowed, not dropped. A member id may appear **only** inside an
+avatar URL on the CDN host. `test_privacy.py` strips exactly that pattern before
+checking, and has cases proving an id is still caught as page text, in a link,
+on another host, and inside a guild icon URL. It also asserts that avatar URLs
+actually rendered, so the exemption cannot pass vacuously.
 
 Queries enumerate columns for this reason. `SELECT *` is banned in
 `web/queries.py`, including via repo helpers: `repo.players.get()` does

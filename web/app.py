@@ -134,6 +134,7 @@ def create_app(env=None):
         return render_template(
             "me.html",
             accounts=accounts,
+            me=queries.my_identity(g.member_id),
             credential=queries.credential_info(g.member_id),
             visible_count=len(g.player_ids),
         )
@@ -176,6 +177,7 @@ def create_app(env=None):
             servers=queries.player_server_labels(
                 player_id, app.config["SERVER_NAMES"]),
             events=queries.events_feed(g.player_ids, limit=15, player_id=player_id),
+            owners=queries.player_owners(player_id),
             depth=queries.history_depth(player_id),
             movers=moved,
             default_skill=default_skill,

@@ -16,11 +16,13 @@ unchanged by the SQLite migration.
     stats = repo.stats.load_all_pollable()
 """
 
-from . import competitions, db, events, players, servers, stats, webauth
+from . import (competitions, db, events, members, players, servers, stats,
+               webauth)
 from .db import close, connect, connect_readonly, transaction, utcnow
 
 __all__ = [
-    "competitions", "db", "events", "players", "servers", "stats", "webauth",
+    "competitions", "db", "events", "members", "players", "servers", "stats",
+    "webauth",
     "connect", "close", "connect_readonly", "transaction", "utcnow", "bootstrap",
 ]
 
