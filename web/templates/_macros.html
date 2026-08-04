@@ -24,11 +24,15 @@
   gap: Jagex adds bosses and skills, and the repo layer inserts unknown names on
   sight, so a name can reach the page before anyone has fetched an icon for it.
 #}
+{#
+  Sprite spans, not <img> tags. One page can reference over a hundred icons;
+  as separate images that is a hundred round trips for 3 KB files, and any one
+  of them can fail on its own. The sprite is a single cached request.
+#}
 {% macro skill_name(name) -%}
   {%- set icon = name | skill_icon -%}
   <span class="iname">
-    {%- if icon %}<img class="gicon" src="{{ url_for('static', filename=icon) }}"
-                       alt="" width="20" height="20" loading="lazy">{% endif -%}
+    {%- if icon %}<i class="ic ic-{{ icon }}" aria-hidden="true"></i>{% endif -%}
     {{ name }}
   </span>
 {%- endmacro %}
@@ -36,8 +40,7 @@
 {% macro activity_name(name) -%}
   {%- set icon = name | activity_icon -%}
   <span class="iname">
-    {%- if icon %}<img class="gicon" src="{{ url_for('static', filename=icon) }}"
-                       alt="" width="20" height="20" loading="lazy">{% endif -%}
+    {%- if icon %}<i class="ic ic-{{ icon }}" aria-hidden="true"></i>{% endif -%}
     {{ name }}
   </span>
 {%- endmacro %}

@@ -1,0 +1,127 @@
+/* GENERATED: see web/static/img/CREDITS.md for how to rebuild.
+   One sprite instead of 114 separate requests. Cells are 40px drawn into a 20px box, so the art stays crisp on 2x
+   displays without shipping a second sheet. */
+
+.ic {
+  display: inline-block; flex: none;
+  width: 20px; height: 20px;
+  background-image: url(../img/icons.png);
+  background-size: 240px 200px;
+  background-repeat: no-repeat;
+  image-rendering: -webkit-optimize-contrast;
+}
+
+.ic-ac-abyssal-sire { background-position: -20px -40px; }
+.ic-ac-alchemical-hydra { background-position: -40px -40px; }
+.ic-ac-amoxliatl { background-position: -60px -40px; }
+.ic-ac-araxxor { background-position: -80px -40px; }
+.ic-ac-artio { background-position: -100px -40px; }
+.ic-ac-barrows-chests { background-position: -120px -40px; }
+.ic-ac-bounty-hunter-hunter { background-position: -180px -40px; }
+.ic-ac-bounty-hunter-legacy-hunter { background-position: -140px -40px; }
+.ic-ac-bounty-hunter-legacy-rogue { background-position: -160px -40px; }
+.ic-ac-bounty-hunter-rogue { background-position: -200px -40px; }
+.ic-ac-brutus { background-position: -220px -40px; }
+.ic-ac-bryophyta { background-position: 0px -60px; }
+.ic-ac-cal-varion { background-position: -20px -60px; }
+.ic-ac-callisto { background-position: -40px -60px; }
+.ic-ac-calvar-ion { background-position: -60px -60px; }
+.ic-ac-cerberus { background-position: -80px -60px; }
+.ic-ac-chambers-of-xeric { background-position: -100px -60px; }
+.ic-ac-chambers-of-xeric-challenge-mode { background-position: -120px -60px; }
+.ic-ac-chaos-elemental { background-position: -140px -60px; }
+.ic-ac-chaos-fanatic { background-position: -160px -60px; }
+.ic-ac-clue-scrolls-all { background-position: -180px -60px; }
+.ic-ac-clue-scrolls-beginner { background-position: -200px -60px; }
+.ic-ac-clue-scrolls-easy { background-position: -220px -60px; }
+.ic-ac-clue-scrolls-elite { background-position: 0px -80px; }
+.ic-ac-clue-scrolls-hard { background-position: -20px -80px; }
+.ic-ac-clue-scrolls-master { background-position: -40px -80px; }
+.ic-ac-clue-scrolls-medium { background-position: -60px -80px; }
+.ic-ac-collections-logged { background-position: -80px -80px; }
+.ic-ac-colosseum-glory { background-position: -100px -80px; }
+.ic-ac-commander-zilyana { background-position: -120px -80px; }
+.ic-ac-corporeal-beast { background-position: -140px -80px; }
+.ic-ac-crazy-archaeologist { background-position: -160px -80px; }
+.ic-ac-dagannoth-prime { background-position: -180px -80px; }
+.ic-ac-dagannoth-rex { background-position: -200px -80px; }
+.ic-ac-dagannoth-supreme { background-position: -220px -80px; }
+.ic-ac-deranged-archaeologist { background-position: 0px -100px; }
+.ic-ac-doom-of-mokhaiotl { background-position: -20px -100px; }
+.ic-ac-duke-sucellus { background-position: -40px -100px; }
+.ic-ac-general-graardor { background-position: -60px -100px; }
+.ic-ac-giant-mole { background-position: -80px -100px; }
+.ic-ac-grotesque-guardians { background-position: -100px -100px; }
+.ic-ac-hespori { background-position: -120px -100px; }
+.ic-ac-k-ril-tsutsaroth { background-position: -140px -100px; }
+.ic-ac-kalphite-queen { background-position: -160px -100px; }
+.ic-ac-king-black-dragon { background-position: -180px -100px; }
+.ic-ac-kraken { background-position: -200px -100px; }
+.ic-ac-kree-arra { background-position: -220px -100px; }
+.ic-ac-lms-rank { background-position: 0px -120px; }
+.ic-ac-lunar-chests { background-position: -20px -120px; }
+.ic-ac-mad-angel { background-position: -40px -120px; }
+.ic-ac-maggot-king { background-position: -60px -120px; }
+.ic-ac-mimic { background-position: -80px -120px; }
+.ic-ac-nex { background-position: -100px -120px; }
+.ic-ac-nightmare { background-position: -120px -120px; }
+.ic-ac-obor { background-position: -140px -120px; }
+.ic-ac-phantom-muspah { background-position: -160px -120px; }
+.ic-ac-phosani-s-nightmare { background-position: -180px -120px; }
+.ic-ac-pvp-arena-rank { background-position: -200px -120px; }
+.ic-ac-rifts-closed { background-position: -220px -120px; }
+.ic-ac-sarachnis { background-position: 0px -140px; }
+.ic-ac-scorpia { background-position: -20px -140px; }
+.ic-ac-scurrius { background-position: -40px -140px; }
+.ic-ac-shellbane-gryphon { background-position: -60px -140px; }
+.ic-ac-skotizo { background-position: -80px -140px; }
+.ic-ac-sol-heredit { background-position: -100px -140px; }
+.ic-ac-soul-wars-zeal { background-position: -120px -140px; }
+.ic-ac-spindel { background-position: -140px -140px; }
+.ic-ac-tempoross { background-position: -160px -140px; }
+.ic-ac-the-corrupted-gauntlet { background-position: -180px -140px; }
+.ic-ac-the-gauntlet { background-position: -200px -140px; }
+.ic-ac-the-hueycoatl { background-position: -220px -140px; }
+.ic-ac-the-leviathan { background-position: 0px -160px; }
+.ic-ac-the-royal-titans { background-position: -20px -160px; }
+.ic-ac-the-whisperer { background-position: -40px -160px; }
+.ic-ac-theatre-of-blood { background-position: -60px -160px; }
+.ic-ac-theatre-of-blood-hard-mode { background-position: -80px -160px; }
+.ic-ac-thermonuclear-smoke-devil { background-position: -100px -160px; }
+.ic-ac-tombs-of-amascut { background-position: -120px -160px; }
+.ic-ac-tombs-of-amascut-expert-mode { background-position: -140px -160px; }
+.ic-ac-tzkal-zuk { background-position: -160px -160px; }
+.ic-ac-tztok-jad { background-position: -180px -160px; }
+.ic-ac-vardorvis { background-position: -200px -160px; }
+.ic-ac-venenatis { background-position: -220px -160px; }
+.ic-ac-vet-ion { background-position: 0px -180px; }
+.ic-ac-vorkath { background-position: -20px -180px; }
+.ic-ac-wintertodt { background-position: -40px -180px; }
+.ic-ac-yama { background-position: -60px -180px; }
+.ic-ac-zalcano { background-position: -80px -180px; }
+.ic-ac-zulrah { background-position: -100px -180px; }
+.ic-sk-agility { background-position: 0px 0px; }
+.ic-sk-attack { background-position: -20px 0px; }
+.ic-sk-construction { background-position: -40px 0px; }
+.ic-sk-cooking { background-position: -60px 0px; }
+.ic-sk-crafting { background-position: -80px 0px; }
+.ic-sk-defence { background-position: -100px 0px; }
+.ic-sk-farming { background-position: -120px 0px; }
+.ic-sk-firemaking { background-position: -140px 0px; }
+.ic-sk-fishing { background-position: -160px 0px; }
+.ic-sk-fletching { background-position: -180px 0px; }
+.ic-sk-herblore { background-position: -200px 0px; }
+.ic-sk-hitpoints { background-position: -220px 0px; }
+.ic-sk-hunter { background-position: 0px -20px; }
+.ic-sk-magic { background-position: -20px -20px; }
+.ic-sk-mining { background-position: -40px -20px; }
+.ic-sk-overall { background-position: -60px -20px; }
+.ic-sk-prayer { background-position: -80px -20px; }
+.ic-sk-ranged { background-position: -100px -20px; }
+.ic-sk-runecraft { background-position: -120px -20px; }
+.ic-sk-sailing { background-position: -140px -20px; }
+.ic-sk-slayer { background-position: -160px -20px; }
+.ic-sk-smithing { background-position: -180px -20px; }
+.ic-sk-strength { background-position: -200px -20px; }
+.ic-sk-thieving { background-position: -220px -20px; }
+.ic-sk-woodcutting { background-position: 0px -40px; }

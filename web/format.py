@@ -111,12 +111,17 @@ def medal(rank_value):
 # --------------------------------------------------------------------------- #
 # Skill and activity icons
 # --------------------------------------------------------------------------- #
-# Vendored from the OSRS Wiki into static/img/{skills,activities}/ and indexed
-# by static/img/icon-manifest.json, which maps the exact name stored in the
-# database to a filename. A manifest rather than deriving the filename at
-# request time, because the mapping is not mechanical: several activities are
-# not wiki page titles ("Rifts closed", "LMS - Rank") and a few skills use a
-# differently named file.
+# Vendored from the OSRS Wiki and packed into ONE sprite sheet
+# (static/img/icons.png), indexed by static/img/icon-manifest.json which maps
+# the exact name stored in the database to a CSS class.
+#
+# A sprite rather than 114 <img> tags: a single page can reference over a
+# hundred icons, and a request each for a 3 KB file is a lot of round trips for
+# very little payload. It also means an icon cannot individually fail to load.
+#
+# A manifest rather than deriving the class at request time, because the
+# mapping is not mechanical: several activities are not wiki page titles
+# ("Rifts closed", "LMS - Rank") and a few skills use a differently named file.
 #
 # A missing entry is normal, not an error. Jagex adds bosses and skills, and the
 # repo layer inserts unknown names on sight, so a name can exist in the database
@@ -139,15 +144,15 @@ def _manifest():
 
 
 def skill_icon(name):
-    """Static path for a skill icon, or None."""
-    filename = _manifest()["skills"].get(name)
-    return f"img/skills/{filename}" if filename else None
+    """Sprite CSS class for a skill icon, or None."""
+    entry = _manifest()["skills"].get(name)
+    return entry["cls"] if entry else None
 
 
 def activity_icon(name):
-    """Static path for an activity icon, or None."""
-    filename = _manifest()["activities"].get(name)
-    return f"img/activities/{filename}" if filename else None
+    """Sprite CSS class for an activity icon, or None."""
+    entry = _manifest()["activities"].get(name)
+    return entry["cls"] if entry else None
 
 
 # --------------------------------------------------------------------------- #

@@ -11,9 +11,21 @@ for original artwork if that ever stops being true.
 | `crier.png` | Header mark: the Varrock town crier's chathead, at 2x for high-DPI screens |
 | `favicon.ico` | The same, padded to square, at 16/32/48/64 |
 | `icon-32.png`, `icon-180.png` | PNG favicon and Apple touch icon |
-| `skills/*.png` | 25 skill icons, keyed by the skill name in the database |
-| `activities/*.png` | 89 boss, raid and minigame icons |
-| `icon-manifest.json` | Maps a database name to a filename |
+| **`icons.png`** | **The sprite actually served: all 114 icons in one 12x10 grid** |
+| `../css/icons.css` | Generated `.ic-*` classes, one background-position per icon |
+| `skills/*.png` | Source art for 25 skills. Not served; kept so the sprite can be rebuilt offline |
+| `activities/*.png` | Source art for 89 bosses, raids and minigames. Same |
+| `icon-manifest.json` | Maps a database name to `{file, cls}` |
+
+## Why a sprite
+
+A single player page references over a hundred icons. As separate `<img>` tags
+that is a hundred-plus round trips for 3 KB files, and any one of them can fail
+on its own. The sprite is **one** cached request: 217 KB, against 336 KB spread
+over 114 requests.
+
+Cells are 40px drawn into a 20px box, so the art stays crisp on 2x displays
+without shipping a second sheet.
 
 ## Why a manifest rather than deriving the filename
 

@@ -173,9 +173,9 @@ h2 { font-size: 1.05rem; margin: 0 0 .75rem; }
 /* ---- icons ---- */
 
 /* Skill and boss icons sit inline with their name and never change the row
-   height: the box is fixed whether or not an icon was found. */
+   height: the box is fixed whether or not an icon was found. The .ic classes
+   themselves are generated into icons.css alongside the sprite. */
 .iname { display: inline-flex; align-items: center; gap: .45em; }
-.gicon { width: 20px; height: 20px; object-fit: contain; flex: none; }
 
 .sicon {
   width: 1.15em; height: 1.15em; border-radius: 50%;

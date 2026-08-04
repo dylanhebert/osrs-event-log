@@ -1,120 +1,462 @@
 {
   "activities": {
-    "Abyssal Sire": "abyssal-sire.png",
-    "Alchemical Hydra": "alchemical-hydra.png",
-    "Amoxliatl": "amoxliatl.png",
-    "Araxxor": "araxxor.png",
-    "Artio": "artio.png",
-    "Barrows Chests": "barrows-chests.png",
-    "Bounty Hunter (Legacy) - Hunter": "bounty-hunter-legacy-hunter.png",
-    "Bounty Hunter (Legacy) - Rogue": "bounty-hunter-legacy-rogue.png",
-    "Bounty Hunter - Hunter": "bounty-hunter-hunter.png",
-    "Bounty Hunter - Rogue": "bounty-hunter-rogue.png",
-    "Brutus": "brutus.png",
-    "Bryophyta": "bryophyta.png",
-    "Cal'varion": "cal-varion.png",
-    "Callisto": "callisto.png",
-    "Calvar'ion": "calvar-ion.png",
-    "Cerberus": "cerberus.png",
-    "Chambers of Xeric": "chambers-of-xeric.png",
-    "Chambers of Xeric: Challenge Mode": "chambers-of-xeric-challenge-mode.png",
-    "Chaos Elemental": "chaos-elemental.png",
-    "Chaos Fanatic": "chaos-fanatic.png",
-    "Clue Scrolls (all)": "clue-scrolls-all.png",
-    "Clue Scrolls (beginner)": "clue-scrolls-beginner.png",
-    "Clue Scrolls (easy)": "clue-scrolls-easy.png",
-    "Clue Scrolls (elite)": "clue-scrolls-elite.png",
-    "Clue Scrolls (hard)": "clue-scrolls-hard.png",
-    "Clue Scrolls (master)": "clue-scrolls-master.png",
-    "Clue Scrolls (medium)": "clue-scrolls-medium.png",
-    "Collections Logged": "collections-logged.png",
-    "Colosseum Glory": "colosseum-glory.png",
-    "Commander Zilyana": "commander-zilyana.png",
-    "Corporeal Beast": "corporeal-beast.png",
-    "Crazy Archaeologist": "crazy-archaeologist.png",
-    "Dagannoth Prime": "dagannoth-prime.png",
-    "Dagannoth Rex": "dagannoth-rex.png",
-    "Dagannoth Supreme": "dagannoth-supreme.png",
-    "Deranged Archaeologist": "deranged-archaeologist.png",
-    "Doom of Mokhaiotl": "doom-of-mokhaiotl.png",
-    "Duke Sucellus": "duke-sucellus.png",
-    "General Graardor": "general-graardor.png",
-    "Giant Mole": "giant-mole.png",
-    "Grotesque Guardians": "grotesque-guardians.png",
-    "Hespori": "hespori.png",
-    "K'ril Tsutsaroth": "k-ril-tsutsaroth.png",
-    "Kalphite Queen": "kalphite-queen.png",
-    "King Black Dragon": "king-black-dragon.png",
-    "Kraken": "kraken.png",
-    "Kree'Arra": "kree-arra.png",
-    "LMS - Rank": "lms-rank.png",
-    "Lunar Chests": "lunar-chests.png",
-    "Mad Angel": "mad-angel.png",
-    "Maggot King": "maggot-king.png",
-    "Mimic": "mimic.png",
-    "Nex": "nex.png",
-    "Nightmare": "nightmare.png",
-    "Obor": "obor.png",
-    "Phantom Muspah": "phantom-muspah.png",
-    "Phosani's Nightmare": "phosani-s-nightmare.png",
-    "PvP Arena - Rank": "pvp-arena-rank.png",
-    "Rifts closed": "rifts-closed.png",
-    "Sarachnis": "sarachnis.png",
-    "Scorpia": "scorpia.png",
-    "Scurrius": "scurrius.png",
-    "Shellbane Gryphon": "shellbane-gryphon.png",
-    "Skotizo": "skotizo.png",
-    "Sol Heredit": "sol-heredit.png",
-    "Soul Wars Zeal": "soul-wars-zeal.png",
-    "Spindel": "spindel.png",
-    "Tempoross": "tempoross.png",
-    "The Corrupted Gauntlet": "the-corrupted-gauntlet.png",
-    "The Gauntlet": "the-gauntlet.png",
-    "The Hueycoatl": "the-hueycoatl.png",
-    "The Leviathan": "the-leviathan.png",
-    "The Royal Titans": "the-royal-titans.png",
-    "The Whisperer": "the-whisperer.png",
-    "Theatre of Blood": "theatre-of-blood.png",
-    "Theatre of Blood: Hard Mode": "theatre-of-blood-hard-mode.png",
-    "Thermonuclear Smoke Devil": "thermonuclear-smoke-devil.png",
-    "Tombs of Amascut": "tombs-of-amascut.png",
-    "Tombs of Amascut: Expert Mode": "tombs-of-amascut-expert-mode.png",
-    "TzKal-Zuk": "tzkal-zuk.png",
-    "TzTok-Jad": "tztok-jad.png",
-    "Vardorvis": "vardorvis.png",
-    "Venenatis": "venenatis.png",
-    "Vet'ion": "vet-ion.png",
-    "Vorkath": "vorkath.png",
-    "Wintertodt": "wintertodt.png",
-    "Yama": "yama.png",
-    "Zalcano": "zalcano.png",
-    "Zulrah": "zulrah.png"
+    "Abyssal Sire": {
+      "cls": "ac-abyssal-sire",
+      "file": "abyssal-sire.png"
+    },
+    "Alchemical Hydra": {
+      "cls": "ac-alchemical-hydra",
+      "file": "alchemical-hydra.png"
+    },
+    "Amoxliatl": {
+      "cls": "ac-amoxliatl",
+      "file": "amoxliatl.png"
+    },
+    "Araxxor": {
+      "cls": "ac-araxxor",
+      "file": "araxxor.png"
+    },
+    "Artio": {
+      "cls": "ac-artio",
+      "file": "artio.png"
+    },
+    "Barrows Chests": {
+      "cls": "ac-barrows-chests",
+      "file": "barrows-chests.png"
+    },
+    "Bounty Hunter (Legacy) - Hunter": {
+      "cls": "ac-bounty-hunter-legacy-hunter",
+      "file": "bounty-hunter-legacy-hunter.png"
+    },
+    "Bounty Hunter (Legacy) - Rogue": {
+      "cls": "ac-bounty-hunter-legacy-rogue",
+      "file": "bounty-hunter-legacy-rogue.png"
+    },
+    "Bounty Hunter - Hunter": {
+      "cls": "ac-bounty-hunter-hunter",
+      "file": "bounty-hunter-hunter.png"
+    },
+    "Bounty Hunter - Rogue": {
+      "cls": "ac-bounty-hunter-rogue",
+      "file": "bounty-hunter-rogue.png"
+    },
+    "Brutus": {
+      "cls": "ac-brutus",
+      "file": "brutus.png"
+    },
+    "Bryophyta": {
+      "cls": "ac-bryophyta",
+      "file": "bryophyta.png"
+    },
+    "Cal'varion": {
+      "cls": "ac-cal-varion",
+      "file": "cal-varion.png"
+    },
+    "Callisto": {
+      "cls": "ac-callisto",
+      "file": "callisto.png"
+    },
+    "Calvar'ion": {
+      "cls": "ac-calvar-ion",
+      "file": "calvar-ion.png"
+    },
+    "Cerberus": {
+      "cls": "ac-cerberus",
+      "file": "cerberus.png"
+    },
+    "Chambers of Xeric": {
+      "cls": "ac-chambers-of-xeric",
+      "file": "chambers-of-xeric.png"
+    },
+    "Chambers of Xeric: Challenge Mode": {
+      "cls": "ac-chambers-of-xeric-challenge-mode",
+      "file": "chambers-of-xeric-challenge-mode.png"
+    },
+    "Chaos Elemental": {
+      "cls": "ac-chaos-elemental",
+      "file": "chaos-elemental.png"
+    },
+    "Chaos Fanatic": {
+      "cls": "ac-chaos-fanatic",
+      "file": "chaos-fanatic.png"
+    },
+    "Clue Scrolls (all)": {
+      "cls": "ac-clue-scrolls-all",
+      "file": "clue-scrolls-all.png"
+    },
+    "Clue Scrolls (beginner)": {
+      "cls": "ac-clue-scrolls-beginner",
+      "file": "clue-scrolls-beginner.png"
+    },
+    "Clue Scrolls (easy)": {
+      "cls": "ac-clue-scrolls-easy",
+      "file": "clue-scrolls-easy.png"
+    },
+    "Clue Scrolls (elite)": {
+      "cls": "ac-clue-scrolls-elite",
+      "file": "clue-scrolls-elite.png"
+    },
+    "Clue Scrolls (hard)": {
+      "cls": "ac-clue-scrolls-hard",
+      "file": "clue-scrolls-hard.png"
+    },
+    "Clue Scrolls (master)": {
+      "cls": "ac-clue-scrolls-master",
+      "file": "clue-scrolls-master.png"
+    },
+    "Clue Scrolls (medium)": {
+      "cls": "ac-clue-scrolls-medium",
+      "file": "clue-scrolls-medium.png"
+    },
+    "Collections Logged": {
+      "cls": "ac-collections-logged",
+      "file": "collections-logged.png"
+    },
+    "Colosseum Glory": {
+      "cls": "ac-colosseum-glory",
+      "file": "colosseum-glory.png"
+    },
+    "Commander Zilyana": {
+      "cls": "ac-commander-zilyana",
+      "file": "commander-zilyana.png"
+    },
+    "Corporeal Beast": {
+      "cls": "ac-corporeal-beast",
+      "file": "corporeal-beast.png"
+    },
+    "Crazy Archaeologist": {
+      "cls": "ac-crazy-archaeologist",
+      "file": "crazy-archaeologist.png"
+    },
+    "Dagannoth Prime": {
+      "cls": "ac-dagannoth-prime",
+      "file": "dagannoth-prime.png"
+    },
+    "Dagannoth Rex": {
+      "cls": "ac-dagannoth-rex",
+      "file": "dagannoth-rex.png"
+    },
+    "Dagannoth Supreme": {
+      "cls": "ac-dagannoth-supreme",
+      "file": "dagannoth-supreme.png"
+    },
+    "Deranged Archaeologist": {
+      "cls": "ac-deranged-archaeologist",
+      "file": "deranged-archaeologist.png"
+    },
+    "Doom of Mokhaiotl": {
+      "cls": "ac-doom-of-mokhaiotl",
+      "file": "doom-of-mokhaiotl.png"
+    },
+    "Duke Sucellus": {
+      "cls": "ac-duke-sucellus",
+      "file": "duke-sucellus.png"
+    },
+    "General Graardor": {
+      "cls": "ac-general-graardor",
+      "file": "general-graardor.png"
+    },
+    "Giant Mole": {
+      "cls": "ac-giant-mole",
+      "file": "giant-mole.png"
+    },
+    "Grotesque Guardians": {
+      "cls": "ac-grotesque-guardians",
+      "file": "grotesque-guardians.png"
+    },
+    "Hespori": {
+      "cls": "ac-hespori",
+      "file": "hespori.png"
+    },
+    "K'ril Tsutsaroth": {
+      "cls": "ac-k-ril-tsutsaroth",
+      "file": "k-ril-tsutsaroth.png"
+    },
+    "Kalphite Queen": {
+      "cls": "ac-kalphite-queen",
+      "file": "kalphite-queen.png"
+    },
+    "King Black Dragon": {
+      "cls": "ac-king-black-dragon",
+      "file": "king-black-dragon.png"
+    },
+    "Kraken": {
+      "cls": "ac-kraken",
+      "file": "kraken.png"
+    },
+    "Kree'Arra": {
+      "cls": "ac-kree-arra",
+      "file": "kree-arra.png"
+    },
+    "LMS - Rank": {
+      "cls": "ac-lms-rank",
+      "file": "lms-rank.png"
+    },
+    "Lunar Chests": {
+      "cls": "ac-lunar-chests",
+      "file": "lunar-chests.png"
+    },
+    "Mad Angel": {
+      "cls": "ac-mad-angel",
+      "file": "mad-angel.png"
+    },
+    "Maggot King": {
+      "cls": "ac-maggot-king",
+      "file": "maggot-king.png"
+    },
+    "Mimic": {
+      "cls": "ac-mimic",
+      "file": "mimic.png"
+    },
+    "Nex": {
+      "cls": "ac-nex",
+      "file": "nex.png"
+    },
+    "Nightmare": {
+      "cls": "ac-nightmare",
+      "file": "nightmare.png"
+    },
+    "Obor": {
+      "cls": "ac-obor",
+      "file": "obor.png"
+    },
+    "Phantom Muspah": {
+      "cls": "ac-phantom-muspah",
+      "file": "phantom-muspah.png"
+    },
+    "Phosani's Nightmare": {
+      "cls": "ac-phosani-s-nightmare",
+      "file": "phosani-s-nightmare.png"
+    },
+    "PvP Arena - Rank": {
+      "cls": "ac-pvp-arena-rank",
+      "file": "pvp-arena-rank.png"
+    },
+    "Rifts closed": {
+      "cls": "ac-rifts-closed",
+      "file": "rifts-closed.png"
+    },
+    "Sarachnis": {
+      "cls": "ac-sarachnis",
+      "file": "sarachnis.png"
+    },
+    "Scorpia": {
+      "cls": "ac-scorpia",
+      "file": "scorpia.png"
+    },
+    "Scurrius": {
+      "cls": "ac-scurrius",
+      "file": "scurrius.png"
+    },
+    "Shellbane Gryphon": {
+      "cls": "ac-shellbane-gryphon",
+      "file": "shellbane-gryphon.png"
+    },
+    "Skotizo": {
+      "cls": "ac-skotizo",
+      "file": "skotizo.png"
+    },
+    "Sol Heredit": {
+      "cls": "ac-sol-heredit",
+      "file": "sol-heredit.png"
+    },
+    "Soul Wars Zeal": {
+      "cls": "ac-soul-wars-zeal",
+      "file": "soul-wars-zeal.png"
+    },
+    "Spindel": {
+      "cls": "ac-spindel",
+      "file": "spindel.png"
+    },
+    "Tempoross": {
+      "cls": "ac-tempoross",
+      "file": "tempoross.png"
+    },
+    "The Corrupted Gauntlet": {
+      "cls": "ac-the-corrupted-gauntlet",
+      "file": "the-corrupted-gauntlet.png"
+    },
+    "The Gauntlet": {
+      "cls": "ac-the-gauntlet",
+      "file": "the-gauntlet.png"
+    },
+    "The Hueycoatl": {
+      "cls": "ac-the-hueycoatl",
+      "file": "the-hueycoatl.png"
+    },
+    "The Leviathan": {
+      "cls": "ac-the-leviathan",
+      "file": "the-leviathan.png"
+    },
+    "The Royal Titans": {
+      "cls": "ac-the-royal-titans",
+      "file": "the-royal-titans.png"
+    },
+    "The Whisperer": {
+      "cls": "ac-the-whisperer",
+      "file": "the-whisperer.png"
+    },
+    "Theatre of Blood": {
+      "cls": "ac-theatre-of-blood",
+      "file": "theatre-of-blood.png"
+    },
+    "Theatre of Blood: Hard Mode": {
+      "cls": "ac-theatre-of-blood-hard-mode",
+      "file": "theatre-of-blood-hard-mode.png"
+    },
+    "Thermonuclear Smoke Devil": {
+      "cls": "ac-thermonuclear-smoke-devil",
+      "file": "thermonuclear-smoke-devil.png"
+    },
+    "Tombs of Amascut": {
+      "cls": "ac-tombs-of-amascut",
+      "file": "tombs-of-amascut.png"
+    },
+    "Tombs of Amascut: Expert Mode": {
+      "cls": "ac-tombs-of-amascut-expert-mode",
+      "file": "tombs-of-amascut-expert-mode.png"
+    },
+    "TzKal-Zuk": {
+      "cls": "ac-tzkal-zuk",
+      "file": "tzkal-zuk.png"
+    },
+    "TzTok-Jad": {
+      "cls": "ac-tztok-jad",
+      "file": "tztok-jad.png"
+    },
+    "Vardorvis": {
+      "cls": "ac-vardorvis",
+      "file": "vardorvis.png"
+    },
+    "Venenatis": {
+      "cls": "ac-venenatis",
+      "file": "venenatis.png"
+    },
+    "Vet'ion": {
+      "cls": "ac-vet-ion",
+      "file": "vet-ion.png"
+    },
+    "Vorkath": {
+      "cls": "ac-vorkath",
+      "file": "vorkath.png"
+    },
+    "Wintertodt": {
+      "cls": "ac-wintertodt",
+      "file": "wintertodt.png"
+    },
+    "Yama": {
+      "cls": "ac-yama",
+      "file": "yama.png"
+    },
+    "Zalcano": {
+      "cls": "ac-zalcano",
+      "file": "zalcano.png"
+    },
+    "Zulrah": {
+      "cls": "ac-zulrah",
+      "file": "zulrah.png"
+    }
   },
   "skills": {
-    "Agility": "agility.png",
-    "Attack": "attack.png",
-    "Construction": "construction.png",
-    "Cooking": "cooking.png",
-    "Crafting": "crafting.png",
-    "Defence": "defence.png",
-    "Farming": "farming.png",
-    "Firemaking": "firemaking.png",
-    "Fishing": "fishing.png",
-    "Fletching": "fletching.png",
-    "Herblore": "herblore.png",
-    "Hitpoints": "hitpoints.png",
-    "Hunter": "hunter.png",
-    "Magic": "magic.png",
-    "Mining": "mining.png",
-    "Overall": "overall.png",
-    "Prayer": "prayer.png",
-    "Ranged": "ranged.png",
-    "Runecraft": "runecraft.png",
-    "Sailing": "sailing.png",
-    "Slayer": "slayer.png",
-    "Smithing": "smithing.png",
-    "Strength": "strength.png",
-    "Thieving": "thieving.png",
-    "Woodcutting": "woodcutting.png"
+    "Agility": {
+      "cls": "sk-agility",
+      "file": "agility.png"
+    },
+    "Attack": {
+      "cls": "sk-attack",
+      "file": "attack.png"
+    },
+    "Construction": {
+      "cls": "sk-construction",
+      "file": "construction.png"
+    },
+    "Cooking": {
+      "cls": "sk-cooking",
+      "file": "cooking.png"
+    },
+    "Crafting": {
+      "cls": "sk-crafting",
+      "file": "crafting.png"
+    },
+    "Defence": {
+      "cls": "sk-defence",
+      "file": "defence.png"
+    },
+    "Farming": {
+      "cls": "sk-farming",
+      "file": "farming.png"
+    },
+    "Firemaking": {
+      "cls": "sk-firemaking",
+      "file": "firemaking.png"
+    },
+    "Fishing": {
+      "cls": "sk-fishing",
+      "file": "fishing.png"
+    },
+    "Fletching": {
+      "cls": "sk-fletching",
+      "file": "fletching.png"
+    },
+    "Herblore": {
+      "cls": "sk-herblore",
+      "file": "herblore.png"
+    },
+    "Hitpoints": {
+      "cls": "sk-hitpoints",
+      "file": "hitpoints.png"
+    },
+    "Hunter": {
+      "cls": "sk-hunter",
+      "file": "hunter.png"
+    },
+    "Magic": {
+      "cls": "sk-magic",
+      "file": "magic.png"
+    },
+    "Mining": {
+      "cls": "sk-mining",
+      "file": "mining.png"
+    },
+    "Overall": {
+      "cls": "sk-overall",
+      "file": "overall.png"
+    },
+    "Prayer": {
+      "cls": "sk-prayer",
+      "file": "prayer.png"
+    },
+    "Ranged": {
+      "cls": "sk-ranged",
+      "file": "ranged.png"
+    },
+    "Runecraft": {
+      "cls": "sk-runecraft",
+      "file": "runecraft.png"
+    },
+    "Sailing": {
+      "cls": "sk-sailing",
+      "file": "sailing.png"
+    },
+    "Slayer": {
+      "cls": "sk-slayer",
+      "file": "slayer.png"
+    },
+    "Smithing": {
+      "cls": "sk-smithing",
+      "file": "smithing.png"
+    },
+    "Strength": {
+      "cls": "sk-strength",
+      "file": "strength.png"
+    },
+    "Thieving": {
+      "cls": "sk-thieving",
+      "file": "thieving.png"
+    },
+    "Woodcutting": {
+      "cls": "sk-woodcutting",
+      "file": "woodcutting.png"
+    }
   }
 }
