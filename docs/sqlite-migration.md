@@ -290,11 +290,13 @@ The migration is reversible. `tools/export_sqlite_to_json.py` rebuilds the JSON
 files, and T1 is what proves it round-trips.
 
 If the JSON files are still in place (within the 14-day window), rolling back is
-just code:
+just code. The last pre-migration commit is preserved on the
+**`pre-sql-migration`** branch — `master` now contains the migration, so
+checking out `master` is not a rollback:
 
 ```bash
 sudo systemctl stop osrs-event-log
-git -C $APP_ROOT checkout <pre-migration-commit>
+git -C $APP_ROOT checkout pre-sql-migration
 sudo systemctl start osrs-event-log
 ```
 
