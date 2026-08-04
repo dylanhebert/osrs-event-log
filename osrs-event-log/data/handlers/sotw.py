@@ -20,9 +20,26 @@ SOTW_POOL = SOTW_PATH + "all_skills.json"          # tracked in git, still a fil
 # The store has to be open before the config can be read. ensure_db() is
 # idempotent, and this mirrors the old behaviour of reading sotw_config.json at
 # import time. osrs-event-log.py also calls verify_files() at startup.
-h.ensure_db()
-SOTW_CONFIG = repo.competitions.get_config('sotw')
+# Import must not create the database — see helpers.open_db_if_exists(). If it
+# is not there yet, start with an empty config; handlers.verify_files() opens
+# the real one at startup and reloads this.
+SOTW_CONFIG = repo.competitions.get_config('sotw') if h.open_db_if_exists() else {}
 logger.debug('Loaded SOTW config into cache.')
+
+
+def reload_config():
+    """Re-read the config from whichever database is currently open.
+
+    SOTW_CONFIG is populated at import time, which binds it to whatever
+    ensure_db() opened first. That is correct for the bot — cwd is fixed and the
+    database is already migrated — but not for anything that connects to a
+    different database afterwards, such as a test using a scratch copy. Those
+    would otherwise keep an empty dict and fail with KeyError: 'current_skill'
+    deep inside message building.
+    """
+    global SOTW_CONFIG
+    SOTW_CONFIG = repo.competitions.get_config('sotw')
+    return SOTW_CONFIG
 
 SOTW_BASIC_FMT = "%m-%d-%y"         # String format for basic SOTW displaying and saving
 SOTW_COMPARE_FMT = "%m-%d-%y %H"    # String format for comparing times

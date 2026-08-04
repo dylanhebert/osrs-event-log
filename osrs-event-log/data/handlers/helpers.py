@@ -67,6 +67,23 @@ async def db_write(path, db):
 
 # ------------------------------- DB bootstrap ------------------------------- #
 
+def open_db_if_exists():
+    """Connect only if the database is already there. Never creates it.
+
+    Used at import time by sotw.py and botw.py, which need their config as soon
+    as they load. Creating the database here would be actively harmful: it would
+    satisfy ensure_db()'s "does osrs.db exist" check and defeat the guard below,
+    letting the bot start on an empty database while the real state still sits
+    in JSON.
+    """
+    import os
+
+    if not os.path.exists(DB_PATH):
+        return None
+    from data import repo
+    return repo.bootstrap(path=DB_PATH, schema_path=SCHEMA_PATH)
+
+
 def ensure_db():
     """Open the SQLite store, creating it from schema.sql on first run.
 

@@ -17,9 +17,17 @@ from . import helpers as h
 BOTW_PATH = h.FULL_DATA_PATH + "botw/"
 BOTW_POOL = BOTW_PATH + "all_bosses.json"          # tracked in git, still a file
 
-h.ensure_db()
-BOTW_CONFIG = repo.competitions.get_config('botw')
+# Import must not create the database — see the matching note in sotw.py.
+BOTW_CONFIG = repo.competitions.get_config('botw') if h.open_db_if_exists() else {}
 logger.debug('Loaded BOTW config into cache.')
+
+
+def reload_config():
+    """Re-read the config from whichever database is currently open.
+    See the matching note in sotw.py."""
+    global BOTW_CONFIG
+    BOTW_CONFIG = repo.competitions.get_config('botw')
+    return BOTW_CONFIG
 
 BOTW_BASIC_FMT = "%m-%d-%y"         # String format for basic BOTW displaying and saving
 BOTW_COMPARE_FMT = "%m-%d-%y %H"    # String format for comparing times

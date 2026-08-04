@@ -32,11 +32,17 @@ def load_bases_json(players):
 
 def load_bases_sqlite(players, db_path):
     """Migrated stored state: integers, None for unranked."""
+    import data.handlers as handlers
     from data import repo
+
     repo.connect(path=db_path)
+    # sotw.py and botw.py cache their config at import time, against whichever
+    # database ensure_db() opened then — an empty one, in a fresh checkout. The
+    # message builders read db.SOTW_CONFIG directly, so without this the run
+    # dies with KeyError: 'current_skill' the moment a skill changes.
+    handlers.reload_configs()
     out = {name: repo.stats.get_player_stats(repo.players.get_id(name))
            for name in players}
-    repo.close()
     return out
 
 
