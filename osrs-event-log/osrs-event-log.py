@@ -63,6 +63,7 @@ initial_extensions =    [
                         'cogs.cmds.user',
                         'cogs.cmds.admin',
                         'cogs.cmds.super',
+                        'cogs.cmds.web',
                         'cogs.looper',
                         'cogs.dink_webhook'
                         ]

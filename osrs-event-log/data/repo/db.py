@@ -14,6 +14,7 @@ read-only web UI on port 8007 — never blocks the bot's writes.
 """
 
 import os
+import pathlib
 import sqlite3
 import threading
 from contextlib import contextmanager
@@ -73,6 +74,61 @@ def connect(path=None, schema_path=None, create=True):
                 (utcnow(),))
 
         _conn, _path = conn, path
+        return _conn
+
+
+def connect_readonly(path):
+    """Open an existing database for reading only. For the web UI, not the bot.
+
+    Additive: nothing in the bot calls this, and no existing function changed to
+    accommodate it. It sets the same module-level connection the rest of this
+    package reads through, so every repo read function works unmodified in a
+    process that opened the database this way.
+
+    Three differences from connect(), each of which is load-bearing:
+
+      * `mode=ro` in the URI. A write attempt fails instead of succeeding.
+      * `PRAGMA query_only = ON`, so even a mistake inside a read path cannot
+        write. Belt and braces, cheap.
+      * NO `PRAGMA journal_mode = WAL`. Setting journal_mode writes the database
+        header, which is exactly what a reader must not do. WAL is already on,
+        set by the bot, and it is a persistent property of the file.
+
+    It also refuses to create anything. connect() creates the database from
+    schema.sql when the file is missing, which in a read-only service would
+    silently produce an empty database and a site that renders as though every
+    player vanished. Here a wrong path is an immediate FileNotFoundError.
+
+    WAL CAVEAT, and it will bite one day: a read-only connection to a WAL
+    database still needs WRITE permission on the `-shm` lock file, or on the
+    directory if `-shm` does not exist yet. `mode=ro` restricts the database
+    file, not the locking machinery. Bot and UI run as the same user today, so
+    this works; the day the UI runs as its own user, reads start failing with
+    "unable to open database file". The fix is file permissions, NOT
+    `immutable=1` — the bot is actively writing, and immutable would hand the UI
+    a stale, torn view.
+    """
+    global _conn, _path
+    with _lock:
+        if not os.path.exists(path):
+            raise FileNotFoundError(
+                f"{path}: no such database. The web UI never creates one — "
+                "check the configured database path.")
+        if _conn is not None:
+            if os.path.abspath(path) == os.path.abspath(_path or ""):
+                return _conn
+            _conn.close()
+            _conn, _path = None, None
+
+        uri = "file:" + pathlib.PurePath(path).as_posix() + "?mode=ro"
+        conn_ro = sqlite3.connect(uri, uri=True, check_same_thread=False,
+                                  isolation_level=None)
+        conn_ro.row_factory = sqlite3.Row
+        conn_ro.execute("PRAGMA query_only = ON")
+        conn_ro.execute("PRAGMA busy_timeout = 5000")
+        conn_ro.execute("PRAGMA foreign_keys = ON")
+
+        _conn, _path = conn_ro, path
         return _conn
 
 
