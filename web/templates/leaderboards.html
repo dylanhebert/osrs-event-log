@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+{% block title %}Leaderboards - OSRS Event Log{% endblock %}
+
+{% block content %}
+<h1>Leaderboards</h1>
+
+{#
+  Server tabs, same shape as the SOTW/BOTW pages. Unlike those, "All servers" is
+  a real option and the default: a combined board is the more useful view when
+  you are in several, whereas standings only exist per server.
+
+  Only shown when there is a choice to make. A member in one server would see
+  two tabs meaning the same thing.
+#}
+{% if nav_servers | length > 1 %}
+  <nav class="tabs">
+    <a class="{{ 'on' if not server }}"
+       href="{{ url_for('leaderboards', skill=skill, activity=activity) }}">All servers</a>
+    {% for s in nav_servers %}
+      <a class="{{ 'on' if server and s.id == server.id }}"
+         href="{{ url_for('leaderboards', skill=skill, activity=activity, server=s.id) }}">{{ s.label }}</a>
+    {% endfor %}
+  </nav>
+{% endif %}
+
+<form class="filters" method="get">
+  {# Carried so changing the skill does not silently drop the server tab. #}
+  {% if server %}<input type="hidden" name="server" value="{{ server.id }}">{% endif %}
+
+  <label for="skill">Skill</label>
+  <select id="skill" name="skill" onchange="this.form.activity.value=''; this.form.submit()">
+    {% for s in skills %}
+      <option value="{{ s }}" {% if skill == s %}selected{% endif %}>{{ s }}</option>
+    {% endfor %}
+  </select>
+
+  <label for="activity">or activity</label>
+  <select id="activity" name="activity" onchange="this.form.skill.value=''; this.form.submit()">
+    <option value="">-</option>
+    {% for a in activities %}
+      <option value="{{ a }}" {% if activity == a %}selected{% endif %}>{{ a }}</option>
+    {% endfor %}
+  </select>
+  <noscript><button type="submit">Show</button></noscript>
+</form>
+
+<section class="panel">
+  <h2>
+    {{ activity or skill }}
+    <span class="muted small">
+      {% if server %}{{ server.label }}{% else %}all servers{% endif %}
+      &middot; {{ shown }} account{{ '' if shown == 1 else 's' }} in scope
+    </span>
+  </h2>
+  {% if rows %}
+    <table class="grid tight">
+      <thead>
+        <tr>
+          <th class="n">#</th><th>Account</th>
+          {% if activity %}<th class="n">Score</th>
+          {% else %}<th class="n">Level</th><th class="n">XP</th>{% endif %}
+          <th class="n">Hiscores rank</th>
+        </tr>
+      </thead>
+      <tbody>
+      {% for r in rows %}
+        <tr>
+          <td class="n">{{ loop.index }}</td>
+          <td><a href="{{ url_for('player', rs_name=r.rs_name) }}">{{ r.display_name }}</a>
+            {% if r.rs_name in own_players %}<span class="chip">yours</span>{% endif %}</td>
+          {% if activity %}
+            <td class="n">{{ r.score | num }}</td>
+          {% else %}
+            <td class="n">{{ r.level | num }}</td>
+            <td class="n">{{ r.xp | num }}</td>
+          {% endif %}
+          <td class="n">{{ r.rank | rank }}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <p class="empty">
+      Nobody{% if server %} in {{ server.label }}{% endif %} has a score here.
+    </p>
+  {% endif %}
+</section>
+{% endblock %}

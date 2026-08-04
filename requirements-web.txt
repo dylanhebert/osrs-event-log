@@ -1,0 +1,16 @@
+# Read-only web UI. Install into web/.venv, NOT the bot's .venv.
+#
+# Deliberately tiny. The UI reads SQLite through the bot's data/repo package
+# using nothing but the standard library, so there is no database driver, no
+# ORM and no migration tool here.
+#
+#   python -m venv web/.venv
+#   web/.venv/Scripts/pip install -r requirements-web.txt     # Windows
+#   web/.venv/bin/pip install -r requirements-web.txt         # droplet
+
+Flask==3.1.0
+python-dotenv==1.0.1
+
+# Server only. gunicorn imports fcntl, which does not exist on Windows, so it
+# installs but cannot run locally. Local development uses `flask run`.
+gunicorn==23.0.0

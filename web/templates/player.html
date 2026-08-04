@@ -1,0 +1,180 @@
+{% extends "base.html" %}
+{% block title %}{{ player.display_name }} - OSRS Event Log{% endblock %}
+
+{% block content %}
+<header class="player-head">
+  <h1>{{ player.display_name }}
+    {% if player.rs_name in own_players %}<span class="chip">yours</span>{% endif %}
+  </h1>
+  <div class="player-facts">
+    <span><strong>{{ player.total_level | num }}</strong> total level</span>
+    <span><strong>{{ player.total_xp | num }}</strong> Overall XP</span>
+    <span>rank <strong>{{ player.overall_rank | rank }}</strong></span>
+    <span title="{{ player.last_polled | stamp }}">
+      polled <strong>{{ player.last_polled | ago }}</strong></span>
+  </div>
+  <div class="player-servers">
+    {% for s in servers %}
+      <span class="chip {{ '' if s.is_active else 'muted' }}">{{ s.label }}</span>
+    {% endfor %}
+  </div>
+</header>
+
+{% if not skills %}
+  {# One of the documented odd cases: a player tracked with an empty skills
+     dict, from when the old HTML hiscores page returned 200 for a name that
+     did not exist and ;add accepted it. The bot still polls them. #}
+  <p class="empty">
+    The hiscores have never returned any stats for this account. It is still
+    polled every cycle, so if it appears on the hiscores this page fills in.
+  </p>
+{% endif %}
+
+<div class="cols">
+  <section class="panel">
+    <h2>Skills</h2>
+    {% if skills %}
+      <table class="grid tight">
+        <thead><tr><th>Skill</th><th class="n">Level</th><th class="n">XP</th><th class="n">Rank</th></tr></thead>
+        <tbody>
+        {% for s in skills %}
+          <tr{% if s.name == 'Overall' %} class="row-strong"{% endif %}>
+            <td>{{ s.name }}</td>
+            <td class="n">{{ s.level | num }}</td>
+            <td class="n">{{ s.xp | num }}</td>
+            <td class="n">{{ s.rank | rank }}</td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    {% else %}
+      <p class="empty">No skills recorded.</p>
+    {% endif %}
+  </section>
+
+  <section class="panel">
+    <h2>Bosses and minigames</h2>
+    {% if activities %}
+      <table class="grid tight">
+        <thead><tr><th>Activity</th><th class="n">Score</th><th class="n">Rank</th></tr></thead>
+        <tbody>
+        {% for a in activities %}
+          <tr><td>{{ a.name }}</td>
+            <td class="n">{{ a.score | num }}</td>
+            <td class="n">{{ a.rank | rank }}</td></tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    {% else %}
+      <p class="empty">Nothing on the hiscores activity list yet.</p>
+    {% endif %}
+  </section>
+</div>
+
+<section class="panel">
+  <h2>History</h2>
+  {% if depth.points >= 2 %}
+    <div class="chart-controls">
+      <label for="series">Series</label>
+      <select id="series">
+        <optgroup label="Skills that have moved">
+          {% for name in movers %}
+            <option value="skill:{{ name }}"
+              {% if name == default_skill %}selected{% endif %}>{{ name }}</option>
+          {% endfor %}
+        </optgroup>
+        <optgroup label="All skills">
+          {% for s in skills %}
+            <option value="skill:{{ s.name }}">{{ s.name }}</option>
+          {% endfor %}
+        </optgroup>
+        {% if activities %}
+        <optgroup label="Activities">
+          {% for a in activities %}
+            <option value="activity:{{ a.name }}">{{ a.name }}</option>
+          {% endfor %}
+        </optgroup>
+        {% endif %}
+      </select>
+      <span class="muted small">
+        Stepped: a flat run means the value did not change, not that data is
+        missing.
+      </span>
+    </div>
+    <div class="chart-box"><canvas id="history"></canvas></div>
+    <p class="muted small" id="chart-note"></p>
+  {% else %}
+    {#
+      History began at the storage migration and a row is written only when a
+      value actually changes, so most accounts sit on a single point for a
+      while. Drawing a chart from one point would imply a trend that does not
+      exist, so say what is true instead.
+    #}
+    <p class="empty">
+      Not enough history to chart yet.
+      {% if depth.since %}
+        Record-keeping for this account started {{ depth.since | day }} and
+        {% if depth.points == 1 %}nothing has changed since{% else %}nothing
+        has been recorded{% endif %}.
+      {% endif %}
+      A point is added only when a value actually moves, so this fills in as
+      they play.
+    </p>
+  {% endif %}
+</section>
+
+<div class="cols">
+  <section class="panel">
+    <h2>Recent events</h2>
+    {% if events %}
+      <ul class="feed">
+        {% for e in events %}
+          <li>
+            <div class="feed-meta">
+              <span class="tag tag-{{ e.source }}">{{ e.event_type | lower }}</span>
+              <time title="{{ e.occurred_at | stamp }}">{{ e.occurred_at | ago }}</time>
+            </div>
+            <div class="feed-msg">{{ e.message }}</div>
+          </li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <p class="empty">No events recorded for this account yet.</p>
+    {% endif %}
+  </section>
+
+  <section class="panel">
+    <h2>Podium finishes</h2>
+    {% if sotw_podiums or botw_podiums %}
+      <table class="grid tight">
+        <thead><tr><th>Week</th><th>Event</th><th class="n">Place</th><th class="n">Score</th></tr></thead>
+        <tbody>
+        {% for p in sotw_podiums %}
+          <tr><td>{{ p.ended_on | day }}</td><td>{{ p.name }}</td>
+            <td class="n">{{ p.rank | medal }}</td><td class="n">{{ p.score | num }} XP</td></tr>
+        {% endfor %}
+        {% for p in botw_podiums %}
+          <tr><td>{{ p.ended_on | day }}</td><td>{{ p.name }}</td>
+            <td class="n">{{ p.rank | medal }}</td><td class="n">{{ p.score | num }} kills</td></tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    {% else %}
+      <p class="empty">No top-three finishes recorded.</p>
+    {% endif %}
+  </section>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{% if depth.points >= 2 %}
+<script src="{{ url_for('static', filename='js/chart.umd.min.js') }}"></script>
+<script src="{{ url_for('static', filename='js/history-chart.js') }}"></script>
+<script>
+  initHistoryChart({
+    endpoint: {{ url_for('player_history', rs_name=player.rs_name) | tojson }},
+    initial:  {{ ('skill:' ~ default_skill) | tojson }}
+  });
+</script>
+{% endif %}
+{% endblock %}

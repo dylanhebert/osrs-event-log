@@ -1,0 +1,136 @@
+{% extends "base.html" %}
+{% block title %}My accounts - OSRS Event Log{% endblock %}
+
+{#
+  Everything on this page is the signed-in member's own data. It still renders
+  no Discord ids: member_id is used as a query filter and never returned, and
+  the Dink link key is reduced to a yes/no before it leaves the database.
+#}
+
+{% block content %}
+<h1>My accounts</h1>
+<p class="muted">
+  {{ accounts | length }} account{{ '' if accounts | length == 1 else 's' }} in the
+  log across {{ nav_servers | length }}
+  server{{ '' if nav_servers | length == 1 else 's' }}, which is what lets you see
+  {{ visible_count }} players in total.
+</p>
+
+{% for a in accounts %}
+  <section class="panel">
+    <h2>
+      <a href="{{ url_for('player', rs_name=a.player.rs_name) }}">{{ a.player.display_name }}</a>
+      {% if not a.player.skill_rows %}<span class="chip warn">no stats</span>{% endif %}
+      {% if not a.player.tracked %}<span class="chip warn">not polled</span>{% endif %}
+    </h2>
+
+    <div class="player-facts">
+      <span><strong>{{ a.player.total_level | num }}</strong> total level</span>
+      <span><strong>{{ a.player.total_xp | num }}</strong> Overall XP</span>
+      <span>rank <strong>{{ a.player.overall_rank | rank }}</strong></span>
+      <span title="{{ a.player.last_polled | stamp }}">
+        polled <strong>{{ a.player.last_polled | ago }}</strong></span>
+    </div>
+
+    <table class="grid tight">
+      <thead>
+        <tr>
+          <th>Server</th>
+          <th>Mentions you</th>
+          <th>Skill of the Week</th>
+          <th>Boss of the Week</th>
+        </tr>
+      </thead>
+      <tbody>
+      {% for link in a.links %}
+        <tr>
+          <td>
+            {{ link.label }}
+            {% if not link.is_active %}<span class="chip warn">bot removed</span>{% endif %}
+          </td>
+          <td>{{ 'yes' if link.mention else 'no' }}</td>
+          <td>{{ 'opted in' if link.sotw_opt else 'opted out' }}</td>
+          <td>{{ 'opted in' if link.botw_opt else 'opted out' }}</td>
+        </tr>
+      {% else %}
+        <tr><td colspan="4" class="empty">Not linked to any server.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+
+    {% if a.elsewhere %}
+      {# player_servers carries a member id per (player, server) row, so an
+         account can be linked to somebody else in another server. #}
+      <p class="muted small">
+        Also in {{ a.elsewhere }} other server{{ '' if a.elsewhere == 1 else 's' }}
+        under a different Discord account.
+      </p>
+    {% endif %}
+
+    <div class="pair">
+      <div>
+        <div class="pair-label">This week</div>
+        <div class="pair-value">{{ a.player.sotw_xp | num }} XP
+          <span class="muted small">/ {{ a.player.botw_kills | num }} kills</span></div>
+      </div>
+      <div>
+        <div class="pair-label">Podium finishes</div>
+        <div class="pair-value">{{ a.sotw_podiums + a.botw_podiums }}
+          <span class="muted small">
+            {{ a.sotw_podiums }} SOTW / {{ a.botw_podiums }} BOTW</span></div>
+      </div>
+      <div>
+        <div class="pair-label">Tracked</div>
+        <div class="pair-value">{{ a.player.skill_rows }}
+          <span class="muted small">skills / {{ a.player.activity_rows }} activities</span></div>
+      </div>
+      <div>
+        <div class="pair-label">Events logged</div>
+        <div class="pair-value">{{ a.player.event_count | num }}</div>
+      </div>
+      <div>
+        <div class="pair-label">Dink</div>
+        {# A boolean only. The link key is a bearer token for a public endpoint
+           and never leaves the database. #}
+        <div class="pair-value">
+          {% if a.player.dink_configured %}set up{% else %}
+            <span class="muted">not set up</span>{% endif %}
+        </div>
+      </div>
+    </div>
+
+    {% if not a.player.dink_configured %}
+      <p class="muted small">
+        Run <code>;dinklink {{ a.player.rs_name }}</code> in Discord to get drops,
+        pets, quests and clues logged as well as hiscores milestones.
+      </p>
+    {% endif %}
+    {% if a.depth.points < 2 %}
+      <p class="muted small">
+        No history charted yet: a point is recorded only when a value actually
+        changes.
+      </p>
+    {% endif %}
+  </section>
+{% else %}
+  <p class="empty">You have no accounts in the log.</p>
+{% endfor %}
+
+<section class="panel">
+  <h2>Your sign-in</h2>
+  {% if credential %}
+    <p class="muted">
+      Password issued <strong>{{ credential.issued_at | ago }}</strong>
+      <span title="{{ credential.issued_at | stamp }}">({{ credential.issued_at | day }})</span>{% if credential.issued_count > 1 %},
+      the {{ credential.issued_count | medal }} you have been given{% endif %}.
+    </p>
+  {% endif %}
+  <ul class="muted">
+    <li><code>;webpassword</code> issues a new password and retires the old one.
+        Anywhere signed in with the old one is signed out.</li>
+    <li><code>;webrevoke</code> switches your access off entirely.</li>
+    <li>Only a hash of your password is stored, so nobody, including the bot,
+        can read it back to you. Losing it means getting a new one.</li>
+  </ul>
+</section>
+{% endblock %}

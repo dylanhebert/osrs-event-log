@@ -17,3 +17,7 @@ requirements_old.txt
 
 # Local copies of live data pulled from the droplet for testing.
 fixtures/
+
+# Web UI secrets: SECRET_KEY, the database path, and the guild-id-to-name map.
+# web/.env.example is the tracked template.
+web/.env

@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% block title %}OSRS Event Log{% endblock %}
+
+{#
+  The signed-out page. Contains counts and nothing else: no player names, no
+  server names, no ids. Nothing on this page identifies a real person, which is
+  the point, because this URL is reachable by anyone.
+#}
+
+{% block content %}
+<section class="hero">
+  <h1>OSRS Event Log</h1>
+  <p class="lede">
+    A Discord bot has been watching {{ summary.players_tracked }} Old School
+    RuneScape accounts across {{ summary.servers_active }} servers, posting
+    levels, drops, pets, quests and clues as they happen. This is the read-only
+    view of what it has recorded.
+  </p>
+  <p class="lede">
+    Player data is visible only to people in the same Discord servers. Run
+    <code>;webpassword</code> in Discord and the bot will DM you a password.
+  </p>
+  <p><a class="btn" href="{{ url_for('login') }}">Sign in</a></p>
+</section>
+
+<section class="tiles">
+  <div class="tile">
+    <div class="tile-value">{{ summary.players_tracked }}</div>
+    <div class="tile-label">accounts polled</div>
+  </div>
+  <div class="tile">
+    <div class="tile-value">{{ summary.total_xp | compact }}</div>
+    <div class="tile-label">total XP tracked</div>
+  </div>
+  <div class="tile">
+    <div class="tile-value">{{ summary.total_levels | num }}</div>
+    <div class="tile-label">combined total levels</div>
+  </div>
+  <div class="tile">
+    <div class="tile-value">{{ summary.weeks_recorded | num }}</div>
+    <div class="tile-label">competition weeks recorded</div>
+  </div>
+  <div class="tile">
+    <div class="tile-value">{{ summary.events_total | num }}</div>
+    <div class="tile-label">events logged</div>
+  </div>
+  <div class="tile">
+    <div class="tile-value">{{ summary.last_poll | ago }}</div>
+    <div class="tile-label">last hiscores poll</div>
+  </div>
+</section>
+
+<section class="panel">
+  <h2>This week</h2>
+  <div class="pair">
+    <div>
+      <div class="pair-label">Skill of the Week</div>
+      <div class="pair-value">{{ summary.current_skill or 'not set' }}</div>
+    </div>
+    <div>
+      <div class="pair-label">Boss of the Week</div>
+      <div class="pair-value">{{ summary.current_boss or 'not set' }}</div>
+    </div>
+  </div>
+</section>
+
+<section class="panel muted">
+  <h2>About the data</h2>
+  <ul>
+    <li>{{ summary.skills_tracked }} skills and {{ summary.activities_tracked }}
+        minigames and bosses are tracked per account.</li>
+    <li>Hiscores are polled every 20 minutes. A value is recorded only when it
+        actually changes.</li>
+    <li>History starts {{ summary.history_since | day if summary.history_since
+        else 'at the storage migration' }}, which is when record-keeping began.
+        There is no earlier data to show.</li>
+  </ul>
+</section>
+{% endblock %}

@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <title>{% block title %}OSRS Event Log{% endblock %}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}">
+</head>
+<body>
+<header class="topbar">
+  <a class="brand" href="{{ url_for('home') }}">OSRS Event Log</a>
+  {% if signed_in %}
+    <nav class="nav">
+      <a href="{{ url_for('players') }}">Players</a>
+      <a href="{{ url_for('events') }}">Events</a>
+      <a href="{{ url_for('competitions', kind='sotw') }}">SOTW</a>
+      <a href="{{ url_for('competitions', kind='botw') }}">BOTW</a>
+      <a href="{{ url_for('leaderboards') }}">Leaderboards</a>
+    </nav>
+    {# Account links sit on the right, next to sign out: they are about you
+       rather than about the data, so they read as a pair. #}
+    <a class="nav-right" href="{{ url_for('me') }}">My accounts</a>
+    <form class="signout" method="post" action="{{ url_for('logout') }}">
+      <button type="submit">Sign out</button>
+    </form>
+  {% else %}
+    <nav class="nav"><a href="{{ url_for('login') }}">Sign in</a></nav>
+  {% endif %}
+</header>
+
+<main class="wrap">
+  {% block content %}{% endblock %}
+</main>
+
+<footer class="foot">
+  <span>Read-only view of the Discord bot's database. Nothing here writes.</span>
+</footer>
+{% block scripts %}{% endblock %}
+</body>
+</html>

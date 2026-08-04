@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block title %}Players - OSRS Event Log{% endblock %}
+
+{% block content %}
+<h1>Players</h1>
+<p class="muted">
+  {{ players | length }} shown of {{ total }} in your servers.
+  {% if hidden %}
+    {{ hidden }} hidden because the hiscores have never returned anything for
+    them.
+    <a href="{{ url_for('players', all='1') }}">Show them anyway</a>.
+  {% elif show_all %}
+    <a href="{{ url_for('players') }}">Hide accounts with no stats</a>.
+  {% endif %}
+</p>
+
+<table class="grid sortable">
+  <thead>
+    <tr>
+      <th>Account</th>
+      <th class="n">Total level</th>
+      <th class="n">Overall XP</th>
+      <th class="n">Rank</th>
+      <th class="n">Bosses</th>
+      <th>Last polled</th>
+    </tr>
+  </thead>
+  <tbody>
+  {% for p in players %}
+    <tr>
+      <td>
+        <a href="{{ url_for('player', rs_name=p.rs_name) }}">{{ p.display_name }}</a>
+        {% if p.rs_name in own_players %}<span class="chip">yours</span>{% endif %}
+        {% if not p.skill_rows %}<span class="chip warn">no stats</span>{% endif %}
+      </td>
+      <td class="n">{{ p.total_level | num }}</td>
+      <td class="n">{{ p.total_xp | num }}</td>
+      <td class="n">{{ p.overall_rank | rank }}</td>
+      <td class="n">{{ p.activity_rows }}</td>
+      <td title="{{ p.last_polled | stamp }}">{{ p.last_polled | ago }}</td>
+    </tr>
+  {% else %}
+    <tr><td colspan="6" class="empty">No players visible.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

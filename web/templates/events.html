@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% block title %}Events - OSRS Event Log{% endblock %}
+
+{% block content %}
+<h1>Events</h1>
+
+<form class="filters" method="get">
+  <label for="source">Source</label>
+  <select id="source" name="source" onchange="this.form.submit()">
+    <option value="">all</option>
+    <option value="hiscores" {% if source == 'hiscores' %}selected{% endif %}>hiscores</option>
+    <option value="dink" {% if source == 'dink' %}selected{% endif %}>dink</option>
+  </select>
+
+  <label for="type">Type</label>
+  <select id="type" name="type" onchange="this.form.submit()">
+    <option value="">all</option>
+    {% for k in kinds %}
+      <option value="{{ k.event_type }}" {% if event_type == k.event_type %}selected{% endif %}>
+        {{ k.event_type | lower }} ({{ k.n }})
+      </option>
+    {% endfor %}
+  </select>
+  <noscript><button type="submit">Filter</button></noscript>
+</form>
+
+{% if events %}
+  <p class="muted">{{ total | num }} matching events.</p>
+  <ul class="feed wide">
+    {% for e in events %}
+      <li>
+        <div class="feed-meta">
+          <span class="tag tag-{{ e.source }}">{{ e.event_type | lower }}</span>
+          <a href="{{ url_for('player', rs_name=e.rs_name) }}">{{ e.display_name }}</a>
+          <time title="{{ e.occurred_at | stamp }}">{{ e.occurred_at | ago }}</time>
+          {% if not e.posted %}<span class="chip warn">not posted to Discord</span>{% endif %}
+        </div>
+        {#
+          e.message only. events.payload holds the raw Dink body, which carries
+          dinkAccountHash among other things, and is never selected or rendered.
+        #}
+        <div class="feed-msg">{{ e.message }}</div>
+      </li>
+    {% endfor %}
+  </ul>
+
+  <nav class="pager">
+    {% if page > 1 %}
+      <a href="{{ url_for('events', page=page-1, source=source, type=event_type) }}">Newer</a>
+    {% endif %}
+    <span>page {{ page }} of {{ (total // per_page) + (1 if total % per_page else 0) }}</span>
+    {% if page * per_page < total %}
+      <a href="{{ url_for('events', page=page+1, source=source, type=event_type) }}">Older</a>
+    {% endif %}
+  </nav>
+{% else %}
+  <p class="empty">
+    {% if source or event_type %}
+      No events match that filter.
+    {% else %}
+      Nothing recorded yet. The events table is new: before the storage
+      migration, Dink drops, pets, quests and clues were posted to Discord and
+      thrown away. From now on they are kept, so this fills up as they happen.
+    {% endif %}
+  </p>
+{% endif %}
+{% endblock %}

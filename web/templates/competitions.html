@@ -1,0 +1,128 @@
+{% extends "base.html" %}
+{% block title %}{{ conf.label }} - OSRS Event Log{% endblock %}
+
+{% block content %}
+<h1>{{ conf.label }}</h1>
+
+{% if nav_servers | length > 1 %}
+  <nav class="tabs">
+    {% for s in nav_servers %}
+      <a class="{{ 'on' if s.id == server.id }}"
+         href="{{ url_for('competitions', kind=kind, server=s.id) }}">{{ s.label }}</a>
+    {% endfor %}
+  </nav>
+{% endif %}
+
+<section class="panel">
+  <h2>This week{% if current %}: {{ current }}{% endif %}</h2>
+  {% if live %}
+    <table class="grid tight">
+      <thead><tr><th class="n">#</th><th>Account</th>
+        <th class="n">{{ 'XP' if kind == 'sotw' else 'Kills' }}</th></tr></thead>
+      <tbody>
+      {% for r in live %}
+        <tr>
+          <td class="n">{{ loop.index }}</td>
+          <td><a href="{{ url_for('player', rs_name=r.rs_name) }}">{{ r.display_name }}</a>
+            {% if r.rs_name in own_players %}<span class="chip">yours</span>{% endif %}</td>
+          <td class="n">{{ r.score | num }}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <p class="empty">
+      Nothing recorded this week yet. Totals reset when a week ends.
+    </p>
+  {% endif %}
+</section>
+
+<section class="panel">
+  <h2>All-time standings</h2>
+  {% if standings %}
+    {#
+      Grouped by player id where one exists, falling back to the stored name.
+      The v_sotw_standings view groups by name alone, which splits a renamed
+      player's trophies in two: renaming keeps the id but old placements keep
+      the old name.
+    #}
+    <table class="grid tight">
+      <thead><tr><th class="n">#</th><th>Account</th><th class="n">1st</th>
+        <th class="n">2nd</th><th class="n">3rd</th><th class="n">Weeks</th>
+        <th class="n">Total {{ 'XP' if kind == 'sotw' else 'kills' }}</th></tr></thead>
+      <tbody>
+      {% for s in standings %}
+        <tr>
+          <td class="n">{{ loop.index }}</td>
+          <td>
+            {% if s.player_id %}
+              <a href="{{ url_for('player', rs_name=s.rs_name) }}">{{ s.rs_name.replace('+', ' ') }}</a>
+            {% else %}
+              {# Placement kept after the player was deleted: the name is
+                 authoritative, there is nothing to link to. #}
+              <span class="muted">{{ s.fallback_name.replace('+', ' ') }}</span>
+            {% endif %}
+          </td>
+          <td class="n">{{ s.rank_1 }}</td>
+          <td class="n">{{ s.rank_2 }}</td>
+          <td class="n">{{ s.rank_3 }}</td>
+          <td class="n">{{ s.weeks_placed }}</td>
+          <td class="n">{{ s.total | num }}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <p class="empty">No completed weeks with placements in this server.</p>
+  {% endif %}
+</section>
+
+<section class="panel">
+  <h2>Past weeks</h2>
+  <p class="muted">{{ weeks_total | num }} weeks recorded.</p>
+  {% if weeks %}
+    <table class="grid tight">
+      <thead><tr><th>Ended</th><th>{{ conf.noun | capitalize }}</th><th>Podium</th></tr></thead>
+      <tbody>
+      {% for w in weeks %}
+        <tr>
+          <td>{{ w.week.ended_on | day }}</td>
+          <td>{{ w.week.name }}</td>
+          <td>
+            {% if w.podium %}
+              {% for p in w.podium %}
+                <span class="podium">
+                  {{ p.rank | medal }}
+                  {% if p.player_id %}
+                    <a href="{{ url_for('player', rs_name=p.rs_name) }}">{{ p.display_name }}</a>
+                  {% else %}
+                    {{ p.player_name.replace('+', ' ') }}
+                  {% endif %}
+                  <span class="n">{{ p.score | num }}</span>
+                </span>
+              {% endfor %}
+            {% else %}
+              {# Very common: 138 of 212 BOTW weeks and 83 of 525 SOTW weeks
+                 have no placements at all. #}
+              <span class="muted">no placements recorded</span>
+            {% endif %}
+          </td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+
+    <nav class="pager">
+      {% if page > 1 %}
+        <a href="{{ url_for('competitions', kind=kind, server=server.id, page=page-1) }}">Newer</a>
+      {% endif %}
+      <span>page {{ page }} of {{ (weeks_total // per_page) + (1 if weeks_total % per_page else 0) }}</span>
+      {% if page * per_page < weeks_total %}
+        <a href="{{ url_for('competitions', kind=kind, server=server.id, page=page+1) }}">Older</a>
+      {% endif %}
+    </nav>
+  {% else %}
+    <p class="empty">No weeks recorded for this server.</p>
+  {% endif %}
+</section>
+{% endblock %}
