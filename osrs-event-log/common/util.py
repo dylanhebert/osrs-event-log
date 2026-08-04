@@ -166,6 +166,14 @@ async def get_player_scores(name_rs, page):
     # player has hiscore profile
     logger.debug(f"{name_rs}: found player...")
     for skill in page['skills']:
+        # The page listed only skills the player actually had xp in, and dropped
+        # the rest of the row entirely — including Overall, for an account that
+        # has fallen off the hiscores altogether. index_lite instead returns all
+        # 25 every time with -1 in the gaps. Mirror the page: without this, an
+        # unranked skill reaches PlayerUpdate as '--' and format_int() raises
+        # ValueError: invalid literal for int() with base 10: '--'.
+        if skill.get('xp', 0) <= 0:
+            continue
         player_dict['skills'][skill['name']] = {
             'rank': hiscore_value(skill.get('rank')),
             'level': hiscore_value(skill.get('level')),
