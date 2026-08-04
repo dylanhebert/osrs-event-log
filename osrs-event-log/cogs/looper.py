@@ -9,7 +9,6 @@ import asyncio
 import aiohttp
 from aiohttp import ClientSession, ClientResponseError
 from concurrent.futures.thread import ThreadPoolExecutor
-from bs4 import BeautifulSoup
 from common.logger import logger
 import common.util as util
 import data.handlers as db
@@ -112,7 +111,6 @@ async def safe_threading(bot, rs_name, rs_data):
 # THREAD A PLAYER SEPARATELY
 async def thread_player(bot, rs_name, rs_data):
     logger.debug(f"Checking player: {rs_name}")
-    parse_minigames = False
     # Check if we need to scrape this player
     player_discord_info = await PLAYER_HANDLER.get_all_player_info(rs_name)
     if not player_discord_info:  # SET TO 'NOT' WHEN ACTUALLY RUNNING!
@@ -125,18 +123,11 @@ async def thread_player(bot, rs_name, rs_data):
         logger.info(f"{rs_name}: Unable to get player | Page status: None")
         return
     logger.debug(f"{rs_name}: got final page...")
-    soup = BeautifulSoup( page, 'html.parser' )
-    logger.debug(f"{rs_name}: got soup...")
-    scores = soup.find(id="contentHiscores")
-    logger.debug(f"{rs_name}: got scores...")
+    # Parsing lives in util so this and check_player_validity cannot drift apart
+    new_scores = await util.get_player_scores(rs_name, page)
 
     # check if player has no hiscore profile
-    try:
-        logger.debug(f"{rs_name}: contents[1]: " + scores.contents[1].name)
-    except:
-        logger.error(f"Error getting hiscores table! Skipping {rs_name}...")
-        return
-    if scores.contents[1].name != 'table':  # if there's no table, the player has no scores
+    if not new_scores['skills']:
         logger.debug(f"{rs_name} not found! Skipping player.")
         return
 
@@ -145,76 +136,60 @@ async def thread_player(bot, rs_name, rs_data):
     overall_xp_changed = False
     # Create player-update object
     Update = PlayerUpdate(rs_name, rs_data, player_discord_info)
-    # Start looping through website rows
-    for tr in scores.find_all('tr')[3:]:
-        # find Overall row, skip if weve already found it
-        if not overall_xp_changed and 'Overall' in tr.get_text():
-            logger.debug(f"{rs_name}: found Overall row...")
-            # if this fails then Overall is (likely) to be new to the json
-            try:
-                # if overall xp did not change, skip player
-                if not util.xp_changed( rs_data['skills']['Overall']['xp'], tr.find_all('td')[4].get_text() ):
-                    overall_xp_changed = False
-                    logger.debug(f"{rs_name}: Overall xp didnt change, skipping...")
-                    break  # SKIP POINT HERE
-                                    # overall xp changed, lets keep going and make the new player dict
-                else:
-                    overall_xp_changed = True
-                    logger.debug(f"{rs_name}: Overall xp changed, continuing...")
-            except:
-                overall_xp_changed = True
-                logger.debug(f"{rs_name}: Overall skill will be added to player, continuing...")
-
-        # if we are in the Minigames section, we need to change how we parse
-        if 'Minigame' in tr.get_text():
-            parse_minigames = True
-            logger.debug(f"{rs_name}: found minigames...")
-            continue  # skip minigame header row, moving onto 1st minigame row
-
-        # do stuff with row/skill
-        row_entry = tr.find_all('td')
-        skill = row_entry[1].get_text().strip()
-        skill_dict = {}
-        logger.debug(f"{rs_name}: found row: {skill}...")
-
-        # row is a skill row
-        if not parse_minigames:
-            skill_dict['rank'] = row_entry[2].get_text()
-            skill_dict['level'] = row_entry[3].get_text()
-            skill_dict['xp'] = row_entry[4].get_text()
-            # check if this skill had an xp gain for a potential player-update
-            if skill in rs_data['skills']:  # first check if skill already existed
-                logger.debug(f"{rs_name}: skill exists...")
-                oldXP = rs_data['skills'][skill]['xp']
-                if skill_dict['xp'] != oldXP:
-                    logger.debug(f"{rs_name}: skill xp changed, sending to Update...")
-                    overall_xp_changed = True
-                    await Update.update_skill(skill_dict, skill, False)
-            else:  # skill didnt exist before on player's hiscores
-                logger.debug(f"{rs_name}: skill doesnt exist, sending to Update...")
-                overall_xp_changed = True
-                await Update.update_skill(skill_dict, skill, True)
-            # update skill to skills dict
-            rs_data['skills'][skill] = skill_dict
-
-        # row is a minigame row, parse_minigames == True
+    # Overall is the cheap early-out: if total xp has not moved then nothing
+    # else can have either, so skip the player without walking every skill.
+    logger.debug(f"{rs_name}: found Overall row...")
+    # if this fails then Overall is (likely) to be new to the json
+    try:
+        # if overall xp did not change, skip player
+        if not util.xp_changed( rs_data['skills']['Overall']['xp'], new_scores['skills']['Overall']['xp'] ):
+            logger.debug(f"{rs_name}: Overall xp didnt change, skipping...")
+            logger.debug(f"{rs_name}: Done with player!")
+            return  # SKIP POINT HERE
+        # overall xp changed, lets keep going and make the new player dict
         else:
-            skill_dict['rank'] = row_entry[2].get_text()
-            skill_dict['score'] = row_entry[3].get_text()
-            # check if this skill had an xp gain for a potential player-update
-            if skill in rs_data['minigames']:  # first check if skill already existed
-                logger.debug(f"{rs_name}: skill exists...")
-                old_score = rs_data['minigames'][skill]['score']
-                if skill_dict['score'] != old_score:
-                    logger.debug(f"{rs_name}: minigame score changed, sending to Update...")
-                    overall_xp_changed = True
-                    await Update.update_minigame(skill_dict, skill, False)
-            else:  # skill didnt exist before on player's hiscores
-                logger.debug(f"{rs_name}: minigame doesnt exist, sending to Update...")
+            overall_xp_changed = True
+            logger.debug(f"{rs_name}: Overall xp changed, continuing...")
+    except (KeyError, TypeError):
+        overall_xp_changed = True
+        logger.debug(f"{rs_name}: Overall skill will be added to player, continuing...")
+
+    # Start looping through skills
+    for skill, skill_dict in new_scores['skills'].items():
+        logger.debug(f"{rs_name}: found row: {skill}...")
+        # check if this skill had an xp gain for a potential player-update
+        if skill in rs_data['skills']:  # first check if skill already existed
+            logger.debug(f"{rs_name}: skill exists...")
+            oldXP = rs_data['skills'][skill]['xp']
+            if skill_dict['xp'] != oldXP:
+                logger.debug(f"{rs_name}: skill xp changed, sending to Update...")
                 overall_xp_changed = True
-                await Update.update_minigame(skill_dict, skill, True)
-            # update clue/boss to minigames dict
-            rs_data['minigames'][skill] = skill_dict  
+                await Update.update_skill(skill_dict, skill, False)
+        else:  # skill didnt exist before on player's hiscores
+            logger.debug(f"{rs_name}: skill doesnt exist, sending to Update...")
+            overall_xp_changed = True
+            await Update.update_skill(skill_dict, skill, True)
+        # update skill to skills dict
+        rs_data['skills'][skill] = skill_dict
+
+    # then the minigames/bosses
+    logger.debug(f"{rs_name}: found minigames...")
+    for skill, skill_dict in new_scores['minigames'].items():
+        logger.debug(f"{rs_name}: found row: {skill}...")
+        # check if this skill had an xp gain for a potential player-update
+        if skill in rs_data['minigames']:  # first check if skill already existed
+            logger.debug(f"{rs_name}: skill exists...")
+            old_score = rs_data['minigames'][skill]['score']
+            if skill_dict['score'] != old_score:
+                logger.debug(f"{rs_name}: minigame score changed, sending to Update...")
+                overall_xp_changed = True
+                await Update.update_minigame(skill_dict, skill, False)
+        else:  # skill didnt exist before on player's hiscores
+            logger.debug(f"{rs_name}: minigame doesnt exist, sending to Update...")
+            overall_xp_changed = True
+            await Update.update_minigame(skill_dict, skill, True)
+        # update clue/boss to minigames dict
+        rs_data['minigames'][skill] = skill_dict
 
     # Finish up & post update
     if overall_xp_changed:

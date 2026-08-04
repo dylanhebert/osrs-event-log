@@ -5,7 +5,6 @@
 import asyncio
 import aiohttp
 from common.logger import logger
-from bs4 import BeautifulSoup
 import pathlib
 import discord
 import secrets
@@ -20,8 +19,13 @@ messages_path = dir_path + "/data/custom_messages.json"
 # Timeout for access a player hiscore page
 TIMEOUT = aiohttp.ClientTimeout(total=15)
 
-# HISCORES PAGE (before username)
-HISCORES_URL = "https://secure.runescape.com/m=hiscore_oldschool/hiscorepersonal?user1="
+# HISCORES ENDPOINT (before username)
+# The human-facing hiscorepersonal page is served behind bot protection that
+# returns 403 to datacenter IPs, so it stopped working when the bot moved from
+# a home Raspberry Pi to the droplet. index_lite.json is the official
+# machine-readable endpoint and is not blocked. It also removes the need to
+# scrape HTML with BeautifulSoup.
+HISCORES_URL = "https://secure.runescape.com/m=hiscore_oldschool/index_lite.json?player="
 
 
 # ------- NON-ASYNC FUNCTIONS -------
@@ -107,15 +111,32 @@ async def check_player_validity(name):
 # ------- WEB FUNCTIONS -------
 #------------------------------
 
-# REQUEST WEB PAGE (AIOHTTP)
+# FORMAT A HISCORES NUMBER THE WAY THE OLD HTML PAGE DID
+def hiscore_value(num):
+    """The scraped page rendered every number with thousands separators, and an
+    unranked entry as '--'. The stored player database is full of those strings,
+    so index_lite.json's raw ints have to be formatted back into the identical
+    shape. If they are not, every skill of every player compares as changed on
+    the first run and the bot spams a milestone message for all of them."""
+    if num is None or num == -1:
+        return '--'
+    return "{:,}".format(num)
+
+
+# REQUEST HISCORES DATA (AIOHTTP)
 async def get_page(name):
+    """Returns the decoded index_lite.json payload for a player, or None if the
+    player could not be fetched. A player who does not exist returns 404, which
+    lands in the same None branch as a network failure."""
     try:
         async with aiohttp.ClientSession(timeout=TIMEOUT) as session:
             try:
                 async with session.get(HISCORES_URL + name) as p:
                     if p.status == 200:
-                        page = await p.text()
-                        logger.debug(f'{name}: Scraped page with aiohttp...')
+                        # Jagex serves this as text/html, so aiohttp's content
+                        # type check has to be disabled to decode it as json.
+                        page = await p.json(content_type=None)
+                        logger.debug(f'{name}: Fetched hiscores with aiohttp...')
                     else:
                         logger.info(f'Unable to get page for {name} | Page status: {p.status}')
                         page = None
@@ -130,39 +151,36 @@ async def get_page(name):
 
 # GET A PLAYERS SCORES INTO DICT
 async def get_player_scores(name_rs, page):
-    parse_minigames = False
+    """Normalises an index_lite.json payload into the same structure the scraped
+    page produced: {'skills': {name: {rank, level, xp}}, 'minigames': {name: {rank, score}}}."""
     logger.debug(f'{name_rs}: got page...')
-    soup = BeautifulSoup( page, 'html.parser' )
-    logger.debug(f'{name_rs}: got soup...')
-    scores = soup.find(id="contentHiscores")
-    logger.debug(f'{name_rs}: got scores...')
     # new player dict to fill and return to correct discord id
     player_dict = {
         'skills' : {},
         'minigames': {}
     }
     # check if player has no hiscore profile
-    logger.debug(f'{name_rs}: contents[1]: '+scores.contents[1].name)
-    if scores.contents[1].name != 'table':  # if there's no table, the player has no scores
+    if not page or not page.get('skills'):
         logger.debug(f"{name_rs} not found! Appended empty player_dict.")
         return player_dict
     # player has hiscore profile
     logger.debug(f"{name_rs}: found player...")
-    for tr in scores.find_all('tr')[3:]:
-        if 'Minigame' in tr.get_text():
-            parse_minigames = True
+    for skill in page['skills']:
+        player_dict['skills'][skill['name']] = {
+            'rank': hiscore_value(skill.get('rank')),
+            'level': hiscore_value(skill.get('level')),
+            'xp': hiscore_value(skill.get('xp')),
+        }
+    for activity in page.get('activities', []):
+        # The old page only listed activities the player had actually done, so
+        # anything with no score is skipped to keep the stored keys identical.
+        # index_lite.json instead returns all 90-odd of them every time.
+        if activity.get('score', 0) <= 0:
             continue
-        row_entry = tr.find_all('td')
-        skill = row_entry[1].get_text().strip()
-        skill_dict = {}
-        skill_dict['rank'] = row_entry[2].get_text()
-        if not parse_minigames:
-            skill_dict['level'] = row_entry[3].get_text()
-            skill_dict['xp'] = row_entry[4].get_text()
-            player_dict['skills'][skill] = skill_dict  # update skill to skills dict
-        else:
-            skill_dict['score'] = row_entry[3].get_text()
-            player_dict['minigames'][skill] = skill_dict  # update clue/boss to minigames dict
+        player_dict['minigames'][activity['name']] = {
+            'rank': hiscore_value(activity.get('rank')),
+            'score': hiscore_value(activity.get('score')),
+        }
     logger.debug(f"{name_rs}: Successfully created dict for {name_rs}!")
     return player_dict
 
