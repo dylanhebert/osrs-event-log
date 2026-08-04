@@ -29,7 +29,7 @@ class SuperCommands(commands.Cog, command_attrs=dict(hidden=True)):
                         description="Changes the global max player count per Discord member")
     @commands.cooldown(1, 15, commands.BucketType.guild)
     async def changemaxplayers(self, ctx, *, new_count):
-        if ctx.author.id == 134858274909585409:
+        if db.is_super_user(ctx.author):
             try: 
                 await db.update_max_players(int(new_count))
                 await ctx.send(f'**Updated player limit globally. New limit: {new_count}**')
@@ -45,7 +45,7 @@ class SuperCommands(commands.Cog, command_attrs=dict(hidden=True)):
                                     "This will notify the saved role for each server or @here if none specified.")
     @commands.cooldown(1, 15, commands.BucketType.guild)
     async def sendannouncement(self, ctx, *, announcement):
-        if ctx.author.id == 134858274909585409:
+        if db.is_super_user(ctx.author):
             all_servers = await db.get_all_servers(ctx.author)
             await util.message_all_servers(self.bot, all_servers, announcement, mention=True)
             logger.info(f"Done sending announcement: {announcement}")
@@ -58,7 +58,7 @@ class SuperCommands(commands.Cog, command_attrs=dict(hidden=True)):
                                     "This will NOT notify the saved role for each server.")
     @commands.cooldown(1, 15, commands.BucketType.guild)
     async def sendthought(self, ctx, *, thought):
-        if ctx.author.id == 134858274909585409:
+        if db.is_super_user(ctx.author):
             all_servers = await db.get_all_servers(ctx.author)
             await util.message_all_servers(self.bot, all_servers, thought, mention=False)
             logger.info(f"Done sending thought: {thought}")
@@ -70,7 +70,7 @@ class SuperCommands(commands.Cog, command_attrs=dict(hidden=True)):
                         description="Removes the bot in a certain server")
     @commands.cooldown(1, 15, commands.BucketType.guild)
     async def removeserver(self, ctx, *, server_id):
-        if ctx.author.id == 134858274909585409:
+        if db.is_super_user(ctx.author):
             Server = self.bot.get_guild(int(server_id))
             logger.debug(f"Remove server name: {Server.name}")
             await Server.leave()
@@ -83,7 +83,7 @@ class SuperCommands(commands.Cog, command_attrs=dict(hidden=True)):
                         description="Sends an announcement to a specific server")
     @commands.cooldown(1, 15, commands.BucketType.guild)
     async def sendspecificannouncement(self, ctx, server_id, announcement):
-        if ctx.author.id == 134858274909585409:
+        if db.is_super_user(ctx.author):
             try:
                 all_servers = await db.get_all_servers(ctx.author)
                 Server = self.bot.get_guild(int(server_id))

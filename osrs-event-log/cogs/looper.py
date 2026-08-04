@@ -385,7 +385,7 @@ class MainLooper(commands.Cog):
     # @commands.command()
     # @commands.cooldown(1, 5, commands.BucketType.guild)
     # async def testscores(self, ctx):
-    #     if ctx.author.id == 134858274909585409:
+    #     if db.is_super_user(ctx.author):
     #         logger.debug('Running testscores...')
     #         await self.main_loop()
     #         logger.debug('Done with testscores!')

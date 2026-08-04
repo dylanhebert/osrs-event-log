@@ -28,6 +28,11 @@ DIR_PATH = str(pathlib.Path().absolute())
 
 BOT_INFO_ALL = db_open_non_async(DIR_PATH + "/bot_config.json")
 BOT_TOKEN = BOT_INFO_ALL['BOT_TOKEN']
+# The Discord user allowed to run the owner-only commands. Read with .get() so
+# an older bot_config.json without the key still starts; general.is_super_user()
+# then denies everyone rather than granting them, so a missing key locks the
+# owner out instead of opening the commands up.
+SUPER_USER_ID = BOT_INFO_ALL.get('SUPER_USER_ID')
 MAX_PLAYERS_PER_MEMBER = BOT_INFO_ALL['MAX_PLAYERS_PER_MEMBER']
 DINK_BASE_URL = BOT_INFO_ALL['DINK_BASE_URL']
 DINK_HOST = BOT_INFO_ALL['DINK_HOST']

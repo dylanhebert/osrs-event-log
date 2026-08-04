@@ -173,6 +173,9 @@ sudo systemctl stop osrs-event-log
 # 3. get the new code
 git -C $APP_ROOT pull
 
+# 3b. add SUPER_USER_ID to bot_config.json — see below. Skipping this does not
+#     stop the bot, it just denies the owner-only commands.
+
 # 4. migrate. --report writes nothing and prints what it would do
 cd $APP_DIR
 $APP_VENV/bin/python tools/migrate_json_to_sqlite.py --report
@@ -212,6 +215,30 @@ every skill of every player in every server.
 ```bash
 sudo systemctl stop osrs-event-log
 ```
+
+### New config key: `SUPER_USER_ID`
+
+The bot owner's Discord id used to be hardcoded in 14 places across
+`cogs/cmds/admin.py` and `cogs/cmds/super.py`. It now comes from
+`bot_config.json`, which is gitignored — this repo is public.
+
+```json
+{
+  "BOT_TOKEN": "...",
+  "SUPER_USER_ID": 123456789012345678,
+  ...
+}
+```
+
+The check **fails closed**: if the key is missing or unparseable,
+`is_super_user()` returns False for everyone. An unset key therefore locks the
+owner out of `;servers`, `;message` and `;maxplayers` rather than granting them
+to every user. `helpers.py` reads it with `.get()`, so an older config without
+the key still starts normally.
+
+`tools/test_super_user.py` covers both directions, including ids quoted as
+strings — Discord snowflakes exceed 2^53, so a config that quotes them must
+still match.
 
 ### Leave the JSON files in place for 14 days
 

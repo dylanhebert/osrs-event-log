@@ -29,6 +29,30 @@ def get_dink_port():
 def get_dink_test_channel():
     return h.DINK_TEST_CHANNEL
 
+def get_super_user_id():
+    return h.SUPER_USER_ID
+
+
+def is_super_user(user):
+    """True only for the configured bot owner.
+
+    Was a Discord user id hardcoded in 14 places across cogs/cmds/admin.py and
+    cogs/cmds/super.py. It now comes from SUPER_USER_ID in bot_config.json,
+    which is gitignored — this repo is public.
+
+    Fails closed. If SUPER_USER_ID is unset the answer is always False, so a
+    missing config key locks the owner out of the owner-only commands rather
+    than granting them to everyone. Accepts a Member/User or a raw id.
+    """
+    if h.SUPER_USER_ID is None:
+        logger.debug('SUPER_USER_ID is not set in bot_config.json; denying.')
+        return False
+    user_id = getattr(user, 'id', user)
+    try:
+        return int(user_id) == int(h.SUPER_USER_ID)
+    except (TypeError, ValueError):
+        return False
+
 def get_custom_messages():
     return h.db_open_non_async(h.MESSAGES_PATH)
 

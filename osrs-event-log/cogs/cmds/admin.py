@@ -34,7 +34,7 @@ class AdminCommands(commands.Cog, name="Admin Commands"):
                                     "If this command is never used, I will not post in your server.")
     @commands.cooldown(1, 5, commands.BucketType.guild)
     async def posthere(self, ctx):
-        if await util.is_admin(ctx.author) or ctx.author.id == 134858274909585409:
+        if await util.is_admin(ctx.author) or db.is_super_user(ctx.author):
             try:
                 await db.update_server_entry(ctx.guild, 'channel', ctx.channel.id)
                 await ctx.send(f'I will now start posting in the {ctx.channel.mention} channel!')
@@ -54,7 +54,7 @@ class AdminCommands(commands.Cog, name="Admin Commands"):
                                     "Milestones include 99s and thresholds for XP, boss kills, and clue scrolls.")
     @commands.cooldown(1, 5, commands.BucketType.guild)
     async def rsrole(self, ctx, *, rs_role: discord.Role):
-        if await util.is_admin(ctx.author) or ctx.author.id == 134858274909585409:
+        if await util.is_admin(ctx.author) or db.is_super_user(ctx.author):
             try:
                 await db.update_server_entry(ctx.guild, 'role', rs_role.id)
                 await ctx.send(f'I will now start posting big announcements with the **{rs_role.name}** role mentioned!')
@@ -73,7 +73,7 @@ class AdminCommands(commands.Cog, name="Admin Commands"):
                                     "Milestones include 99s and thresholds for XP, boss kills, and clue scrolls.")
     @commands.cooldown(1, 5, commands.BucketType.guild)
     async def resetrsrole(self, ctx):
-        if await util.is_admin(ctx.author) or ctx.author.id == 134858274909585409:
+        if await util.is_admin(ctx.author) or db.is_super_user(ctx.author):
             try:
                 await db.update_server_entry(ctx.guild, 'role', None)
                 await ctx.send(f'I will now start posting big announcements with the **@here** role mentioned!')
@@ -94,7 +94,7 @@ class AdminCommands(commands.Cog, name="Admin Commands"):
     @commands.cooldown(1, 10, commands.BucketType.guild)
     async def addother(self, ctx, member: discord.Member, *, game_name):
         # If player is admin
-        if await util.is_admin(ctx.author) or ctx.author.id == 134858274909585409:
+        if await util.is_admin(ctx.author) or db.is_super_user(ctx.author):
             print('admin!')
             name_rs = util.name_to_rs(game_name)
             await ctx.send("*Checking name...*")
@@ -126,7 +126,7 @@ class AdminCommands(commands.Cog, name="Admin Commands"):
                                     "Anyone wishing to remove themselves should use ;remove.")
     @commands.cooldown(1, 5, commands.BucketType.guild)
     async def removeother(self, ctx, member: discord.Member, *, game_name):
-        if await util.is_admin(ctx.author) or ctx.author.id == 134858274909585409:
+        if await util.is_admin(ctx.author) or db.is_super_user(ctx.author):
             name_rs = util.name_to_rs(game_name)
             try:
                 await db.remove_player(ctx.guild, member, name_rs, False)
@@ -141,7 +141,7 @@ class AdminCommands(commands.Cog, name="Admin Commands"):
                         description="Toggles the Skill of the Week system for this server on or off")
     @commands.cooldown(1, 5, commands.BucketType.guild)
     async def toggleskillweek(self, ctx):
-        if await util.is_admin(ctx.author) or ctx.author.id == 134858274909585409:
+        if await util.is_admin(ctx.author) or db.is_super_user(ctx.author):
             try:
                 new_value = await db.toggle_server_entry(ctx.guild, "sotw_opt")
                 display_val = 'ON'
@@ -158,7 +158,7 @@ class AdminCommands(commands.Cog, name="Admin Commands"):
                         description="Toggles the Boss of the Week system for this server on or off")
     @commands.cooldown(1, 5, commands.BucketType.guild)
     async def togglebossweek(self, ctx):
-        if await util.is_admin(ctx.author) or ctx.author.id == 134858274909585409:
+        if await util.is_admin(ctx.author) or db.is_super_user(ctx.author):
             try:
                 new_value = await db.toggle_server_entry(ctx.guild, "botw_opt")
                 display_val = 'ON'
@@ -175,7 +175,7 @@ class AdminCommands(commands.Cog, name="Admin Commands"):
                         description="Toggles daily progress updates for SOTW for this server on or off")
     @commands.cooldown(1, 5, commands.BucketType.guild)
     async def toggleskillupdates(self, ctx):
-        if await util.is_admin(ctx.author) or ctx.author.id == 134858274909585409:
+        if await util.is_admin(ctx.author) or db.is_super_user(ctx.author):
             try:
                 new_value = await db.toggle_server_entry(ctx.guild, "sotw_progress")
                 display_val = 'ON'
@@ -192,7 +192,7 @@ class AdminCommands(commands.Cog, name="Admin Commands"):
                         description="Toggles daily progress updates for BOTW for this server on or off")
     @commands.cooldown(1, 5, commands.BucketType.guild)
     async def togglebossupdates(self, ctx):
-        if await util.is_admin(ctx.author) or ctx.author.id == 134858274909585409:
+        if await util.is_admin(ctx.author) or db.is_super_user(ctx.author):
             try:
                 new_value = await db.toggle_server_entry(ctx.guild, "botw_progress")
                 display_val = 'ON'
