@@ -27,6 +27,11 @@ _conn = None
 _path = None
 _lock = threading.RLock()
 
+# Read-only mode only. When set, conn() hands out a connection PER THREAD
+# instead of one shared object. See connect_readonly() for why.
+_ro_path = None
+_ro_local = threading.local()
+
 
 def utcnow():
     """Timestamps are UTC ISO8601. The bot's SOTW/BOTW scheduling uses local
@@ -99,6 +104,20 @@ def connect_readonly(path):
     silently produce an empty database and a site that renders as though every
     player vanished. Here a wrong path is an immediate FileNotFoundError.
 
+    ONE CONNECTION PER THREAD. The bot is a single process with a single event
+    loop, so it shares one connection safely. A web server is not: anything that
+    serves requests on threads will have several of them in this module at once,
+    and a shared sqlite3 connection then interleaves cursors between them. That
+    is not theoretical. It produced, from a threaded dev server:
+
+        sqlite3.InterfaceError: bad parameter or other API misuse
+        ValueError: list.index(x): x not in list   <- one request reading
+                                                     another request's rows
+
+    Handing each thread its own connection removes the whole class of problem
+    and costs nothing: a SQLite connection is a file handle and some memory, and
+    a read-only one cannot conflict with any other.
+
     WAL CAVEAT, and it will bite one day: a read-only connection to a WAL
     database still needs WRITE permission on the `-shm` lock file, or on the
     directory if `-shm` does not exist yet. `mode=ro` restricts the database
@@ -108,42 +127,62 @@ def connect_readonly(path):
     `immutable=1` — the bot is actively writing, and immutable would hand the UI
     a stale, torn view.
     """
-    global _conn, _path
+    global _conn, _path, _ro_path
     with _lock:
         if not os.path.exists(path):
             raise FileNotFoundError(
                 f"{path}: no such database. The web UI never creates one — "
                 "check the configured database path.")
         if _conn is not None:
-            if os.path.abspath(path) == os.path.abspath(_path or ""):
-                return _conn
             _conn.close()
             _conn, _path = None, None
 
-        uri = "file:" + pathlib.PurePath(path).as_posix() + "?mode=ro"
-        conn_ro = sqlite3.connect(uri, uri=True, check_same_thread=False,
-                                  isolation_level=None)
-        conn_ro.row_factory = sqlite3.Row
-        conn_ro.execute("PRAGMA query_only = ON")
-        conn_ro.execute("PRAGMA busy_timeout = 5000")
-        conn_ro.execute("PRAGMA foreign_keys = ON")
-
-        _conn, _path = conn_ro, path
+        _ro_path = path
+        _path = path
+        # Open one for this thread now, so a bad path fails at startup rather
+        # than on whichever request happens to arrive first.
+        _conn = _open_readonly(path)
+        _ro_local.conn = _conn
         return _conn
 
 
+def _open_readonly(path):
+    uri = "file:" + pathlib.PurePath(path).as_posix() + "?mode=ro"
+    connection = sqlite3.connect(uri, uri=True, check_same_thread=False,
+                                 isolation_level=None)
+    connection.row_factory = sqlite3.Row
+    connection.execute("PRAGMA query_only = ON")
+    connection.execute("PRAGMA busy_timeout = 5000")
+    connection.execute("PRAGMA foreign_keys = ON")
+    return connection
+
+
 def conn():
+    # Read-only mode gives each thread its own connection. The bot never takes
+    # this branch: nothing sets _ro_path unless connect_readonly() was called.
+    if _ro_path is not None:
+        connection = getattr(_ro_local, "conn", None)
+        if connection is None:
+            connection = _open_readonly(_ro_path)
+            _ro_local.conn = connection
+        return connection
     if _conn is None:
         return connect()
     return _conn
 
 
 def close():
-    global _conn, _path
+    global _conn, _path, _ro_path
     with _lock:
         if _conn is not None:
             _conn.close()
-        _conn, _path = None, None
+        # Only this thread's read-only connection can be closed from here;
+        # others are released when their thread ends.
+        other = getattr(_ro_local, "conn", None)
+        if other is not None and other is not _conn:
+            other.close()
+        _ro_local.conn = None
+        _conn, _path, _ro_path = None, None, None
 
 
 def path():

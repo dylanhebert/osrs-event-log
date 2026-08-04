@@ -113,6 +113,13 @@ def load_context():
     g.servers = []
     g.own_players = set()
 
+    # Static files never need to know who is asking. Skipping them is not just
+    # tidiness: a page pulls ~120 icons, and running five queries per icon meant
+    # the database did hundreds of pointless lookups per page view, all of them
+    # concurrent. Serving a PNG should not touch the database at all.
+    if request.endpoint == "static":
+        return
+
     member_id = session.get(SESSION_KEY)
     if member_id is None:
         return
