@@ -1,49 +1,88 @@
-import asyncio
 from common.logger import logger
-from common import exceptions as ex
-from . import helpers as h
+from data import repo
 
 
 class LoopPlayerHandler:
+    """Per-cycle state for the hiscores looper.
+
+    build_cache() / remove_cache() keep their names and call sites, but they no
+    longer carry the write. In the JSON version remove_cache() was what actually
+    persisted the whole runescape file, once, at the end of a loop — so a
+    process killed mid-loop had already posted to Discord but recorded nothing,
+    and the next loop re-posted the same milestones. Stats are now written per
+    player, transactionally, as they change.
+
+    The cache is now just a snapshot for iteration, not a write buffer.
+    """
+
     def __init__(self):
-        self.data_discord = None
         self.data_runescape = None
         self.server_info_all = None
-        
+
     async def build_cache(self):
-        self.data_discord = await h.db_open(h.DB_DISCORD_PATH)
-        self.data_runescape = await h.db_open(h.DB_RUNESCAPE_PATH)
+        repo.stats.reset_caches()
+        # Only pollable players — never the full players table. See the
+        # pollable_players view in data/schema.sql: the 12 ghost players have
+        # never been polled, and polling them would make every skill read as new
+        # and post "first time on the Hiscores" for all of them at once.
+        self.data_runescape = repo.stats.load_all_pollable()
         self.server_info_all = await self.get_server_info_all()
-        
+
     async def remove_cache(self):
-        # Write new player info to Db before clear
-        await h.db_write(h.DB_RUNESCAPE_PATH, self.data_runescape)
-        self.data_discord = None
+        # Nothing to flush: writes already committed.
         self.data_runescape = None
         self.server_info_all = None
-        
+
     async def get_server_info_all(self):
-        build_dict = {}
-        for server in self.data_discord['active_servers']:
-            build_dict[str(server)] = {
-                'channel': self.data_discord[f'server:{server}#channel'],
-                'role': self.data_discord[f'server:{server}#role'] }
-        return build_dict
+        return repo.servers.info_all(active_only=True)
 
     async def get_all_player_info(self, rs_name):
         """Gets all servers and members connected to a player"""
         logger.debug('------------------------------')
         logger.debug(f'Initialized GET PLAYER LOOPER INFO - Player: {rs_name}')
-        # Loop through db to get player's servers
-        player_servers_all = []
-        for server in self.data_discord[f'player:{rs_name}#all_servers']:
-            logger.debug(f'Checking server: {server}')
-            if server in self.data_discord['active_servers']:
-                player_servers_all.append({
-                    "server": server,
-                    "member": self.data_discord[f'player:{rs_name}#server:{server}#member'],
-                    "mention": self.data_discord[f'player:{rs_name}#server:{server}#mention']
-                })
+        player_servers_all = repo.players.active_links(rs_name)
         logger.debug(f"Finished GET PLAYER LOOPER INFO - Player: {rs_name}")
-        # logger.debug(player_servers_all)
         return player_servers_all
+
+    async def save_player(self, rs_name, stats):
+        """Persist one player's stats, appending history only where a value moved."""
+        player_id = repo.players.get_id(rs_name)
+        if player_id is None:
+            logger.debug(f'{rs_name}: not in the database, nothing saved')
+            return 0, 0
+        return repo.stats.apply_changes(player_id, stats)
+
+    async def record_events(self, rs_name, update, posted=True):
+        """Record what was posted, for the activity feed.
+
+        Best-effort: recording must never be the reason a milestone fails to
+        reach Discord, so anything raised here is logged and swallowed.
+
+        Called once per player rather than once per server. The messages are
+        identical across servers, and which servers saw them is derivable from
+        player_servers, so a row per server would only duplicate text.
+
+        `title` is left NULL for hiscores events. PlayerUpdate does not track
+        which skill produced which message, and threading that through would
+        mean touching every message-building branch. The message text carries
+        it; enriching this later is additive.
+        """
+        try:
+            player_id = repo.players.get_id(rs_name)
+            if player_id is None:
+                return 0
+            buckets = (('MILESTONE', update.milestones),
+                       ('SKILL', update.skills),
+                       ('MINIGAME', update.minigames))
+            written = 0
+            with repo.transaction():
+                for event_type, messages in buckets:
+                    for message in messages:
+                        repo.events.log_event(
+                            player_id, None, repo.events.SOURCE_HISCORES,
+                            event_type, message, posted=posted)
+                        written += 1
+            return written
+        except Exception as e:
+            logger.exception(f'{rs_name}: could not record events -- {e}')
+            return 0
