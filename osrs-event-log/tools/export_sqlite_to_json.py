@@ -65,9 +65,13 @@ def export_discord(conn):
 
     db["active_servers"] = sorted(r["id"] for r in servers if r["is_active"])
     db["removed_servers"] = sorted(r["id"] for r in servers if not r["is_active"])
+    # DISTINCT: the list is a membership index for the webhook's validity check,
+    # and live data has two accounts sharing one key. Without this the shared
+    # key comes back twice and the round-trip fails.
     db["dinklinks"] = sorted(
         r["dink_link_key"] for r in conn.execute(
-            "SELECT dink_link_key FROM players WHERE dink_link_key IS NOT NULL"))
+            "SELECT DISTINCT dink_link_key FROM players"
+            " WHERE dink_link_key IS NOT NULL"))
 
     for row in servers:
         sid = row["id"]

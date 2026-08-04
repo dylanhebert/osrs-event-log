@@ -91,7 +91,14 @@ CREATE TABLE players (
     -- util.name_to_discord() output, materialised so the future web UI never
     -- has to import bot code to render a name.
     display_name    TEXT NOT NULL,
-    dink_link_key   TEXT UNIQUE,           -- NULL = player has not set up Dink
+    -- NULL = player has not set up Dink.
+    --
+    -- Deliberately NOT unique. The webhook validates the key and then routes on
+    -- payload['playerName'], so the key is a bearer token rather than an
+    -- identity, and live data has two accounts sharing one. A UNIQUE here would
+    -- reject real production state to enforce something the code never relied
+    -- on. The migration reports duplicates instead.
+    dink_link_key   TEXT,
     sotw_xp         INTEGER NOT NULL DEFAULT 0,
     botw_kills      INTEGER NOT NULL DEFAULT 0,
     -- 1 = the player had an entry in db_runescape.json, which is what the old

@@ -65,12 +65,22 @@ def diff(label, before, after, problems):
         if before[key] != after[key]:
             problems.append(
                 f"{label}: value CHANGED -> {key!r}\n"
-                f"      before: {_short(before[key])}\n"
-                f"      after : {_short(after[key])}")
+                f"      before: {_short(before[key], key)}\n"
+                f"      after : {_short(after[key], key)}")
     return problems
 
 
-def _short(value):
+def _short(value, key=None):
+    """Render a value for a diff line, redacting Dink link keys.
+
+    Those are bearer tokens for the public webhook endpoint — anyone holding one
+    can post events as any player. They must not end up in terminal scrollback,
+    CI output or a pasted bug report just because a test failed.
+    """
+    if key is not None and ("dinklink" in key or key == "dinklinks"):
+        if isinstance(value, list):
+            return f"<{len(value)} dink keys redacted, {len(set(value))} distinct>"
+        return "<dink key redacted>"
     text = json.dumps(value, sort_keys=True)
     return text if len(text) <= 200 else text[:200] + " ..."
 

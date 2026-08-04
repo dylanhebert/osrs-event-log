@@ -33,12 +33,18 @@ import tempfile
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-COPY_INTO_OLD_TREE = [
-    ("data", "db_discord.json"),
-    ("data", "db_runescape.json"),
-    ("data", "sotw", "sotw_config.json"),
-    ("data", "botw", "botw_config.json"),
-    ("bot_config.json",),
+# Gitignored state, taken from --data-dir so that a fixture run compares the
+# same inputs on both sides. Copying these from the repo instead would feed the
+# pre-migration tree whatever happens to be in data/ while the migrated side
+# reads the fixture, and the diff would be meaningless.
+STATE_FROM_DATA_DIR = [
+    ("db_discord.json",),
+    ("db_runescape.json",),
+    ("sotw", "sotw_config.json"),
+    ("botw", "botw_config.json"),
+    ("custom_messages.json",),
+    ("sotw", "all_skills.json"),
+    ("botw", "all_bosses.json"),
 ]
 TOOLS_INTO_OLD_TREE = ["harness.py", "_golden_runner.py", "__init__.py"]
 
@@ -47,7 +53,7 @@ def run(cmd, **kwargs):
     return subprocess.run(cmd, capture_output=True, text=True, **kwargs)
 
 
-def build_old_tree(root, base_ref, dest):
+def build_old_tree(root, base_ref, dest, data_dir):
     """Export the pre-migration tree from git, then drop in the gitignored
     state files and the harness (which post-dates the base commit)."""
     os.makedirs(dest, exist_ok=True)
@@ -73,13 +79,24 @@ def build_old_tree(root, base_ref, dest):
     here = os.path.dirname(os.path.abspath(__file__))
     live = os.path.dirname(here)
 
-    for parts in COPY_INTO_OLD_TREE:
-        source = os.path.join(live, *parts)
-        target = os.path.join(inner, *parts)
+    for parts in STATE_FROM_DATA_DIR:
+        source = os.path.join(data_dir, *parts)
+        target = os.path.join(inner, "data", *parts)
         if not os.path.exists(source):
-            return f"missing {source}"
+            # all_skills / all_bosses / custom_messages are tracked, so the git
+            # export already has them; only the gitignored state must be there.
+            if parts[-1] in ("db_discord.json", "db_runescape.json",
+                             "sotw_config.json", "botw_config.json"):
+                return f"missing {source}"
+            continue
         os.makedirs(os.path.dirname(target), exist_ok=True)
         shutil.copy2(source, target)
+
+    # Config is deployment-level, not state, so it always comes from the repo.
+    bot_config = os.path.join(live, "bot_config.json")
+    if not os.path.exists(bot_config):
+        return f"missing {bot_config}"
+    shutil.copy2(bot_config, os.path.join(inner, "bot_config.json"))
 
     os.makedirs(os.path.join(inner, "tools"), exist_ok=True)
     for name in TOOLS_INTO_OLD_TREE:
@@ -187,7 +204,8 @@ def main(argv=None):
                 print(f"      {label}")
 
         # 3. pre-migration tree
-        old_inner = build_old_tree(root, base_ref, os.path.join(scratch, "old"))
+        old_inner = build_old_tree(root, base_ref, os.path.join(scratch, "old"),
+                                   os.path.abspath(args.data_dir))
         if not os.path.isdir(str(old_inner)):
             print(f"  FAILED to build the old tree: {old_inner}", file=sys.stderr)
             return 2

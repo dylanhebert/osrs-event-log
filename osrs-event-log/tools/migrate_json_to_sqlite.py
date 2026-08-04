@@ -589,10 +589,22 @@ class Migrator:
         listed = set(cl["dinklinks"])
         stored = {row[0] for row in self.conn.execute(
             "SELECT dink_link_key FROM players WHERE dink_link_key IS NOT NULL")}
-        for key in sorted(listed - stored):
-            self.rep.anomaly("dinklink in the index list but on no player", key)
-        for key in sorted(stored - listed):
-            self.rep.anomaly("dinklink on a player but missing from the index list", key)
+        # Keys are bearer tokens — report counts and player names, never values.
+        if listed - stored:
+            self.rep.anomaly("dinklinks in the index list but on no player",
+                             f"{len(listed - stored)} key(s)")
+        if stored - listed:
+            self.rep.anomaly("dinklinks on a player but missing from the index list",
+                             f"{len(stored - listed)} key(s)")
+
+        # Two accounts sharing one key is untidy but harmless: the webhook
+        # authenticates with the key and then routes on payload['playerName'].
+        # Worth surfacing so it can be cleaned up with ;dinklink.
+        for row in self.conn.execute(
+                "SELECT GROUP_CONCAT(rs_name, ', ') AS names, COUNT(*) AS n"
+                " FROM players WHERE dink_link_key IS NOT NULL"
+                " GROUP BY dink_link_key HAVING n > 1"):
+            self.rep.anomaly("one dinklink shared by several players", row["names"])
 
         # server all_players vs the link rows
         for sid, names in cl["server_players"].items():
@@ -650,7 +662,14 @@ def main(argv=None):
                         help="ISO timestamp to stamp rows with (default: now, UTC)")
     args = parser.parse_args(argv)
 
-    schema_path = args.schema or os.path.join(args.data_dir, "schema.sql")
+    # The schema ships with the code, not with the state, so a fixture pulled
+    # from the server has no schema.sql in it. Prefer one alongside the data if
+    # it is there, otherwise fall back to the repo's.
+    schema_path = args.schema
+    if schema_path is None:
+        beside_data = os.path.join(args.data_dir, "schema.sql")
+        schema_path = (beside_data if os.path.exists(beside_data)
+                       else os.path.join("data", "schema.sql"))
     db_path = args.db or os.path.join(args.data_dir, "osrs.db")
     now = args.now or datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
@@ -672,6 +691,7 @@ def main(argv=None):
 
     report = Report()
     conn = sqlite3.connect(db_path)
+    conn.row_factory = sqlite3.Row
     try:
         conn.executescript(schema_sql)
         # Constraints stay off during the load so that a data problem surfaces
