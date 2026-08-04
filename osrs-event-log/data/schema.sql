@@ -335,8 +335,22 @@ CREATE TABLE events (
     message     TEXT    NOT NULL,  -- the text as posted
     payload     TEXT,              -- raw Dink body as JSON, NULL for hiscores
     occurred_at TEXT    NOT NULL,
-    posted      INTEGER NOT NULL DEFAULT 0
+    posted      INTEGER NOT NULL DEFAULT 0,
+    -- The Discord message this row was recovered from, for rows imported by
+    -- tools/backfill_events_from_discord.py (schema version 5). NULL for
+    -- everything the bot records live, which is the normal case.
+    --
+    -- One Discord message expands into several rows, because post_update()
+    -- concatenates units before sending while record_events() stores them
+    -- separately, so this is NOT unique. It exists so a re-import can skip
+    -- messages it has already seen, and so a bad import can be deleted
+    -- precisely. Both matter: the message formats have changed over the years,
+    -- so the parser will be improved and re-run.
+    discord_message_id INTEGER
 );
+
+CREATE INDEX idx_events_discord_msg ON events(discord_message_id)
+    WHERE discord_message_id IS NOT NULL;
 
 CREATE INDEX idx_events_time        ON events(occurred_at DESC);
 CREATE INDEX idx_events_player_time ON events(player_id, occurred_at DESC);

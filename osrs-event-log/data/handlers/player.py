@@ -106,11 +106,26 @@ async def rename_player(Server, Member, old_rs_name, new_rs_name, stats_dict):
 
     other_servers = [sid for sid in repo.players.server_ids(old_rs_name) if sid != Server.id]
 
+    # The target name may already be a player in its own right, which makes this
+    # a merge rather than a rename. Renaming in place would then try to set
+    # rs_name to a value another row already holds and fail on the UNIQUE index,
+    # so that branch is only safe when the destination name is genuinely free.
+    #
+    # This is reachable in ordinary use: transfer A>>B in one server, and the
+    # second server's transfer of the same pair finds A down to a single link,
+    # taking the in-place branch straight into the collision.
+    target_id = repo.players.get_id(new_rs_name)
+    source_id = repo.players.get_id(old_rs_name)
+    if target_id is not None and target_id == source_id:
+        raise ex.DataHandlerError('These are the same account!')
+    merging = target_id is not None
+
     with repo.transaction():
-        if other_servers:
-            # The player is still in another server under the old name, so the
-            # old identity has to survive. Create the new one alongside it, the
-            # way the JSON version did by copying keys.
+        if other_servers or merging:
+            # Either the old identity still has to exist for another server, or
+            # the new name is already a player. Both are handled by attaching
+            # the link to the destination: add_link() ensures the player, so it
+            # finds the existing row rather than creating a duplicate.
             player_id = repo.players.add_link(new_rs_name, Server.id, Member.id)
             repo.players.set_global(new_rs_name, 'sotw_xp',
                                     repo.players.get_global(old_rs_name, 'sotw_xp'))
@@ -118,6 +133,9 @@ async def rename_player(Server, Member, old_rs_name, new_rs_name, stats_dict):
                                     repo.players.get_global(old_rs_name, 'botw_kills'))
             repo.players.remove_link(old_rs_name, Server.id)
             repo.stats.replace_all(player_id, stats_dict)
+            if merging:
+                logger.info(f"Merged into an existing player | Old: {old_rs_name} "
+                            f"| New: {new_rs_name}")
         else:
             # Rename in place, keeping the id — so SOTW/BOTW history placements
             # and the whole stat history stay attached instead of detaching.
@@ -125,6 +143,14 @@ async def rename_player(Server, Member, old_rs_name, new_rs_name, stats_dict):
             player_id = repo.players.get_id(new_rs_name)
             repo.stats.replace_all(player_id, stats_dict)
             logger.info(f"Renamed player in place | Old: {old_rs_name} | New: {new_rs_name}")
+
+    # A player left with no server links at all is dead weight: the old code
+    # deleted its db_runescape entry in that situation. untrack() does the
+    # equivalent, dropping its stats and taking it out of the poll set while
+    # keeping the row so SOTW/BOTW history placements still resolve.
+    if not repo.players.server_ids(old_rs_name):
+        repo.players.untrack(old_rs_name)
+        logger.info(f"{old_rs_name} has no servers left, untracked")
 
     logger.info(f"RENAMED PLAYER: Old: {old_rs_name} | New: {new_rs_name} | Updated by: {Member.name} | ID: {Member.id} | Server: {Server.name} | ID: {Server.id}")
     return True

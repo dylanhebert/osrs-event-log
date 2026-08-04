@@ -8,6 +8,7 @@ other half.
     v3  servers.name          guild display name, so the UI can label a server
         servers.icon_hash     guild icon, so it can show one
     v4  discord_members       who owns an account: name and avatar hash
+    v5  events.discord_message_id  so a Discord backfill can re-run safely
 
 It is idempotent and additive: it creates tables, an index and nullable columns,
 rewrites no existing row, and drops nothing. Safe to run more than once and safe
@@ -24,7 +25,7 @@ import sqlite3
 import sys
 from datetime import datetime, timezone
 
-SCHEMA_VERSION = 4
+SCHEMA_VERSION = 5
 
 NEW_TABLES = ["web_credentials", "discord_members"]
 
@@ -58,6 +59,15 @@ DDL = [
 NEW_COLUMNS = [
     ("servers", "name", "TEXT"),
     ("servers", "icon_hash", "TEXT"),
+    ("events", "discord_message_id", "INTEGER"),
+]
+
+# Partial indexes on the new columns, created after the columns exist.
+LATE_DDL = [
+    """
+    CREATE INDEX IF NOT EXISTS idx_events_discord_msg
+        ON events(discord_message_id) WHERE discord_message_id IS NOT NULL
+    """,
 ]
 
 
@@ -136,6 +146,9 @@ def main(argv=None):
                 # Nullable with no default, so SQLite records this in the
                 # header without rewriting a single row.
                 conn.execute(f"ALTER TABLE {table} ADD COLUMN {column} {decl}")
+            # After the columns exist, not before.
+            for statement in LATE_DDL:
+                conn.execute(statement)
             if version < SCHEMA_VERSION:
                 conn.execute(
                     "INSERT INTO schema_version (version, applied_at) VALUES (?, ?)",
