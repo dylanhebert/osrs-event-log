@@ -133,7 +133,9 @@ def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     parser.add_argument("--data-dir", default="data")
     parser.add_argument("--base-ref", default=None,
-                        help="pre-migration git ref (default: merge-base of master and HEAD)")
+                        help="pre-migration git ref (default: the "
+                             "pre-sql-migration branch, else merge-base of "
+                             "master and HEAD)")
     parser.add_argument("--keep", action="store_true")
     args = parser.parse_args(argv)
 
@@ -143,11 +145,41 @@ def main(argv=None):
 
     base_ref = args.base_ref
     if base_ref is None:
-        merge_base = run(["git", "-C", root, "merge-base", "master", "HEAD"])
-        if merge_base.returncode:
-            print("  could not determine base ref; pass --base-ref", file=sys.stderr)
-            return 2
-        base_ref = merge_base.stdout.strip()
+        # merge-base(master, HEAD) was right while the migration lived on its
+        # own branch. Once it merged, master itself became post-migration, so on
+        # any branch cut afterwards that merge-base exports the NEW tree and
+        # this test silently compares the migration against itself. The
+        # symptom is every scenario failing with KeyError: 'current_skill',
+        # because the "old" side is SQLite code handed JSON state and no
+        # database.
+        #
+        # The real pre-migration state is preserved on the pre-sql-migration
+        # branch. Prefer it, and keep the merge-base as a fallback for anyone
+        # running this from a checkout that lacks the branch.
+        preferred = run(["git", "-C", root, "rev-parse", "--verify",
+                         "--quiet", "pre-sql-migration^{commit}"])
+        if preferred.returncode == 0 and preferred.stdout.strip():
+            base_ref = preferred.stdout.strip()
+        else:
+            merge_base = run(["git", "-C", root, "merge-base", "master", "HEAD"])
+            if merge_base.returncode:
+                print("  could not determine base ref; pass --base-ref",
+                      file=sys.stderr)
+                return 2
+            base_ref = merge_base.stdout.strip()
+
+    # Whatever ref was chosen, prove it is actually pre-migration. data/repo/
+    # arrived WITH the migration, so its presence means the "old" side is the
+    # new code and the comparison is meaningless. Fail here with an explanation
+    # rather than 60 confusing scenario diffs.
+    probe = run(["git", "-C", root, "ls-tree", "-r", "--name-only", base_ref,
+                 "osrs-event-log/data/repo/"])
+    if probe.returncode == 0 and probe.stdout.strip():
+        print(f"  base ref {base_ref[:12]} already contains data/repo/, so it is\n"
+              f"  POST-migration and cannot serve as the 'before' side.\n"
+              f"  Pass --base-ref pre-sql-migration (or the last commit before\n"
+              f"  the migration landed).", file=sys.stderr)
+        return 2
 
     scratch = tempfile.mkdtemp(prefix="osrs-golden-")
     db_path = os.path.join(scratch, "osrs.db")
