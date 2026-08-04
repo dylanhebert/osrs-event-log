@@ -1,9 +1,11 @@
 # Member = A Discord member
 # Player = A Runescape account
+#
+# Adapter layer — see general.py. Signatures unchanged; storage is data/repo.
 
-import asyncio
 from common.logger import logger
 from common import exceptions as ex
+from data import repo
 from . import helpers as h
 
 
@@ -16,47 +18,25 @@ async def add_player(Server, Member, rs_name, stats_dict):
     logger.info('------------------------------')
     logger.info(f'Initialized ADD PLAYER: {rs_name} | Added by: {Member.name} | ID: {Member.id} | Server: {Server.name} | ID: {Server.id}')
 
-    # Open Discord DB
-    db_dis = await h.db_open(h.DB_DISCORD_PATH)
+    existing_member = repo.players.linked_member(rs_name, Server.id)
+    if existing_member is not None:
+        if existing_member == Member.id:
+            raise ex.DataHandlerError(
+                f'**{Member.name}** is already linked to OSRS account: *{rs_name}*!')
+        raise ex.DataHandlerError(
+            f'OSRS account *{rs_name}* is already linked to another member on this server!')
 
-    # Check if player is already in this server linked with a member
-    try: await h.check_player_member_link(db_dis, Server, Member, rs_name)
-    except Exception as e: raise e
-
-    # Get list of existing players for this member in this server
-    player_path = f'player:{rs_name}#server:{Server.id}'
-    member_path = f'member:{Member.id}#server:{Server.id}'
-    try: 
-        # Member already has a player in this server
-        player_list = db_dis[f'{member_path}#players']
-        logger.debug(f'Found player list for member: {Member.id} in server: {Server.id}...')
-    except KeyError:
-        # Member doesn't have a player in this server
-        player_list = []
-        logger.info(f"ADDED NEW MEMBER - Name: {Member.name} | ID: {Member.id} | Server ID {Server.id}")
+    player_list = repo.players.member_players(Server.id, Member.id)
     if len(player_list) >= h.MAX_PLAYERS_PER_MEMBER:
-        # Member has too many players for them in this server
-        raise ex.DataHandlerError(f'You can only have up to **{h.MAX_PLAYERS_PER_MEMBER}** OSRS accounts connected to a Discord member per server.\n' 
+        raise ex.DataHandlerError(f'You can only have up to **{h.MAX_PLAYERS_PER_MEMBER}** OSRS accounts connected to a Discord member per server.\n'
                                 f'Please remove one to add another. Current accounts: *{", ".join(player_list)}*\n'
                                 'If you are changing an OSRS name, use *;transfer {old-name}>>{new-name}* to retain your Activity Log records')
-    player_list.append(rs_name)
 
-    # Add server to player (my method)
-    await h.player_add_server(db_dis, Server, rs_name)
-    # Add updated player list to member for this server
-    db_dis[f'{member_path}#players'] = player_list
-    # Add generic entries about this member
-    db_dis[f'server:{Server.id}#all_players'].append(rs_name)
-    db_dis[f'{player_path}#member'] = Member.id
-    db_dis[f'{player_path}#mention'] = True
-    db_dis[f'{player_path}#sotw_opt'] = True
-    db_dis[f'{player_path}#botw_opt'] = True
-    await h.db_write(h.DB_DISCORD_PATH, db_dis)
+    with repo.transaction():
+        player_id = repo.players.add_link(rs_name, Server.id, Member.id,
+                                          mention=True, sotw_opt=True, botw_opt=True)
+        repo.stats.replace_all(player_id, stats_dict)
 
-    # Edit Runescape DB
-    db_rs = await h.db_open(h.DB_RUNESCAPE_PATH)  # open Runescape DB
-    db_rs[rs_name] = stats_dict
-    await h.db_write(h.DB_RUNESCAPE_PATH, db_rs)
     logger.info(f"ADDED NEW PLAYER - RS name : {rs_name} | Member: {Member.name} | ID: {Member.id} | Server: {Server.name} | ID: {Server.id}")
     return True
 
@@ -65,14 +45,11 @@ async def add_player(Server, Member, rs_name, stats_dict):
 
 async def remove_player(Server, Member, rs_name, force_rm):
     """Remove a player from a specific server\n
-    Remove player from runescape.json if there are no more servers for player\n
+    Stop tracking the player if there are no more servers for them\n
     Returns False if player could not be removed"""
 
-    member_key_only = False
     if isinstance(Member, int):
-        member_key_only = True
-        member_name = Member
-        member_id = Member
+        member_name = member_id = Member
         logger.debug(f'Removing player with member key only: {member_name}, {rs_name}')
     else:
         member_name = Member.name
@@ -80,55 +57,27 @@ async def remove_player(Server, Member, rs_name, force_rm):
 
     logger.info('------------------------------')
     logger.info(f'Initialized REMOVE PLAYER: {rs_name} | Removed by: {member_name}')
-    db_dis = await h.db_open(h.DB_DISCORD_PATH)  # open Discord DB
 
-    # Check if Member passed is tied to this player on this server (non-admin remove)
-    if not force_rm:
-        try: 
-            if not await h.player_in_server_member(db_dis, Server, member_id, rs_name):
-                raise ex.DataHandlerError(f'**{member_name}** does not use OSRS account: *{rs_name}*')
-        except Exception as e: raise e
+    if not repo.players.exists(rs_name):
+        raise ex.DataHandlerError(f'OSRS account *{rs_name}* is not present in any Activity Log!')
 
-    # Check if this player is in this server, try removing server from player
-    try: await h.player_remove_server(db_dis, Server, rs_name)
-    except Exception as e: raise e
+    linked_member = repo.players.linked_member(rs_name, Server.id)
+    if repo.players.link(rs_name, Server.id) is None:
+        raise ex.DataHandlerError(f"OSRS account *{rs_name}* is not present in this server's Activity Log!")
 
-    # Get ID of member in this server with this player (admin could be removing)
-    player_path = f'player:{rs_name}#server:{Server.id}'
-    linked_member = db_dis[f'{player_path}#member']
-    # Update all DB entries for this player
-    db_dis[f'member:{linked_member}#server:{Server.id}#players'].remove(rs_name)
-    # Check if member has any more players in this server
-    if not db_dis[f'member:{linked_member}#server:{Server.id}#players']:
-        del db_dis[f'member:{linked_member}#server:{Server.id}#players']
-    db_dis[f'server:{Server.id}#all_players'].remove(rs_name)
-    del db_dis[f'{player_path}#member']
-    del db_dis[f'{player_path}#mention']
-    del db_dis[f'{player_path}#sotw_opt']
+    # A non-admin may only remove a player they are themselves linked to.
+    if not force_rm and linked_member != member_id:
+        raise ex.DataHandlerError(f'**{member_name}** does not use OSRS account: *{rs_name}*')
 
-    try: del db_dis[f'{player_path}#dinklink']
-    except: logger.debug(f"  -{rs_name} dinklink not found for this player. Continuing...")
-    
-    # some users dont have this field
-    try: del db_dis[f'{player_path}#botw_opt']
-    except: logger.debug(f"  -{rs_name} botw_opt not found for this player. Continuing...")
-    
+    with repo.transaction():
+        repo.players.remove_link(rs_name, Server.id)
+        remaining = repo.players.server_ids(rs_name)
+        if not remaining:
+            # Matches the old behaviour: the db_runescape entry went away but
+            # sotw_xp / botw_kills stayed behind in db_discord.json.
+            repo.players.untrack(rs_name)
+            logger.info(f"Completely removed player from all DBs | RS name: {rs_name}")
 
-    # Check if there are no more instances of this player in any server
-    if len(db_dis[f'player:{rs_name}#all_servers']) == 0:
-        # Delete entries that apply to all instances of this player
-        del db_dis[f'player:{rs_name}#all_servers']
-        del db_dis[f'player:{rs_name}#sotw_xp']
-        del db_dis[f'player:{rs_name}#botw_kills']
-        # Remove player from Runescape DB
-        db_rs = await h.db_open(h.DB_RUNESCAPE_PATH)  # open Runescape DB
-        try:
-            del db_rs[rs_name]
-        except:
-            logger.debug(f"  -{rs_name} was not found in RS DB. Continuing...")
-        await h.db_write(h.DB_RUNESCAPE_PATH, db_rs)
-        logger.info(f"Completely removed player from all DBs | RS name: {rs_name}")
-    await h.db_write(h.DB_DISCORD_PATH, db_dis)
     logger.info(f"REMOVED PLAYER - RS name : {rs_name} | Linked Member ID : {linked_member} | Remover ID: {member_id} | Server: {Server.name} | ID: {Server.id}")
     return True
 
@@ -143,70 +92,40 @@ async def rename_player(Server, Member, old_rs_name, new_rs_name, stats_dict):
     logger.info(f'Initialized RENAME PLAYER: Old: {old_rs_name} | New: {new_rs_name} | Updated by: {Member.name} | ID: {Member.id} | Server: {Server.name} | ID: {Server.id}')
     if old_rs_name == new_rs_name:
         raise ex.DataHandlerError('These are the same names!')
-    db_dis = await h.db_open(h.DB_DISCORD_PATH)  # open Discord DB
-    
-    # Check if new player is already in this server linked with a member
-    try: await h.check_player_member_link(db_dis, Server, Member, new_rs_name)
-    except Exception as e: raise e
 
-    # Check if this server is in this player, try removing server from player
-    try: await h.player_remove_server(db_dis, Server, old_rs_name)
-    except Exception as e: raise e
+    existing_member = repo.players.linked_member(new_rs_name, Server.id)
+    if existing_member is not None:
+        if existing_member == Member.id:
+            raise ex.DataHandlerError(
+                f'**{Member.name}** is already linked to OSRS account: *{new_rs_name}*!')
+        raise ex.DataHandlerError(
+            f'OSRS account *{new_rs_name}* is already linked to another member on this server!')
 
-    # Get list of existing players for this member in this server
-    old_player_path = f'player:{old_rs_name}#server:{Server.id}'
-    new_player_path = f'player:{new_rs_name}#server:{Server.id}'
-    member_path = f'member:{Member.id}#server:{Server.id}'
+    if repo.players.link(old_rs_name, Server.id) is None:
+        raise ex.DataHandlerError(f"OSRS account *{old_rs_name}* is not present in this server's Activity Log!")
 
-    # Add server to player (my method)
-    await h.player_add_server(db_dis, Server, new_rs_name)
-    # Replace player in member's player list for this server
-    db_dis[f'{member_path}#players'].remove(old_rs_name)
-    db_dis[f'{member_path}#players'].append(new_rs_name)
-    # Replace player in server's player list
-    db_dis[f'server:{Server.id}#all_players'].remove(old_rs_name)
-    db_dis[f'server:{Server.id}#all_players'].append(new_rs_name)
-    # Replace old entries with new, updated entries
-    db_dis[f'{new_player_path}#member'] = db_dis[f'{old_player_path}#member']
-    db_dis[f'{new_player_path}#mention'] = db_dis[f'{old_player_path}#mention']
-    db_dis[f'{new_player_path}#sotw_opt'] = db_dis[f'{old_player_path}#sotw_opt']
-    db_dis[f'player:{new_rs_name}#sotw_xp'] = db_dis[f'player:{old_rs_name}#sotw_xp']
-    db_dis[f'player:{new_rs_name}#botw_kills'] = db_dis[f'player:{old_rs_name}#botw_kills']
+    other_servers = [sid for sid in repo.players.server_ids(old_rs_name) if sid != Server.id]
 
-    try: db_dis[f'player:{new_rs_name}#dinklink'] = db_dis[f'player:{old_rs_name}#dinklink']
-    except: logger.debug(f"  -{old_rs_name} dinklink not found for this player. Continuing...")
+    with repo.transaction():
+        if other_servers:
+            # The player is still in another server under the old name, so the
+            # old identity has to survive. Create the new one alongside it, the
+            # way the JSON version did by copying keys.
+            player_id = repo.players.add_link(new_rs_name, Server.id, Member.id)
+            repo.players.set_global(new_rs_name, 'sotw_xp',
+                                    repo.players.get_global(old_rs_name, 'sotw_xp'))
+            repo.players.set_global(new_rs_name, 'botw_kills',
+                                    repo.players.get_global(old_rs_name, 'botw_kills'))
+            repo.players.remove_link(old_rs_name, Server.id)
+            repo.stats.replace_all(player_id, stats_dict)
+        else:
+            # Rename in place, keeping the id — so SOTW/BOTW history placements
+            # and the whole stat history stay attached instead of detaching.
+            repo.players.rename(old_rs_name, new_rs_name)
+            player_id = repo.players.get_id(new_rs_name)
+            repo.stats.replace_all(player_id, stats_dict)
+            logger.info(f"Renamed player in place | Old: {old_rs_name} | New: {new_rs_name}")
 
-    # some users dont have this field
-    try:
-        db_dis[f'{new_player_path}#botw_opt'] = db_dis[f'{old_player_path}#botw_opt']
-        del db_dis[f'{old_player_path}#botw_opt']
-    except:
-        logger.debug(f"  -{old_rs_name} botw_opt not found for this player. Continuing...")
-
-    # Remove old entries (MAY CHANGE LATER)
-    del db_dis[f'{old_player_path}#member']
-    del db_dis[f'{old_player_path}#mention']
-    del db_dis[f'{old_player_path}#sotw_opt']
-
-    # Edit Runescape DB
-    # Check if there are no more instances of old player in any server
-    db_rs = await h.db_open(h.DB_RUNESCAPE_PATH)  # open Runescape DB
-    if len(db_dis[f'player:{old_rs_name}#all_servers']) == 0:
-        # Delete entries that apply to all instances of this player
-        del db_dis[f'player:{old_rs_name}#all_servers']
-        del db_dis[f'player:{old_rs_name}#sotw_xp']
-        del db_dis[f'player:{old_rs_name}#botw_kills']
-
-        try: del db_dis[f'player:{old_rs_name}#dinklink']
-        except: logger.debug(f"  -{old_rs_name} dinklink not found for this player. Continuing...")
-
-        # Remove old player from Runescape DB
-        del db_rs[old_rs_name]
-        await h.db_write(h.DB_RUNESCAPE_PATH, db_rs)
-        logger.info(f"Completely removed player from all DBs | RS name : {old_rs_name}")
-    await h.db_write(h.DB_DISCORD_PATH, db_dis)
-    db_rs[new_rs_name] = stats_dict
-    await h.db_write(h.DB_RUNESCAPE_PATH, db_rs)
     logger.info(f"RENAMED PLAYER: Old: {old_rs_name} | New: {new_rs_name} | Updated by: {Member.name} | ID: {Member.id} | Server: {Server.name} | ID: {Server.id}")
     return True
 
@@ -217,14 +136,14 @@ async def toggle_player_entry(Server, Member, rs_name, entry):
     """Toggles a player entry's value between True and False"""
     logger.info('------------------------------')
     logger.info(f"Initialized TOGGLE PLAYER ENTRY - Player: {rs_name} | Member: {Member.name} | ID: {Member.id} | Server: {Server.name} | ID: {Server.id}")
-    db = await h.db_open(h.DB_DISCORD_PATH)
-    try: 
-        if not await h.player_in_server_member(db, Server, Member.id, rs_name):
-            raise ex.DataHandlerError(f'**{Member.name}** does not use OSRS account: *{rs_name}*')
-    except Exception as e: raise e
-    new_toggle = not db[f'player:{rs_name}#server:{Server.id}#{entry}']
-    db[f'player:{rs_name}#server:{Server.id}#{entry}'] = new_toggle
-    await h.db_write(h.DB_DISCORD_PATH, db)
+    link = repo.players.link(rs_name, Server.id)
+    if link is None:
+        raise ex.DataHandlerError(f"OSRS account *{rs_name}* is not present in this server's Activity Log!")
+    if link['member_id'] != Member.id:
+        raise ex.DataHandlerError(f'**{Member.name}** does not use OSRS account: *{rs_name}*')
+
+    new_toggle = not repo.players.get_link_option(rs_name, Server.id, entry)
+    repo.players.set_link_option(rs_name, Server.id, entry, new_toggle)
     logger.info(f"FINISHED TOGGLE PLAYER ENTRY - Player: {rs_name} | Member: {Member.name} | ID: {Member.id} | Server: {Server.name} | ID: {Server.id}")
     return new_toggle
 
@@ -235,9 +154,7 @@ async def update_player_entry_global(rs_name, entry, new_val):
     """Update a player's global entry"""
     logger.info('------------------------------')
     logger.info(f"Initialized UPDATE GLOBAL PLAYER ENTRY - Player: {rs_name} | Entry: {entry} | New Value: {new_val}")
-    db = await h.db_open(h.DB_DISCORD_PATH)
-    db[f'player:{rs_name}#{entry}'] = new_val
-    await h.db_write(h.DB_DISCORD_PATH, db)
+    repo.players.set_global(rs_name, entry, new_val)
     logger.info(f"FINISHED UPDATE GLOBAL PLAYER ENTRY - Player: {rs_name} | Entry: {entry} | New Value: {new_val}")
     return new_val
 
@@ -248,10 +165,7 @@ async def add_to_player_entry_global(rs_name, entry, add_val):
     """Add to a player's global entry"""
     logger.info('------------------------------')
     logger.info(f"Initialized ADD TO GLOBAL PLAYER ENTRY - Player: {rs_name} | Entry: {entry} | Add Value: {add_val}")
-    db = await h.db_open(h.DB_DISCORD_PATH)
-    new_val = db[f'player:{rs_name}#{entry}'] + add_val
-    db[f'player:{rs_name}#{entry}'] = new_val
-    await h.db_write(h.DB_DISCORD_PATH, db)
+    new_val = repo.players.add_to_global(rs_name, entry, add_val)
     logger.info(f"FINISHED ADD TO GLOBAL PLAYER ENTRY - Player: {rs_name} | Entry: {entry} | New Value: {new_val}")
     return new_val
 
@@ -260,30 +174,11 @@ async def update_player_dinklink(rs_name, new_val):
     """Update a player's global dinklink"""
     logger.info('------------------------------')
     logger.info(f"Initialized UPDATE GLOBAL PLAYER DINKLINK - Player: {rs_name} | New Value: {new_val}")
-    db = await h.db_open(h.DB_DISCORD_PATH)
-
-    old_dinklink = None
-    try: old_dinklink = db[f'player:{rs_name}#dinklink']
-    except: logger.debug(f"  -{rs_name} dinklink not found for this player. Continuing...")
-
-    db[f'player:{rs_name}#dinklink'] = new_val
-
-    if old_dinklink:
-        try: db['dinklinks'].remove(old_dinklink)
-        except: logger.debug(f"  -{rs_name} Could not remove dinklink from dinklinks list")
-    db['dinklinks'].append(new_val)
-
-    await h.db_write(h.DB_DISCORD_PATH, db)
+    repo.players.set_dink_key(rs_name, new_val)
     logger.info(f"FINISHED UPDATE GLOBAL PLAYER DINKLINK - Player: {rs_name} | New Value: {new_val}")
     return new_val
 
 
 async def is_member_linked_to_player(Server, Member, rs_name):
-    db = await h.db_open(h.DB_DISCORD_PATH)
-    try: 
-        member_id = db[f"player:{rs_name}#server:{Server}#member"]
-        if int(member_id) == int(Member):
-            return True
-    except: 
-        return False
-    return False
+    linked = repo.players.linked_member(rs_name, int(Server))
+    return linked is not None and int(linked) == int(Member)

@@ -131,6 +131,12 @@ async def thread_player(bot, rs_name, rs_data):
         logger.debug(f"{rs_name} not found! Skipping player.")
         return
 
+    # Fetched and parsed successfully. Recorded here rather than alongside the
+    # stats write, because most players are about to take the unchanged
+    # early-out and never reach it — which would leave last_polled meaning
+    # "last written" instead of "last seen".
+    await PLAYER_HANDLER.mark_polled(rs_name)
+
     # player has hiscore profile
     logger.debug(f"{rs_name}: found player...")
     overall_xp_changed = False
@@ -194,8 +200,14 @@ async def thread_player(bot, rs_name, rs_data):
     # Finish up & post update
     if overall_xp_changed:
         logger.debug(f"{rs_name}: updating database value...")
-        PLAYER_HANDLER.data_runescape[rs_name] = rs_data
+        # Written here, per player, inside a transaction — not buffered until
+        # the end of the loop the way the JSON version was. If the process dies
+        # mid-loop now, what was already posted to Discord is already recorded,
+        # so the next cycle will not re-post the same milestones.
+        skill_writes, activity_writes = await PLAYER_HANDLER.save_player(rs_name, rs_data)
+        logger.debug(f"{rs_name}: wrote {skill_writes} skills, {activity_writes} minigames")
         if Update.has_any_updates():
+            posted_anywhere = False
             # Get servers to post to for player
             for player_server in player_discord_info:
                 try:
@@ -210,9 +222,13 @@ async def thread_player(bot, rs_name, rs_data):
                     else:
                         rs_role = server.get_role(server_info['role'])
                     await Update.post_update(bot, server, event_channel, rs_role, player_server)
+                    posted_anywhere = True
                 # Any kind of error posting to server
                 except Exception as e:
                     logger.exception(f"Error with server in player: {player_server['server']} -- {e}")
+            # Recorded once, after every server has been attempted, so that
+            # posted reflects whether it actually reached Discord anywhere.
+            await PLAYER_HANDLER.record_events(rs_name, Update, posted=posted_anywhere)
             logger.debug(f"{rs_name}: Posting update...")
         else:
             logger.debug(f"{rs_name}: No good criteria for update...")            
@@ -375,7 +391,7 @@ class MainLooper(commands.Cog):
     # @commands.command()
     # @commands.cooldown(1, 5, commands.BucketType.guild)
     # async def testscores(self, ctx):
-    #     if ctx.author.id == 134858274909585409:
+    #     if db.is_super_user(ctx.author):
     #         logger.debug('Running testscores...')
     #         await self.main_loop()
     #         logger.debug('Done with testscores!')

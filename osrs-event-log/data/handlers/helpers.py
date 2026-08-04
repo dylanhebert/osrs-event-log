@@ -1,26 +1,38 @@
 # Data handler helpers
 #
+# Bot configuration still lives in bot_config.json — it is deployment config,
+# not user state, and keeping it a file means it can be edited without touching
+# the database. Everything that used to be JSON *state* is now SQLite; see
+# data/repo/.
 
-import pathlib
-import asyncio
 import json
+import pathlib
+
 from common.logger import logger
-from common import exceptions as ex
 
 
 # ------------------ Non-Async Json Read for Specific Things ----------------- #
 
 def db_open_non_async(path):
     """Opens a json file as a python dict/list non-asyncronously"""
-    with open(path,"r") as f:
+    with open(path, "r") as f:
         return json.load(f)
+
 
 # --------------------------------- Constants -------------------------------- #
 
+# Every path is built from the current working directory, not the module
+# location. The service must run from the inner osrs-event-log directory or it
+# dies at import. This predates the migration and is unchanged by it.
 DIR_PATH = str(pathlib.Path().absolute())
 
 BOT_INFO_ALL = db_open_non_async(DIR_PATH + "/bot_config.json")
 BOT_TOKEN = BOT_INFO_ALL['BOT_TOKEN']
+# The Discord user allowed to run the owner-only commands. Read with .get() so
+# an older bot_config.json without the key still starts; general.is_super_user()
+# then denies everyone rather than granting them, so a missing key locks the
+# owner out instead of opening the commands up.
+SUPER_USER_ID = BOT_INFO_ALL.get('SUPER_USER_ID')
 MAX_PLAYERS_PER_MEMBER = BOT_INFO_ALL['MAX_PLAYERS_PER_MEMBER']
 DINK_BASE_URL = BOT_INFO_ALL['DINK_BASE_URL']
 DINK_HOST = BOT_INFO_ALL['DINK_HOST']
@@ -29,82 +41,83 @@ DINK_TEST_CHANNEL = BOT_INFO_ALL['DINK_TEST_CHANNEL']
 
 DATA_PATH = "data/"
 FULL_DATA_PATH = DIR_PATH + "/" + DATA_PATH
+MESSAGES_PATH = FULL_DATA_PATH + "custom_messages.json"
+SCHEMA_PATH = FULL_DATA_PATH + "schema.sql"
+DB_PATH = FULL_DATA_PATH + "osrs.db"
+
+# Retained so a rollback export has somewhere obvious to land, and so the
+# migration tooling and these handlers agree on where the old files were.
 DB_DISCORD_PATH = FULL_DATA_PATH + "db_discord.json"
 DB_RUNESCAPE_PATH = FULL_DATA_PATH + "db_runescape.json"
-MESSAGES_PATH = FULL_DATA_PATH + "custom_messages.json"
-
 
 
 # ------------------------------ Json Read/Write ----------------------------- #
 
 async def db_open(path):
     """Opens a json file as a python dict/list"""
-    with open(path,"r") as f:
+    with open(path, "r") as f:
         return json.load(f)
+
 
 async def db_write(path, db):
     """Writes a python dict/list as a json file"""
-    with open(path,"w") as f:
+    with open(path, "w") as f:
         json.dump(db, f, indent=4, sort_keys=False)
-        # json.dump(db, f)
-        
 
 
-# ---------------------------- Specific Functions ---------------------------- #
+# ------------------------------- DB bootstrap ------------------------------- #
 
-async def check_player_member_link(db_dis, Server, Member, rs_name):
-    """Check if a player already has a link to a server"""
-    try:
-        # This member already has this player
-        if db_dis[f'player:{rs_name}#server:{Server.id}#member'] == Member.id:
-            raise ex.DataHandlerError(f'**{Member.name}** is already linked to OSRS account: *{rs_name}*!')
-        # This player had a member on this server but is now open (deprecated)
-        elif db_dis[f'player:{rs_name}#server:{Server.id}#member'] == None:
-            logger.debug(f'{rs_name} was used in this server before. {Member.name} will now try to take it')
-            return True
-        # Another member is using this player
-        else:
-            raise ex.DataHandlerError(f'OSRS account *{rs_name}* is already linked to another member on this server!')
-    # This is an open player for this server
-    except KeyError:
-        return True
+def open_db_if_exists():
+    """Connect only if the database is already there. Never creates it.
 
-
-async def player_add_server(db_dis, Server, rs_name):
-    """Try to add a server id to a player's all_servers list\n
-    Add all_servers entry for the player if none already
+    Used at import time by sotw.py and botw.py, which need their config as soon
+    as they load. Creating the database here would be actively harmful: it would
+    satisfy ensure_db()'s "does osrs.db exist" check and defeat the guard below,
+    letting the bot start on an empty database while the real state still sits
+    in JSON.
     """
-    try: 
-        db_dis[f'player:{rs_name}#all_servers'].append(Server.id)
-        logger.debug(f'{rs_name} is an existing player name...')
-    except KeyError:
-        db_dis[f'player:{rs_name}#all_servers'] = [Server.id]
-        db_dis[f'player:{rs_name}#sotw_xp'] = 0
-        db_dis[f'player:{rs_name}#botw_kills'] = 0
-        logger.debug(f'{rs_name} is a brand new player name...')
+    import os
+
+    if not os.path.exists(DB_PATH):
+        return None
+    from data import repo
+    return repo.bootstrap(path=DB_PATH, schema_path=SCHEMA_PATH)
 
 
-async def player_remove_server(db_dis, Server, rs_name):
-    """Try to remove a server id from a player's all_servers list"""
-    try: 
-        db_dis[f'player:{rs_name}#all_servers'].remove(Server.id)
-        logger.info(f'Removed server ID {Server.id} from {rs_name} in DB')
-    except KeyError:
-        raise ex.DataHandlerError(f'OSRS account *{rs_name}* is not present in any Activity Log!')
-    except ValueError:
-        raise ex.DataHandlerError(f"OSRS account *{rs_name}* is not present in this server's Activity Log!")
+def ensure_db():
+    """Open the SQLite store, creating it from schema.sql on first run.
+
+    Refuses to create an empty database when the legacy JSON state is still
+    sitting next to it, because that combination means the migration has not
+    been run yet. Starting the bot in that state would bring it up with zero
+    players and zero servers: it would stop posting entirely, and the first
+    ;add would begin rebuilding state from nothing on top of live data.
+
+    Deleting or renaming the two JSON files after a verified migration is what
+    turns this check off.
+    """
+    import os
+
+    from data import repo
+
+    if not os.path.exists(DB_PATH):
+        legacy = [p for p in (DB_DISCORD_PATH, DB_RUNESCAPE_PATH) if os.path.exists(p)]
+        if legacy:
+            raise RuntimeError(
+                f"{DB_PATH} does not exist but the legacy JSON state does "
+                f"({', '.join(os.path.basename(p) for p in legacy)}).\n"
+                "Run the migration first:\n"
+                "    python tools/migrate_json_to_sqlite.py --db data/osrs.db\n"
+                "then verify with tools/test_roundtrip.py and tools/test_zero_delta.py.\n"
+                "Starting now would come up with an empty database.")
+
+    return repo.bootstrap(path=DB_PATH, schema_path=SCHEMA_PATH)
 
 
-async def player_in_server_member(db_dis, Server, member_id, rs_name):
-    """Check if a player is in a member for this server\n
-    Returns True or False"""
-    try:
-        # This member is using this player in this server
-        if db_dis[f'player:{rs_name}#server:{Server.id}#member'] == member_id:
-            return True
-        # Another member is using this player
-        else:
-            return False
-    # This is an open player for this server
-    except KeyError:
-        raise ex.DataHandlerError(f"OSRS account *{rs_name}* is not present in this server's Activity Log!")
+def refresh_max_players(new_val):
+    global MAX_PLAYERS_PER_MEMBER
+    MAX_PLAYERS_PER_MEMBER = new_val
+    return MAX_PLAYERS_PER_MEMBER
+
+
+logger.debug('Data handler helpers loaded.')

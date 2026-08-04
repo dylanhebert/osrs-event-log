@@ -7,6 +7,7 @@ from common.logger import logger
 import data.handlers as db
 import dink_messages
 import common.util as util
+from data import repo
 from data.handlers.DinkPlayerHandler import DinkPlayerHandler
 
 # If you already have helpers for DB, import them here
@@ -194,6 +195,7 @@ class DinkWebhook(commands.Cog):
             await PLAYER_HANDLER.remove_cache()
             return
         
+        posted_anywhere = False
         for player_server in player_discord_info:
             try:
                 server = self.bot.get_guild(player_server['server'])
@@ -214,10 +216,28 @@ class DinkWebhook(commands.Cog):
                     full_message = f'{message}{mention_role} {mention_member}'
 
                 await event_channel.send(full_message)
+                posted_anywhere = True
                 logger.info(f"New Dink update posted for [{name_rs}] in server [{server.name}] ({server.id}) & channel [{event_channel.name}] ({event_channel.id})")
             # Any kind of error posting to server
             except Exception as e:
                 logger.exception(f"Error with server in player: {player_server['server']} -- {e}")
+
+        # Record the event for the activity feed. Until now Dink events were
+        # formatted, posted and discarded, so drops, pets, quests, clues and
+        # collection log left no trace at all.
+        #
+        # Deliberately last, and deliberately swallowing everything: Dink does
+        # not retry, so nothing in this method may raise after the message has
+        # gone out. A failure to record is a log line, never a lost event.
+        try:
+            player_id = repo.players.get_id(name_rs)
+            if player_id is not None:
+                repo.events.log_event(
+                    player_id, None, repo.events.SOURCE_DINK,
+                    event_type or 'UNKNOWN', message,
+                    payload=payload, posted=posted_anywhere)
+        except Exception as e:
+            logger.exception(f"Could not record Dink event for {name_rs} -- {e}")
 
         await PLAYER_HANDLER.remove_cache()
 

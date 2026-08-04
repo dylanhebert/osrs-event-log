@@ -8,3 +8,12 @@ db_runescape.json
 sotw_config.json
 botw_config.json
 requirements_old.txt
+
+# SQLite state. Same rule as the JSON files it replaces: the droplet holds the
+# only copy, backed up by gd-ops/scripts/backup-db.sh.
+*.db
+*.db-wal
+*.db-shm
+
+# Local copies of live data pulled from the droplet for testing.
+fixtures/

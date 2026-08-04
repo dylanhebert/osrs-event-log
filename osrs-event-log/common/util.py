@@ -60,17 +60,21 @@ def xp_changed(old, new):
     else:
         return False
 
-# FORMAT COMMAS IN LONG INTS
+# PARSE A STORED VALUE TO AN INT
 def format_int(num):
+    """Values are stored as real integers now, so this is mostly a pass-through.
+
+    It used to do `if "," in num` on the comma-formatted strings the JSON held,
+    which raises TypeError on an int. Strings are still accepted so that a
+    hand-edited value or an old fixture does not crash the looper.
+    """
     if num is None:
         return 0
-    if "," in num:
-        num = int(num.replace(",", ""))
-    else:
-        num = int(num)
-    return num
+    if isinstance(num, int):
+        return num
+    return int(str(num).replace(",", ""))
 
-# FORMAT COMMAS IN LONG INTS #2
+# FORMAT COMMAS IN LONG INTS FOR DISPLAY
 def format_int_str(num):
     try:
         num = int(num)
@@ -80,6 +84,18 @@ def format_int_str(num):
         return "{:,}".format(num)
     else:
         return str(num)
+
+# FORMAT A RANK FOR DISPLAY
+def format_rank_str(rank):
+    """Unranked is None in the database and was '--' on the scraped page.
+
+    Messages print rank directly, so without this an unranked entry renders as
+    'None' (or '-1' straight from the API) where players are used to seeing
+    '--'.
+    """
+    if rank is None or rank == -1:
+        return '--'
+    return format_int_str(rank)
 
 
 # ------ BASIC ASYNC FUNCTIONS ------
@@ -111,16 +127,21 @@ async def check_player_validity(name):
 # ------- WEB FUNCTIONS -------
 #------------------------------
 
-# FORMAT A HISCORES NUMBER THE WAY THE OLD HTML PAGE DID
-def hiscore_value(num):
-    """The scraped page rendered every number with thousands separators, and an
-    unranked entry as '--'. The stored player database is full of those strings,
-    so index_lite.json's raw ints have to be formatted back into the identical
-    shape. If they are not, every skill of every player compares as changed on
-    the first run and the bot spams a milestone message for all of them."""
+# NORMALISE A HISCORES NUMBER FOR STORAGE
+def hiscore_int(num):
+    """index_lite.json marks an unranked entry as -1; the database uses NULL.
+
+    This replaces hiscore_value(), which formatted the API's raw ints back into
+    the comma-separated strings the scraped HTML page produced ("102,315,637")
+    because the JSON store was full of them. Values are real integers now, so
+    the round-trip through a string is gone entirely — and with it the risk that
+    a formatting mismatch made every skill of every player compare as changed.
+
+    Formatting moved to display time: util.format_int_str / util.format_rank_str.
+    """
     if num is None or num == -1:
-        return '--'
-    return "{:,}".format(num)
+        return None
+    return int(num)
 
 
 # REQUEST HISCORES DATA (AIOHTTP)
@@ -169,15 +190,15 @@ async def get_player_scores(name_rs, page):
         # The page listed only skills the player actually had xp in, and dropped
         # the rest of the row entirely — including Overall, for an account that
         # has fallen off the hiscores altogether. index_lite instead returns all
-        # 25 every time with -1 in the gaps. Mirror the page: without this, an
-        # unranked skill reaches PlayerUpdate as '--' and format_int() raises
-        # ValueError: invalid literal for int() with base 10: '--'.
+        # 25 every time with -1 in the gaps. Mirror the page: a skill the player
+        # has no xp in must not become a stored row, or it reads as a brand new
+        # skill on the next poll and posts "first time on the Hiscores".
         if skill.get('xp', 0) <= 0:
             continue
         player_dict['skills'][skill['name']] = {
-            'rank': hiscore_value(skill.get('rank')),
-            'level': hiscore_value(skill.get('level')),
-            'xp': hiscore_value(skill.get('xp')),
+            'rank': hiscore_int(skill.get('rank')),
+            'level': hiscore_int(skill.get('level')),
+            'xp': hiscore_int(skill.get('xp')),
         }
     for activity in page.get('activities', []):
         # The old page only listed activities the player had actually done, so
@@ -186,8 +207,8 @@ async def get_player_scores(name_rs, page):
         if activity.get('score', 0) <= 0:
             continue
         player_dict['minigames'][activity['name']] = {
-            'rank': hiscore_value(activity.get('rank')),
-            'score': hiscore_value(activity.get('score')),
+            'rank': hiscore_int(activity.get('rank')),
+            'score': hiscore_int(activity.get('score')),
         }
     logger.debug(f"{name_rs}: Successfully created dict for {name_rs}!")
     return player_dict

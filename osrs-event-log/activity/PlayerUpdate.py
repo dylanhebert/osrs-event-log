@@ -234,7 +234,7 @@ class PlayerUpdate:
         # skill is new to hiscores
         else:
             logger.debug("new entry...")
-            message = f"**{self.rs_name} levelled up {title} to {new_data['level']}**```This is the first time this skill is on the Hiscores```"
+            message = f"**{self.rs_name} levelled up {title} to {util.format_int_str(new_data['level'])}**```This is the first time this skill is on the Hiscores```"
             self.skills.append(message)
             logger.debug(f"appended NEW update for {title} to skills list...")
 
@@ -277,7 +277,7 @@ class PlayerUpdate:
                     total_clue_msg = f" | Total clues completed: {util.format_int_str(self.clue_all_total)}"
                 else:
                     total_clue_msg = ""
-                message = f"**{self.rs_name} completed {an} {clue_lvl} Clue Scroll for the first time**```c\n{clue_lvl} clues completed: {util.format_int_str(new_data['score'])} | Current rank: {new_data['rank']}{total_clue_msg}```"
+                message = f"**{self.rs_name} completed {an} {clue_lvl} Clue Scroll for the first time**```c\n{clue_lvl} clues completed: {util.format_int_str(new_data['score'])} | Current rank: {util.format_rank_str(new_data['rank'])}{total_clue_msg}```"
                 self.minigames.append(message)
                 logger.debug(f"appended update for {title} to minigames list...")
 
@@ -308,11 +308,11 @@ class PlayerUpdate:
                 # check if this was a special boss
                 if title in self.custom_messages['bosses']:
                     message_extra = self.custom_messages['bosses'][title]
-                    message = f"**{self.rs_name} {boss_terms[0]} {title} for the first time! {message_extra}**```c\nTotal {boss_terms[1]} count: {util.format_int_str(new_data['score'])} | Current rank: {new_data['rank']}```"
+                    message = f"**{self.rs_name} {boss_terms[0]} {title} for the first time! {message_extra}**```c\nTotal {boss_terms[1]} count: {util.format_int_str(new_data['score'])} | Current rank: {util.format_rank_str(new_data['rank'])}```"
                     self.milestones.append(message)
                     logger.debug(f"appended Boss update for {title} to milestones list...")
                 else:
-                    message = f"**{self.rs_name} {boss_terms[0]} {title} for the first time!**```c\nTotal {boss_terms[1]} count: {util.format_int_str(new_data['score'])} | Current rank: {new_data['rank']}```"
+                    message = f"**{self.rs_name} {boss_terms[0]} {title} for the first time!**```c\nTotal {boss_terms[1]} count: {util.format_int_str(new_data['score'])} | Current rank: {util.format_rank_str(new_data['rank'])}```"
                     self.minigames.append(message)
                     logger.debug(f"appended update for {title} to minigames list...")
             
@@ -327,40 +327,52 @@ class PlayerUpdate:
         logger.debug("assigning Overall...")
         lvl_new = util.format_int(new_data['level'])
         lvl_old = util.format_int(old_data['level'])
+        # Values are integers now, so every one printed into a message goes
+        # through format_int_str/format_rank_str. The store used to hold them
+        # pre-formatted ("2,376", "--") and these f-strings printed them raw.
+        lvl_str = util.format_int_str(new_data['level'])
+        xp_str = util.format_int_str(new_data['xp'])
+        rank_str = util.format_rank_str(new_data['rank'])
         # MAX
         max_lvl = 2376
-        if lvl_new == max_lvl and lvl_old != max_lvl:  #  TOTAL LEVEL {new_data['level']}
+        if lvl_new == max_lvl and lvl_old != max_lvl:  #  TOTAL LEVEL {lvl_str}
             message = f"**{self.rs_name} HAS MAXED!!** \U0001F44F \U0001F44F \U0001F44F \U0001F525 \U0001F602 \U0001F44C \U0001F4AF \U0001F44F \U0001F44F \U0001F44F \n*Now you can finally play the game.*\
-                        ```c\nOverall XP: {new_data['xp']} | Overall rank: {new_data['rank']}```"
+                        ```c\nOverall XP: {xp_str} | Overall rank: {rank_str}```"
             self.milestones.append(message)
         # 2200 total
         elif lvl_old < 2200 and lvl_new >= 2200:
-            message = f"**{self.rs_name} has achieved 2,200 total level**```c\nTotal level: {new_data['level']} | Overall XP: {new_data['xp']}```"
+            message = f"**{self.rs_name} has achieved 2,200 total level**```c\nTotal level: {lvl_str} | Overall XP: {xp_str}```"
             self.milestones.append(message)
         # 2000 total
         elif lvl_old < 2000 and lvl_new >= 2000:
-            message = f"**{self.rs_name} has achieved 2,000 total level**```c\nTotal level: {new_data['level']} | Overall XP: {new_data['xp']}```"
+            message = f"**{self.rs_name} has achieved 2,000 total level**```c\nTotal level: {lvl_str} | Overall XP: {xp_str}```"
             self.milestones.append(message)
         # no milestones
-        else: self.overall_update = f"```c\nTotal level: {new_data['level']} | Total Overall XP: {new_data['xp']}```"
+        else: self.overall_update = f"```c\nTotal level: {lvl_str} | Total Overall XP: {xp_str}```"
 
 
 # ----------------------------------- SKILL ---------------------------------- #
 
     def make_skill_update(self, old_data, new_data, title, xp_diff):
         logger.debug(f"assigning {title}...")
-        new_lvl = new_data['level']
+        # level is an int now. These comparisons used to be against the string
+        # '99', and the custom-message lookup against a dict whose keys are
+        # strings ("98", "92", "69", ...) in data/custom_messages.json. Left as
+        # they were, every one of them would silently evaluate False forever:
+        # no 99 milestones, no joke messages, no errors, nothing in the logs.
+        new_lvl = util.format_int(new_data['level'])
+        max_lvl = 99
         # special messages for 99
-        if new_lvl == '99':
+        if new_lvl == max_lvl:
             message_extra = f". {self.custom_messages['max_levels'][title]}"
-        # check for special messages
-        elif new_lvl in self.custom_messages['levels']:
-            message_extra = f". {self.custom_messages['levels'][new_lvl]}"
+        # check for special messages — keyed by the level as a string
+        elif str(new_lvl) in self.custom_messages['levels']:
+            message_extra = f". {self.custom_messages['levels'][str(new_lvl)]}"
         else: message_extra = ''
         # make message
-        message = f"**{self.rs_name} levelled up {title} to {new_lvl}{message_extra}**```c\n{util.format_int_str(xp_diff)} XP gained | Total {title} XP: {new_data['xp']}```"
+        message = f"**{self.rs_name} levelled up {title} to {new_lvl}{message_extra}**```c\n{util.format_int_str(xp_diff)} XP gained | Total {title} XP: {util.format_int_str(new_data['xp'])}```"
         # 99 milestone
-        if new_lvl == '99':
+        if new_lvl == max_lvl:
             self.milestones.append(message)
             logger.debug(f"appended update for {title} to milestones list...")
         # any other level
@@ -382,7 +394,7 @@ class PlayerUpdate:
         increment = threshold
         while xp_new >= threshold:
             if xp_old < threshold:
-                message = f"**{self.rs_name} has achieved {util.format_int_str(threshold)} {title} XP**```c\n{util.format_int_str(xp_diff)} XP gained | Total {title} XP: {new_data['xp']}```"
+                message = f"**{self.rs_name} has achieved {util.format_int_str(threshold)} {title} XP**```c\n{util.format_int_str(xp_diff)} XP gained | Total {title} XP: {util.format_int_str(new_data['xp'])}```"
                 # 10M xp is too low for milestone notification - 2/23/20
                 if threshold == 10000000:
                     self.skills.append(message)
@@ -413,7 +425,7 @@ class PlayerUpdate:
                 if clue_lvl != 'Total':  # show total if not already looking at total clues
                     message_extra = f" | Total clues completed: {util.format_int_str(self.clue_all_total)}"
                 else: message_extra = ""
-                message = f"**{self.rs_name} has completed at least {util.format_int_str(threshold)} {clue_lvl} Clue Scrolls**```c\n{clue_lvl} clues completed: {new_data['score']} | Current rank: {new_data['rank']}{message_extra}```"
+                message = f"**{self.rs_name} has completed at least {util.format_int_str(threshold)} {clue_lvl} Clue Scrolls**```c\n{clue_lvl} clues completed: {util.format_int_str(new_data['score'])} | Current rank: {util.format_rank_str(new_data['rank'])}{message_extra}```"
                 self.milestones.append(message)
                 logger.debug(f"appended Clue update for {title} to milestones list...")
                 found_milestone = True
@@ -432,7 +444,7 @@ class PlayerUpdate:
                 total_clue_msg = f" | Total clues completed: {util.format_int_str(self.clue_all_total)}"
             else:
                 total_clue_msg = ""
-            message = f"**{self.rs_name} has completed {new_data['score']} {clue_lvl} Clue Scrolls**```c\nNew {clue_lvl} clues logged: {count_diff} | Current rank: {new_data['rank']}{total_clue_msg}```"
+            message = f"**{self.rs_name} has completed {util.format_int_str(new_data['score'])} {clue_lvl} Clue Scrolls**```c\nNew {clue_lvl} clues logged: {util.format_int_str(count_diff)} | Current rank: {util.format_rank_str(new_data['rank'])}{total_clue_msg}```"
 
             self.minigames.append(message)
             logger.debug(f"appended update for {title} to minigames list...")
@@ -454,7 +466,7 @@ class PlayerUpdate:
         increment = threshold
         while kill_new >= threshold:
             if kill_old < threshold:
-                message = f"**{self.rs_name} has {action_1} {title} at least {util.format_int_str(threshold)} times**```c\nTotal {action_2} count: {new_data['score']} | Current rank: {new_data['rank']}```"
+                message = f"**{self.rs_name} has {action_1} {title} at least {util.format_int_str(threshold)} times**```c\nTotal {action_2} count: {util.format_int_str(new_data['score'])} | Current rank: {util.format_rank_str(new_data['rank'])}```"
                 self.milestones.append(message)
                 logger.debug(f"appended Boss update for {title} to milestones list...")
                 found_milestone = True
@@ -469,7 +481,7 @@ class PlayerUpdate:
             # else: times = 'times'
             logger.debug("found diff...")
             try:
-                message = f"**{self.rs_name} has {action_1} {title} {new_data['score']} times**```c\nNew {action_2}s logged: {util.format_int_str(kill_diff)} | Current rank: {new_data['rank']}```"
+                message = f"**{self.rs_name} has {action_1} {title} {util.format_int_str(new_data['score'])} times**```c\nNew {action_2}s logged: {util.format_int_str(kill_diff)} | Current rank: {util.format_rank_str(new_data['rank'])}```"
             except Exception as e:
                 logger.exception(f'Error posting boss update: {e}')
             logger.debug("made message...")

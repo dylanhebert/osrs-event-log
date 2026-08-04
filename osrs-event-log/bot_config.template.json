@@ -1,5 +1,6 @@
 {
   "BOT_TOKEN": null,
+  "SUPER_USER_ID": null,
   "MAX_PLAYERS_PER_MEMBER": 2,
   "DINK_BASE_URL": "",
   "DINK_HOST": "",

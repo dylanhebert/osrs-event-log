@@ -1,44 +1,31 @@
-import asyncio
 from common.logger import logger
-from common import exceptions as ex
-from . import helpers as h
+from data import repo
 
 
 class DinkPlayerHandler:
+    """Per-request state for the Dink webhook.
+
+    Dink does not retry, so anything that raises here loses an event
+    permanently. build_cache() is now a cheap refresh rather than a 320 KB
+    json.load() on every incoming webhook.
+    """
+
     def __init__(self):
-        self.data_discord = None
         self.server_info_all = None
-        
+
     async def build_cache(self):
-        self.data_discord = await h.db_open(h.DB_DISCORD_PATH)
         self.server_info_all = await self.get_server_info_all()
-        
+
     async def remove_cache(self):
-        self.data_discord = None
         self.server_info_all = None
-        
+
     async def get_server_info_all(self):
-        build_dict = {}
-        for server in self.data_discord['active_servers']:
-            build_dict[str(server)] = {
-                'channel': self.data_discord[f'server:{server}#channel'],
-                'role': self.data_discord[f'server:{server}#role'] }
-        return build_dict
+        return repo.servers.info_all(active_only=True)
 
     async def get_all_player_info(self, rs_name):
         """Gets all servers and members connected to a player"""
         logger.debug('------------------------------')
         logger.debug(f'Initialized DINK GET PLAYER INFO - Player: {rs_name}')
-        # Loop through db to get player's servers
-        player_servers_all = []
-        for server in self.data_discord[f'player:{rs_name}#all_servers']:
-            logger.debug(f'Checking server: {server}')
-            if server in self.data_discord['active_servers']:
-                player_servers_all.append({
-                    "server": server,
-                    "member": self.data_discord[f'player:{rs_name}#server:{server}#member'],
-                    "mention": self.data_discord[f'player:{rs_name}#server:{server}#mention']
-                })
+        player_servers_all = repo.players.active_links(rs_name)
         logger.debug(f"Finished DINK GET PLAYER INFO - Player: {rs_name}")
-        # logger.debug(player_servers_all)
         return player_servers_all

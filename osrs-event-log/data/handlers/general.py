@@ -1,10 +1,14 @@
 # Member = A Discord member
 # Player = A Runescape account
+#
+# Adapter layer. Every function here keeps the exact signature the cogs already
+# call — including taking discord.py Server/Member objects — and forwards to
+# data/repo, which deals only in plain ids. The cogs are unchanged by the SQLite
+# migration; that is the point of the split.
 
-import json
-import os
 from common.logger import logger
 from common import exceptions as ex
+from data import repo
 from . import helpers as h
 
 
@@ -25,11 +29,29 @@ def get_dink_port():
 def get_dink_test_channel():
     return h.DINK_TEST_CHANNEL
 
-async def get_db_discord():
-    return await h.db_open(h.DB_DISCORD_PATH)
+def get_super_user_id():
+    return h.SUPER_USER_ID
 
-async def get_db_runescape():
-    return await h.db_open(h.DB_RUNESCAPE_PATH)
+
+def is_super_user(user):
+    """True only for the configured bot owner.
+
+    Was a Discord user id hardcoded in 14 places across cogs/cmds/admin.py and
+    cogs/cmds/super.py. It now comes from SUPER_USER_ID in bot_config.json,
+    which is gitignored — this repo is public.
+
+    Fails closed. If SUPER_USER_ID is unset the answer is always False, so a
+    missing config key locks the owner out of the owner-only commands rather
+    than granting them to everyone. Accepts a Member/User or a raw id.
+    """
+    if h.SUPER_USER_ID is None:
+        logger.debug('SUPER_USER_ID is not set in bot_config.json; denying.')
+        return False
+    user_id = getattr(user, 'id', user)
+    try:
+        return int(user_id) == int(h.SUPER_USER_ID)
+    except (TypeError, ValueError):
+        return False
 
 def get_custom_messages():
     return h.db_open_non_async(h.MESSAGES_PATH)
@@ -37,22 +59,18 @@ def get_custom_messages():
 
 # ------------------------------- Verify Files ------------------------------- #
 
-def verify_files(file_name):
-    """Verify if a file is present in a path"""
-    path_check = h.DATA_PATH + file_name
-    if os.path.exists(path_check):
-        logger.debug(f'Found {path_check}')
-        pass
-    else:
-        if file_name == 'db_discord.json':
-            db = {'active_servers': [],'removed_servers': [],'dinklinks': []}
-        else:
-            db = {}
-        with open(path_check, 'w') as outfile:  
-            json.dump(db, outfile)
-        logger.info(f'CREATED NEW FILE: {path_check}')
-        
-        
+def verify_files(file_name=None):
+    """Make sure the data store exists and is usable.
+
+    Kept as verify_files() with an optional argument because osrs-event-log.py
+    calls it twice at startup, once per old JSON filename. Creating the database
+    is idempotent, so the second call is a no-op.
+    """
+    connection = h.ensure_db()
+    logger.debug(f'Data store ready at {h.DB_PATH}')
+    return connection
+
+
 # ----------------------- Update Max Players Per Member ---------------------- #
 
 async def update_max_players(new_val):
@@ -63,44 +81,14 @@ async def update_max_players(new_val):
         logger.debug(f'Old max players: {config_all["MAX_PLAYERS_PER_MEMBER"]}')
         config_all['MAX_PLAYERS_PER_MEMBER'] = new_val
         await h.db_write(config_path, config_all)
-        h.MAX_PLAYERS_PER_MEMBER = new_val
-    except Exception as e:
-        raise ex.DataHandlerError(f'COULD NOT LOAD BOT CONFIG!')
-    
+        h.refresh_max_players(new_val)
+    except Exception:
+        raise ex.DataHandlerError('COULD NOT LOAD BOT CONFIG!')
+
 
 async def is_dinklink_in_use(dinklink):
-    db_dis = await h.db_open(h.DB_DISCORD_PATH)
-    if dinklink in db_dis['dinklinks']:
-        return True
-    return False
+    return repo.players.dink_key_in_use(dinklink)
 
 
 def dink_link_full_url(dinklink):
     return f"{h.DINK_BASE_URL}/dink/{dinklink}"
-        
-        
-# ---------------------------------- TESTING --------------------------------- #
-
-# def verify_files(file_name):
-#     """Verify if a file is present in a path"""
-#     path_check = DATA_PATH + file_name
-#     if os.path.exists(path_check):
-#         logger.debug(f'Found {path_check}')
-#         TEMP CODE FOR TESTING
-#         if file_name == 'db_discord.json':
-#             db = {'active_servers': [],'removed_servers': []}
-#             with open(DB_DISCORD_PATH, 'w') as outfile:  
-#                 json.dump(db, outfile, indent=4, sort_keys=False)
-#         else:
-#             db = {}
-#             with open(DB_RUNESCAPE_PATH, 'w') as outfile:  
-#                 json.dump(db, outfile, indent=4, sort_keys=False)
-#         pass
-#     else:
-#         if file_name == 'db_discord.json':
-#             db = {'active_servers': [],'removed_servers': []}
-#         else:
-#             db = {}
-#         with open(path_check, 'w') as outfile:  
-#             json.dump(db, outfile)
-#         logger.info(f'CREATED NEW FILE: {path_check}')
