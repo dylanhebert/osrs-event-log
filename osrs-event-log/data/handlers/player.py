@@ -134,8 +134,19 @@ async def rename_player(Server, Member, old_rs_name, new_rs_name, stats_dict):
             repo.players.remove_link(old_rs_name, Server.id)
             repo.stats.replace_all(player_id, stats_dict)
             if merging:
-                logger.info(f"Merged into an existing player | Old: {old_rs_name} "
-                            f"| New: {new_rs_name}")
+                # The id changed, so anything keyed on the old id has to follow
+                # or it is stranded on a row nobody can reach. Done only once
+                # the old identity has no servers left: while it is still in
+                # use elsewhere, its history is still its own.
+                if not repo.players.server_ids(old_rs_name):
+                    moved = repo.players.merge_into(old_rs_name, new_rs_name)
+                    summary = ", ".join(f"{n} {t}" for t, n in moved.items()) or "nothing"
+                    logger.info(f"Merged into an existing player | Old: {old_rs_name} "
+                                f"| New: {new_rs_name} | moved: {summary}")
+                else:
+                    logger.info(f"Merged into an existing player | Old: {old_rs_name} "
+                                f"| New: {new_rs_name} | old identity still in "
+                                f"other servers, history left attached")
         else:
             # Rename in place, keeping the id — so SOTW/BOTW history placements
             # and the whole stat history stay attached instead of detaching.

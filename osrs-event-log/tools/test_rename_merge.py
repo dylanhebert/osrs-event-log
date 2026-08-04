@@ -84,54 +84,93 @@ def main():
 
     # The production shape: BOTH names already exist, the source is in two
     # servers, the destination in neither yet.
-    repo.players.add_link("Gold+Putter", 100, 11)
-    repo.players.add_link("Gold+Putter", 200, 11)
-    repo.players.ensure("Green+Putter", tracked=True)
-    repo.players.set_global("Gold+Putter", "sotw_xp", 4242)
-    source_id = repo.players.get_id("Gold+Putter")
-    target_id = repo.players.get_id("Green+Putter")
+    repo.players.add_link("Retired+Alt", 100, 11)
+    repo.players.add_link("Retired+Alt", 200, 11)
+    repo.players.ensure("Surviving+Main", tracked=True)
+    repo.players.set_global("Retired+Alt", "sotw_xp", 4242)
+    source_id = repo.players.get_id("Retired+Alt")
+    target_id = repo.players.get_id("Surviving+Main")
+
+    # Give the old identity the things a real account accumulates, so the merge
+    # has something to strand if it gets this wrong.
+    repo.players.set_dink_key("Retired+Alt", "a-key")
+    repo.stats.replace_all(source_id, STATS)
+    repo.events.log_event(source_id, None, "hiscores", "LEVEL", "an old event")
+    with repo.transaction():
+        repo.db.execute(
+            "INSERT INTO sotw_weeks (server_id, skill_name, ended_on, seq)"
+            " VALUES (100, 'Agility', '2026-07-01', 0)")
+        week_id = repo.db.scalar("SELECT MAX(id) FROM sotw_weeks")
+        repo.db.execute(
+            "INSERT INTO sotw_week_players (week_id, player_id, player_name,"
+            " xp, rank, seq) VALUES (?,?,?,?,?,0)",
+            (week_id, source_id, "Retired+Alt", 600, 3))
 
     print("setup")
     check("both names exist as separate players", source_id != target_id,
           f"{source_id} vs {target_id}")
     check("source is in two servers",
-          repo.players.server_ids("Gold+Putter") == [100, 200])
+          repo.players.server_ids("Retired+Alt") == [100, 200])
 
     print("\nfirst transfer, in server A")
     asyncio.run(
-        handler.rename_player(server_a, member, "Gold+Putter", "Green+Putter", STATS))
+        handler.rename_player(server_a, member, "Retired+Alt", "Surviving+Main", STATS))
     check("server A now points at the destination player",
-          repo.players.linked_member("Green+Putter", 100) == 11)
-    check("source keeps its other server", repo.players.server_ids("Gold+Putter") == [200])
+          repo.players.linked_member("Surviving+Main", 100) == 11)
+    check("source keeps its other server", repo.players.server_ids("Retired+Alt") == [200])
     check("no duplicate player was created",
           repo.db.scalar("SELECT COUNT(*) FROM players WHERE rs_name = ?",
-                         ("Green+Putter",), 0) == 1)
+                         ("Surviving+Main",), 0) == 1)
     check("the destination kept its original id",
-          repo.players.get_id("Green+Putter") == target_id)
+          repo.players.get_id("Surviving+Main") == target_id)
 
     print("\nsecond transfer, in server B (this is what failed in production)")
     try:
         asyncio.run(
-            handler.rename_player(server_b, member, "Gold+Putter", "Green+Putter", STATS))
+            handler.rename_player(server_b, member, "Retired+Alt", "Surviving+Main", STATS))
         check("it completes instead of raising UNIQUE constraint failed", True)
     except Exception as e:
         check("it completes instead of raising UNIQUE constraint failed", False,
               f"{type(e).__name__}: {e}")
 
     check("server B now points at the destination player",
-          repo.players.linked_member("Green+Putter", 200) == 11)
+          repo.players.linked_member("Surviving+Main", 200) == 11)
     check("the destination is now in both servers",
-          repo.players.server_ids("Green+Putter") == [100, 200])
+          repo.players.server_ids("Surviving+Main") == [100, 200])
     check("the source has no servers left",
-          repo.players.server_ids("Gold+Putter") == [])
+          repo.players.server_ids("Retired+Alt") == [])
     check("the source was untracked rather than left in the poll set",
           repo.db.scalar("SELECT tracked FROM players WHERE rs_name = ?",
-                         ("Gold+Putter",)) == 0)
+                         ("Retired+Alt",)) == 0)
     check("the source row survives, so old placements still resolve",
-          repo.players.get_id("Gold+Putter") == source_id)
+          repo.players.get_id("Retired+Alt") == source_id)
     check("still exactly one destination player",
           repo.db.scalar("SELECT COUNT(*) FROM players WHERE rs_name = ?",
-                         ("Green+Putter",), 0) == 1)
+                         ("Surviving+Main",), 0) == 1)
+
+    print("\neverything tied to the old name followed it")
+    check("stat history moved to the destination",
+          repo.db.scalar("SELECT COUNT(*) FROM player_skill_history"
+                         " WHERE player_id = ?", (source_id,), 0) == 0,
+          "history left stranded on the retired id")
+    check("...and is now on the destination",
+          repo.db.scalar("SELECT COUNT(*) FROM player_skill_history"
+                         " WHERE player_id = ?", (target_id,), 0) > 0)
+    check("events moved",
+          repo.db.scalar("SELECT COUNT(*) FROM events WHERE player_id = ?",
+                         (source_id,), 0) == 0)
+    check("SOTW placements are credited to the destination",
+          repo.db.scalar("SELECT COUNT(*) FROM sotw_week_players"
+                         " WHERE player_id = ?", (target_id,), 0) == 1)
+    check("...but keep the name they were won under",
+          repo.db.scalar("SELECT player_name FROM sotw_week_players"
+                         " WHERE player_id = ?", (target_id,)) == "Retired+Alt")
+    check("the dink key moved, since the destination had none",
+          repo.db.scalar("SELECT dink_link_key FROM players WHERE id = ?",
+                         (target_id,)) == "a-key")
+    check("...and was cleared from the retired identity",
+          repo.db.scalar("SELECT dink_link_key FROM players WHERE id = ?",
+                         (source_id,)) is None)
 
     print("\nthe plain rename path still renames in place")
     repo.players.add_link("Solo+Name", 100, 12)
@@ -146,7 +185,7 @@ def main():
     print("\nguards")
     try:
         asyncio.run(
-            handler.rename_player(server_a, member, "Green+Putter", "Green+Putter", STATS))
+            handler.rename_player(server_a, member, "Surviving+Main", "Surviving+Main", STATS))
         check("renaming to the identical name is refused", False, "no error raised")
     except ex.DataHandlerError:
         check("renaming to the identical name is refused", True)

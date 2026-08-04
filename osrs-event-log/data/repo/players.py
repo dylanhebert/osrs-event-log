@@ -240,6 +240,65 @@ def rename(old_rs_name, new_rs_name):
                (new_rs_name, name_to_discord(new_rs_name), old_rs_name))
 
 
+def merge_into(source_rs_name, target_rs_name):
+    """Move everything the old identity accumulated onto the new one.
+
+    A transfer means "this player is now known by the new name", so anything
+    tied to the old name belongs to the new one. rename() achieves that for
+    free by keeping the id, but it only works when the destination name is
+    free. When the destination is already a player the operation is a merge,
+    the id has to change, and every table keyed on the old id has to follow or
+    the history is stranded on a row nobody can reach.
+
+    What moves, and why:
+
+      stat history        the account's past; without it a chart restarts at
+                          the transfer
+      events              feed continuity
+      SOTW/BOTW placements  re-pointed by id, but player_name is left alone.
+                          The name records who they were called at the time,
+                          which is true and is what the standings fall back to
+                          for deleted players; the id is what credits the
+                          trophy to the right person now.
+      dink_link_key       only if the destination has none, since overwriting a
+                          working key would break that account's RuneLite
+                          config silently.
+
+    Current stats are NOT moved: the caller replaces them with a fresh fetch.
+
+    Returns a dict of what moved, for logging. Caller supplies the transaction.
+    """
+    source_id = get_id(source_rs_name)
+    target_id = get_id(target_rs_name)
+    if source_id is None or target_id is None or source_id == target_id:
+        return {}
+
+    moved = {}
+    for table in ("player_skill_history", "player_activity_history", "events",
+                  "sotw_week_players", "botw_week_players"):
+        cur = db.execute(f"UPDATE {table} SET player_id = ? WHERE player_id = ?",
+                         (target_id, source_id))
+        if cur.rowcount:
+            moved[table] = cur.rowcount
+
+    target_key = db.scalar("SELECT dink_link_key FROM players WHERE id = ?",
+                           (target_id,))
+    source_key = db.scalar("SELECT dink_link_key FROM players WHERE id = ?",
+                           (source_id,))
+    if source_key and not target_key:
+        db.execute("UPDATE players SET dink_link_key = ? WHERE id = ?",
+                   (source_key, target_id))
+        moved["dink_link_key"] = 1
+    if source_key:
+        # The old row keeps no credential either way. Leaving a bearer token on
+        # a retired identity serves nothing and the webhook routes on the
+        # payload's player name, not on which row holds the key.
+        db.execute("UPDATE players SET dink_link_key = NULL WHERE id = ?",
+                   (source_id,))
+
+    return moved
+
+
 def delete(rs_name):
     """Remove the player entirely. Cascades to links and stats.
 
