@@ -311,12 +311,30 @@ def main():
     # ---------------------------------------------------------------- #
     # 4. Authenticated responses must not be shared-cacheable.
     # ---------------------------------------------------------------- #
-    print("\n4. authenticated responses are not shared-cacheable")
+    print("\n4. caching: private pages sealed, static assets cacheable")
     cache = client.get("/players").headers.get("Cache-Control", "")
     ok = "private" in cache and "no-store" in cache
-    print(f"  {'ok  ' if ok else 'FAIL'} /players Cache-Control: {cache}")
+    print(f"  {'ok  ' if ok else 'FAIL'} /players is private, no-store: {cache}")
     if not ok:
         failures.append(f"/players Cache-Control was {cache!r}")
+
+    # Static assets must NOT inherit no-store. They are the same bytes for
+    # everyone and contain nothing about anybody, and marking them no-store
+    # makes a browser re-fetch ~120 icons on every page load, which shows up as
+    # randomly missing images rather than as an obvious failure.
+    static = client.get("/static/img/skills/prayer.png")
+    scache = static.headers.get("Cache-Control", "")
+    ok = static.status_code == 200 and "no-store" not in scache
+    print(f"  {'ok  ' if ok else 'FAIL'} static icons are storable: "
+          f"{static.status_code}, {scache or '(no header)'}")
+    if not ok:
+        failures.append(f"static Cache-Control was {scache!r}")
+
+    css = client.get("/static/css/app.css")
+    ok = css.status_code == 200 and "no-store" not in css.headers.get("Cache-Control", "")
+    print(f"  {'ok  ' if ok else 'FAIL'} stylesheet is storable")
+    if not ok:
+        failures.append("stylesheet was marked no-store")
 
     shutil.rmtree(scratch.parent, ignore_errors=True)
 

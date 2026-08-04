@@ -49,8 +49,27 @@ def create_app(env=None):
         Cloudflare sits in front of this. Without an explicit header it may
         cache a page built for one member's server set and serve it to another,
         which would be a data leak dressed up as a performance win.
+
+        STATIC FILES ARE EXEMPT, and must be. They are skill icons, CSS and a
+        charting library: the same bytes for everyone, containing nothing about
+        anybody. Marking them `no-store` told browsers they may not be kept at
+        all, so every page load re-fetched all ~120 icons. On the dev server
+        that produced randomly missing images, because a handful of the
+        parallel requests lost; in production it would have meant Cloudflare
+        never caching them and every view pulling the whole set down again.
+
+        setdefault, not assignment, so Flask's own debug behaviour (which sends
+        no-cache for static) still wins and edited CSS shows up on reload.
         """
-        if auth.signed_in():
+        if request.endpoint == "static":
+            # Flask's own default is `no-cache`, which stores the file but
+            # revalidates every single time: 120 conditional requests per page
+            # view even when nothing changed. Give them a real lifetime in
+            # production, and leave debug alone so an edited stylesheet still
+            # appears on reload.
+            response.headers["Cache-Control"] = (
+                "no-cache" if app.debug else "public, max-age=86400")
+        elif auth.signed_in():
             response.headers["Cache-Control"] = "private, no-store, max-age=0"
         else:
             response.headers.setdefault("Cache-Control", "public, max-age=60")
