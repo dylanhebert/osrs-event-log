@@ -15,7 +15,9 @@
 {% endif %}
 
 <section class="panel">
-  <h2>This week{% if current %}: {{ current }}{% endif %}</h2>
+  <h2>This week{% if current %}:
+    {% if kind == 'sotw' %}{{ ui.skill_name(current) }}{% else %}{{ ui.activity_name(current) }}{% endif %}
+  {% endif %}</h2>
   {% if live %}
     <table class="grid tight">
       <thead><tr><th class="n">#</th><th>Account</th>
@@ -88,7 +90,8 @@
       {% for w in weeks %}
         <tr>
           <td>{{ w.week.ended_on | day }}</td>
-          <td>{{ w.week.name }}</td>
+          <td>{% if kind == 'sotw' %}{{ ui.skill_name(w.week.name) }}
+              {%- else %}{{ ui.activity_name(w.week.name) }}{% endif %}</td>
           <td>
             {% if w.podium %}
               {% for p in w.podium %}

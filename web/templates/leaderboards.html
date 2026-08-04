@@ -48,7 +48,7 @@
 
 <section class="panel">
   <h2>
-    {{ activity or skill }}
+    {% if activity %}{{ ui.activity_name(activity) }}{% else %}{{ ui.skill_name(skill) }}{% endif %}
     <span class="muted small">
       {% if server %}{{ server.label }}{% else %}all servers{% endif %}
       &middot; {{ shown }} account{{ '' if shown == 1 else 's' }} in scope

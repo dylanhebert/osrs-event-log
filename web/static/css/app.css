@@ -1,33 +1,72 @@
 /* OSRS Event Log - read-only UI.
-   One stylesheet, no framework, no build step. */
+   One stylesheet, no framework, no build step.
+
+   Styled after the Old School Hiscores: dark stone chrome, parchment panels,
+   gold rules, tabular numbers. Two deliberate departures from that page, both
+   because this site carries far more data than it does:
+
+     * tables stay dense and left-aligned with numbers right-aligned, rather
+       than centred, because these run to 90 rows rather than 25
+     * body text is a normal UI font. The RuneScape font is proprietary and not
+       ours to ship, and small pixel type is hard to read at these row counts.
+       Headings use a serif to carry the tone instead.
+
+   Light and dark both supported: parchment reads as the "day" theme, and the
+   dark variant keeps the same gold and stone palette rather than inverting to
+   grey. */
 
 :root {
-  --bg: #0f1216;
-  --panel: #161b22;
-  --panel-2: #1c222b;
-  --ink: #e6edf3;
-  --ink-dim: #9aa4b2;
-  --line: #232b36;
-  --grid: rgba(255, 255, 255, .07);
-  --accent: #7cc4ff;
-  --accent-dim: #2a4a63;
-  --warn: #e3a008;
-  --good: #4ade80;
+  color-scheme: light dark;
+
+  /* Stone chrome, the page frame */
+  --stone: #3b352b;
+  --stone-dark: #2a251d;
+  --stone-line: #5a5140;
+
+  /* Parchment, the content surfaces */
+  --parch: #d8ccab;
+  --parch-2: #cabb92;
+  --parch-edge: #a9986d;
+
+  --ink: #2b2417;
+  --ink-dim: #6b5d42;
+  --gold: #ffb83f;
+  --gold-dim: #94743a;
+  --link: #6b3f13;
+  --link-hover: #97591b;
+
+  --grid: rgba(43, 36, 23, .18);
+  --warn: #8a3b12;
+  --good: #2f6b2f;
+  --accent: #7a5a24;
+  --accent-dim: #b8a679;
 }
 
 * { box-sizing: border-box; }
 
 body {
   margin: 0;
-  background: var(--bg);
   color: var(--ink);
+  background: var(--stone-dark);
+  /* The tiled stone feel of the hiscores frame, done with gradients so there
+     is no extra asset to ship. */
+  background-image:
+    repeating-linear-gradient(45deg, rgba(0,0,0,.16) 0 2px, transparent 2px 6px),
+    linear-gradient(180deg, #423a2d 0%, #2a251d 100%);
+  background-attachment: fixed;
   font: 15px/1.55 ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
 }
 
-a { color: var(--accent); text-decoration: none; }
-a:hover { text-decoration: underline; }
+h1, h2, h3, .brand {
+  font-family: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+  letter-spacing: .01em;
+}
+
+a { color: var(--link); text-decoration: none; }
+a:hover { color: var(--link-hover); text-decoration: underline; }
+
 code {
-  background: var(--panel-2); padding: .1em .4em; border-radius: 4px;
+  background: rgba(0,0,0,.08); padding: .1em .4em; border-radius: 3px;
   font-family: ui-monospace, "Cascadia Code", Consolas, monospace; font-size: .92em;
 }
 
@@ -35,203 +74,235 @@ code {
 
 .topbar {
   display: flex; align-items: center; gap: 1.25rem;
-  padding: .85rem 1.5rem; background: var(--panel);
-  border-bottom: 1px solid var(--line); flex-wrap: wrap;
+  padding: .7rem 1.5rem; flex-wrap: wrap;
+  background: linear-gradient(180deg, #4a4234 0%, #332d24 100%);
+  border-bottom: 2px solid var(--gold-dim);
+  box-shadow: 0 2px 10px rgba(0,0,0,.45);
 }
 .brand {
-  font-weight: 650; color: var(--ink); letter-spacing: .2px;
+  font-weight: 700; font-size: 1.1rem; color: var(--gold);
   display: inline-flex; align-items: center; gap: .5rem;
+  text-shadow: 1px 1px 0 rgba(0,0,0,.6);
 }
-/* Shipped at 2x (152x190) and drawn at 26px tall so it stays crisp on
-   high-DPI screens. width:auto keeps the chathead's own proportions. */
+.brand:hover { color: #ffd07a; text-decoration: none; }
 .crier { height: 26px; width: auto; display: block; }
 
-/* Discord guild icons. Fixed box either way, so a server with an icon and one
-   without do not shift the row they sit in. */
-.sicon {
-  width: 1.15em; height: 1.15em; border-radius: 50%;
-  vertical-align: -.25em; margin-right: .35em; object-fit: cover;
-  flex: none;
-}
-.sicon-mono {
-  display: inline-flex; align-items: center; justify-content: center;
-  background: var(--accent-dim); color: var(--ink);
-  font-size: .68em; font-weight: 650; line-height: 1;
-}
-
-/* Discord member avatars. Same fixed-box treatment as guild icons so a member
-   with an avatar and one without occupy identical space. */
-.member { display: inline-flex; align-items: center; gap: .4em; }
-.avatar {
-  width: 1.3em; height: 1.3em; border-radius: 50%;
-  object-fit: cover; flex: none;
-}
-.avatar-mono {
-  display: inline-flex; align-items: center; justify-content: center;
-  background: var(--accent-dim); color: var(--ink);
-  font-size: .62em; font-weight: 650; line-height: 1;
-}
-.me-head { display: flex; align-items: center; gap: .5rem; }
-.me-head .avatar { width: 1.1em; height: 1.1em; }
-.player-owner { margin-top: .4rem; }
 .nav { display: flex; gap: 1.1rem; flex: 1; flex-wrap: wrap; }
-.nav a, .nav-right { color: var(--ink-dim); }
-.nav a:hover, .nav-right:hover { color: var(--ink); text-decoration: none; }
-/* Pushed to the right by .nav's flex: 1, so it sits beside Sign out rather
-   than with the data navigation. margin-left keeps it off the button. */
+.nav a, .nav-right { color: #e4d7b4; text-shadow: 1px 1px 0 rgba(0,0,0,.5); }
+.nav a:hover, .nav-right:hover { color: var(--gold); text-decoration: none; }
 .nav-right { margin-left: auto; white-space: nowrap; }
+
 .signout button, .btn, button[type=submit] {
-  background: var(--accent-dim); color: var(--ink); border: 1px solid var(--line);
-  padding: .4rem .9rem; border-radius: 6px; cursor: pointer; font: inherit;
+  background: linear-gradient(180deg, #6b5c3f 0%, #4a3f2a 100%);
+  color: #f0e4c2; border: 1px solid var(--gold-dim);
+  padding: .35rem .9rem; border-radius: 3px; cursor: pointer;
+  font: inherit; text-shadow: 1px 1px 0 rgba(0,0,0,.5);
 }
 .btn { display: inline-block; }
-.signout button:hover, .btn:hover, button[type=submit]:hover { background: #34607f; }
-
-.wrap { max-width: 1120px; margin: 0 auto; padding: 1.75rem 1.25rem 3rem; }
-.foot {
-  border-top: 1px solid var(--line); color: var(--ink-dim);
-  padding: 1.25rem 1.5rem; font-size: .86rem; text-align: center;
+.signout button:hover, .btn:hover, button[type=submit]:hover {
+  background: linear-gradient(180deg, #7d6c4a 0%, #574a31 100%);
+  color: var(--gold);
 }
 
-h1 { font-size: 1.55rem; margin: 0 0 .35rem; }
-h2 { font-size: 1.05rem; margin: 0 0 .75rem; color: var(--ink); }
+.wrap { max-width: 1120px; margin: 0 auto; padding: 1.5rem 1.25rem 3rem; }
+.foot {
+  color: #a2967a; padding: 1.25rem 1.5rem; font-size: .84rem; text-align: center;
+  text-shadow: 1px 1px 0 rgba(0,0,0,.5);
+}
 
-/* ---- panels & layout ---- */
+h1 { font-size: 1.5rem; margin: 0 0 .35rem; color: #f2e6c4;
+     text-shadow: 1px 1px 0 rgba(0,0,0,.55); }
+.panel h1, .panel h2, .panel h3 { color: var(--ink); text-shadow: none; }
+h2 { font-size: 1.05rem; margin: 0 0 .75rem; }
+
+/* ---- parchment panels ---- */
 
 .panel {
-  background: var(--panel); border: 1px solid var(--line);
-  border-radius: 10px; padding: 1.1rem 1.25rem; margin: 0 0 1.25rem;
+  background: linear-gradient(180deg, var(--parch) 0%, var(--parch-2) 100%);
+  border: 1px solid var(--parch-edge);
+  border-radius: 3px;
+  padding: 1rem 1.15rem;
+  margin: 0 0 1.15rem;
+  box-shadow: 0 2px 8px rgba(0,0,0,.4), inset 0 0 0 1px rgba(255,255,255,.18);
 }
 .panel.narrow { max-width: 30rem; margin-inline: auto; }
-.panel.muted, .muted { color: var(--ink-dim); }
+.muted { color: var(--ink-dim); }
+.wrap > p.muted, .wrap > .muted { color: #cbbf9e; text-shadow: 1px 1px 0 rgba(0,0,0,.5); }
 .small { font-size: .86rem; }
 
-.cols { display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; }
+.cols { display: grid; grid-template-columns: 1fr 1fr; gap: 1.15rem; }
 @media (max-width: 820px) { .cols { grid-template-columns: 1fr; } }
 
-.hero { margin-bottom: 1.75rem; }
-.lede { color: var(--ink-dim); max-width: 46rem; }
+.hero { margin-bottom: 1.5rem; }
+.lede { color: #d5c9a8; max-width: 46rem; text-shadow: 1px 1px 0 rgba(0,0,0,.5); }
 
 .tiles {
   display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-  gap: .85rem; margin-bottom: 1.25rem;
+  gap: .8rem; margin-bottom: 1.15rem;
 }
 .tile {
-  background: var(--panel); border: 1px solid var(--line);
-  border-radius: 10px; padding: .9rem 1rem;
+  background: linear-gradient(180deg, var(--parch) 0%, var(--parch-2) 100%);
+  border: 1px solid var(--parch-edge); border-radius: 3px; padding: .8rem .9rem;
+  box-shadow: 0 2px 6px rgba(0,0,0,.35), inset 0 0 0 1px rgba(255,255,255,.18);
 }
-.tile-value { font-size: 1.4rem; font-weight: 650; }
-.tile-label { color: var(--ink-dim); font-size: .82rem; margin-top: .15rem; }
+.tile-value { font-size: 1.35rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+.tile-label { color: var(--ink-dim); font-size: .8rem; margin-top: .1rem; }
 
-.pair { display: flex; gap: 3rem; flex-wrap: wrap; }
-.pair-label { color: var(--ink-dim); font-size: .82rem; }
-.pair-value { font-size: 1.25rem; font-weight: 600; }
+.pair { display: flex; gap: 2.5rem; flex-wrap: wrap; }
+.pair-label { color: var(--ink-dim); font-size: .8rem; }
+.pair-value { font-size: 1.2rem; font-weight: 700; }
 
 /* ---- tables ---- */
 
 .grid { width: 100%; border-collapse: collapse; font-size: .92rem; }
 .grid th, .grid td {
-  text-align: left; padding: .5rem .6rem; border-bottom: 1px solid var(--line);
-  vertical-align: top;
+  text-align: left; padding: .45rem .6rem; vertical-align: middle;
+  border-bottom: 1px solid var(--grid);
 }
-.grid th { color: var(--ink-dim); font-weight: 500; font-size: .82rem; }
-.grid tbody tr:hover { background: var(--panel-2); }
+.grid th {
+  color: var(--ink); font-weight: 700; font-size: .82rem;
+  border-bottom: 2px solid var(--gold-dim);
+  font-family: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+}
+.grid tbody tr:nth-child(even) { background: rgba(255, 255, 255, .16); }
+.grid tbody tr:hover { background: rgba(255, 184, 63, .22); }
 .grid .n, .grid th.n { text-align: right; font-variant-numeric: tabular-nums; }
-.grid.tight th, .grid.tight td { padding: .35rem .5rem; }
-.row-strong { font-weight: 650; background: var(--panel-2); }
+.grid.tight th, .grid.tight td { padding: .3rem .5rem; }
+.row-strong { font-weight: 700; background: rgba(255, 184, 63, .18) !important; }
+
+/* ---- icons ---- */
+
+/* Skill and boss icons sit inline with their name and never change the row
+   height: the box is fixed whether or not an icon was found. */
+.iname { display: inline-flex; align-items: center; gap: .45em; }
+.gicon { width: 20px; height: 20px; object-fit: contain; flex: none; }
+
+.sicon {
+  width: 1.15em; height: 1.15em; border-radius: 50%;
+  vertical-align: -.25em; margin-right: .35em; object-fit: cover; flex: none;
+}
+.sicon-mono {
+  display: inline-flex; align-items: center; justify-content: center;
+  background: var(--accent-dim); color: var(--ink);
+  font-size: .68em; font-weight: 700; line-height: 1;
+}
+.member { display: inline-flex; align-items: center; gap: .4em; }
+.avatar { width: 1.3em; height: 1.3em; border-radius: 50%; object-fit: cover; flex: none; }
+.avatar-mono {
+  display: inline-flex; align-items: center; justify-content: center;
+  background: var(--accent-dim); color: var(--ink);
+  font-size: .62em; font-weight: 700; line-height: 1;
+}
+.me-head { display: flex; align-items: center; gap: .5rem; color: #f2e6c4; }
+.me-head .avatar { width: 1.1em; height: 1.1em; }
+.player-owner { margin-top: .4rem; }
 
 /* ---- bits ---- */
 
 .chip {
-  display: inline-block; font-size: .72rem; padding: .05rem .45rem;
-  border: 1px solid var(--line); border-radius: 999px;
+  display: inline-block; font-size: .72rem; padding: .05rem .5rem;
+  border: 1px solid var(--parch-edge); border-radius: 999px;
+  background: rgba(255,255,255,.28);
   color: var(--ink-dim); margin-left: .35rem; white-space: nowrap;
 }
-.chip.warn { color: var(--warn); border-color: #4a3a10; }
+.chip.warn { color: var(--warn); border-color: #a86a3c; background: rgba(168,106,60,.15); }
 .tag {
-  display: inline-block; font-size: .7rem; text-transform: uppercase;
-  letter-spacing: .04em; padding: .1rem .45rem; border-radius: 4px;
-  background: var(--panel-2); color: var(--ink-dim);
+  display: inline-block; font-size: .68rem; text-transform: uppercase;
+  letter-spacing: .05em; padding: .1rem .45rem; border-radius: 2px;
+  background: rgba(0,0,0,.1); color: var(--ink-dim); font-weight: 700;
 }
-.tag-dink { color: #c4b5fd; }
-.tag-hiscores { color: #7cc4ff; }
+.tag-dink { color: #5b3a8a; }
+.tag-hiscores { color: #1f5673; }
 
 .empty {
-  color: var(--ink-dim); background: var(--panel-2);
-  border: 1px dashed var(--line); border-radius: 8px;
-  padding: .85rem 1rem; font-size: .9rem;
+  color: var(--ink-dim); background: rgba(255,255,255,.22);
+  border: 1px dashed var(--parch-edge); border-radius: 3px;
+  padding: .8rem .95rem; font-size: .9rem;
 }
 .error {
-  color: #fca5a5; background: #2a1618; border: 1px solid #4a2225;
-  border-radius: 8px; padding: .7rem .9rem; font-size: .9rem;
+  color: #7a1c14; background: #e8cfc4; border: 1px solid #a8593f;
+  border-radius: 3px; padding: .65rem .9rem; font-size: .9rem;
 }
 
 .feed { list-style: none; margin: 0; padding: 0; }
-.feed li { padding: .55rem 0; border-bottom: 1px solid var(--line); }
+.feed li { padding: .5rem 0; border-bottom: 1px solid var(--grid); }
 .feed li:last-child { border-bottom: 0; }
 .feed-meta {
-  display: flex; gap: .6rem; align-items: center; flex-wrap: wrap;
+  display: flex; gap: .55rem; align-items: center; flex-wrap: wrap;
   color: var(--ink-dim); font-size: .8rem; margin-bottom: .2rem;
 }
-/* Rendered Discord markup. NOT pre-wrap: the renderer turns newlines into
-   <br> itself, so pre-wrap here would double every line break. */
+/* Rendered Discord markup. NOT pre-wrap: the renderer emits <br> itself, so
+   pre-wrap here would double every line break. */
 .feed-msg { font-size: .92rem; }
 .feed.wide .feed-msg { max-width: 70ch; }
-.feed-msg strong { color: var(--ink); font-weight: 650; }
-/* The bot's stat lines arrive as ```c fenced blocks. Rendered as a quiet inset
-   strip rather than a heavy code block: it is data, not source. */
+.feed-msg strong { font-weight: 700; }
+/* The bot's stat lines arrive as ```c fenced blocks: an inset strip, because
+   it is data rather than source. */
 .feed-msg pre {
-  margin: .35rem 0 0; padding: .4rem .6rem;
-  background: var(--panel-2); border-left: 2px solid var(--accent-dim);
-  border-radius: 4px; overflow-x: auto;
+  margin: .3rem 0 0; padding: .35rem .6rem;
+  background: rgba(0,0,0,.07); border-left: 3px solid var(--gold-dim);
+  border-radius: 2px; overflow-x: auto;
 }
 .feed-msg pre code {
-  background: none; padding: 0; border-radius: 0;
-  font-size: .85rem; color: var(--ink-dim);
+  background: none; padding: 0; font-size: .85rem; color: var(--ink-dim);
   font-variant-numeric: tabular-nums; white-space: pre-wrap;
 }
 .feed-msg code { font-size: .88rem; }
 .feed-msg del { color: var(--ink-dim); }
 
 .rank { margin: 0; padding-left: 1.2rem; }
-.rank li { padding: .2rem 0; }
+.rank li { padding: .18rem 0; }
 .rank .n { color: var(--ink-dim); float: right; font-variant-numeric: tabular-nums; }
 
-.podium { display: inline-block; margin-right: .9rem; white-space: nowrap; }
+.podium { display: inline-block; margin-right: .85rem; white-space: nowrap; }
 .podium .n { color: var(--ink-dim); font-variant-numeric: tabular-nums; }
 
-.tabs { display: flex; gap: .5rem; margin-bottom: 1rem; flex-wrap: wrap; }
+/* Category tabs, echoing the hiscores' tab strip. */
+.tabs { display: flex; gap: .3rem; margin-bottom: 1rem; flex-wrap: wrap; }
 .tabs a {
-  padding: .3rem .8rem; border: 1px solid var(--line);
-  border-radius: 999px; color: var(--ink-dim); font-size: .88rem;
+  display: inline-flex; align-items: center;
+  padding: .32rem .85rem; border: 1px solid var(--stone-line);
+  border-bottom: none; border-radius: 3px 3px 0 0;
+  background: linear-gradient(180deg, #4a4234 0%, #332d24 100%);
+  color: #e4d7b4; font-size: .88rem; text-shadow: 1px 1px 0 rgba(0,0,0,.5);
 }
-.tabs a.on { background: var(--accent-dim); color: var(--ink); }
+.tabs a:hover { color: var(--gold); text-decoration: none; }
+.tabs a.on {
+  background: linear-gradient(180deg, var(--parch) 0%, var(--parch-2) 100%);
+  color: var(--ink); border-color: var(--parch-edge); text-shadow: none;
+  font-weight: 700;
+}
 
 .filters {
   display: flex; gap: .6rem; align-items: center; flex-wrap: wrap;
   margin-bottom: 1rem;
 }
-.filters label { color: var(--ink-dim); font-size: .85rem; }
+.filters label { color: #cbbf9e; font-size: .85rem; text-shadow: 1px 1px 0 rgba(0,0,0,.5); }
 select, input[type=password] {
-  background: var(--panel-2); color: var(--ink);
-  border: 1px solid var(--line); border-radius: 6px;
-  padding: .35rem .55rem; font: inherit;
+  background: var(--parch); color: var(--ink);
+  border: 1px solid var(--parch-edge); border-radius: 3px;
+  padding: .3rem .5rem; font: inherit;
 }
 input[type=password] { width: 100%; margin: .3rem 0 .8rem; }
 
 .pager {
   display: flex; gap: 1rem; align-items: center; justify-content: center;
-  color: var(--ink-dim); font-size: .88rem; margin-top: 1rem;
+  color: #cbbf9e; font-size: .88rem; margin-top: 1rem;
+  text-shadow: 1px 1px 0 rgba(0,0,0,.5);
 }
+.pager a { color: var(--gold); }
 
-.player-head { margin-bottom: 1.25rem; }
+.player-head { margin-bottom: 1.15rem; }
 .player-facts {
-  display: flex; gap: 1.5rem; flex-wrap: wrap;
-  color: var(--ink-dim); font-size: .92rem;
+  display: flex; gap: 1.4rem; flex-wrap: wrap;
+  color: #cbbf9e; font-size: .92rem; text-shadow: 1px 1px 0 rgba(0,0,0,.5);
 }
-.player-facts strong { color: var(--ink); font-variant-numeric: tabular-nums; }
+.player-facts strong { color: var(--gold); font-variant-numeric: tabular-nums; }
 .player-servers { margin-top: .5rem; }
-.player-servers .chip { margin-left: 0; margin-right: .35rem; }
+.player-servers .chip {
+  margin-left: 0; margin-right: .35rem;
+  background: rgba(0,0,0,.25); color: #e4d7b4; border-color: var(--stone-line);
+}
 
 .chart-controls {
   display: flex; gap: .7rem; align-items: center; flex-wrap: wrap;
@@ -239,18 +310,32 @@ input[type=password] { width: 100%; margin: .3rem 0 .8rem; }
 }
 .chart-box { position: relative; height: 300px; }
 
-.help { margin-top: 1.5rem; border-top: 1px solid var(--line); padding-top: 1rem; }
+.help { margin-top: 1.5rem; border-top: 1px solid var(--grid); padding-top: 1rem; }
 .help h2 { font-size: .95rem; }
 .help ol { padding-left: 1.2rem; color: var(--ink-dim); font-size: .9rem; }
 
-/* The site is a dark-first tool; light mode just softens it rather than
-   inverting, so tables stay legible under either preference. */
-@media (prefers-color-scheme: light) {
+/* Dark theme: keep the gold-and-stone identity rather than inverting to grey,
+   and darken the parchment into aged leather instead of turning it black. */
+@media (prefers-color-scheme: dark) {
   :root {
-    --bg: #f6f8fa; --panel: #fff; --panel-2: #f0f3f6;
-    --ink: #1c2128; --ink-dim: #5b6673; --line: #d8dee4;
-    --grid: rgba(0, 0, 0, .08); --accent: #0969da; --accent-dim: #ddf0ff;
+    --parch: #2f2a20; --parch-2: #262117; --parch-edge: #4e4634;
+    --ink: #e2d6b8; --ink-dim: #a2957a;
+    --grid: rgba(255, 255, 255, .09);
+    --link: #ffb83f; --link-hover: #ffd07a;
+    --accent-dim: #4e4634;
+    --warn: #e0a458; --good: #7fc97f;
   }
-  .signout button, .btn, button[type=submit] { color: #0b3a5c; }
-  .error { color: #8b1a1a; background: #fff1f1; border-color: #f3c2c2; }
+  body { background-image:
+    repeating-linear-gradient(45deg, rgba(0,0,0,.22) 0 2px, transparent 2px 6px),
+    linear-gradient(180deg, #23201a 0%, #16140f 100%); }
+  .panel h1, .panel h2, .panel h3 { color: var(--ink); }
+  .grid tbody tr:nth-child(even) { background: rgba(255, 255, 255, .04); }
+  .grid tbody tr:hover { background: rgba(255, 184, 63, .12); }
+  .row-strong { background: rgba(255, 184, 63, .1) !important; }
+  .chip { background: rgba(255,255,255,.06); }
+  .empty { background: rgba(255,255,255,.04); }
+  .error { color: #f0b4a8; background: #3a1c16; border-color: #7a3a2a; }
+  .feed-msg pre { background: rgba(0,0,0,.28); }
+  .tabs a.on { color: var(--ink); }
+  select, input[type=password] { background: #201c15; color: var(--ink); }
 }

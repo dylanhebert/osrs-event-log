@@ -17,6 +17,31 @@
   {%- endif -%}
 {%- endmacro %}
 
+{#
+  Skill and activity icons, vendored from the OSRS Wiki.
+
+  A name with no icon renders the name alone rather than a broken image or a
+  gap: Jagex adds bosses and skills, and the repo layer inserts unknown names on
+  sight, so a name can reach the page before anyone has fetched an icon for it.
+#}
+{% macro skill_name(name) -%}
+  {%- set icon = name | skill_icon -%}
+  <span class="iname">
+    {%- if icon %}<img class="gicon" src="{{ url_for('static', filename=icon) }}"
+                       alt="" width="20" height="20" loading="lazy">{% endif -%}
+    {{ name }}
+  </span>
+{%- endmacro %}
+
+{% macro activity_name(name) -%}
+  {%- set icon = name | activity_icon -%}
+  <span class="iname">
+    {%- if icon %}<img class="gicon" src="{{ url_for('static', filename=icon) }}"
+                       alt="" width="20" height="20" loading="lazy">{% endif -%}
+    {{ name }}
+  </span>
+{%- endmacro %}
+
 {% macro server_tab(server, href, active=False) -%}
   <a class="{{ 'on' if active }}" href="{{ href }}">
     {{ server_icon(server) }}{{ server.label }}

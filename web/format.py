@@ -109,6 +109,48 @@ def medal(rank_value):
 
 
 # --------------------------------------------------------------------------- #
+# Skill and activity icons
+# --------------------------------------------------------------------------- #
+# Vendored from the OSRS Wiki into static/img/{skills,activities}/ and indexed
+# by static/img/icon-manifest.json, which maps the exact name stored in the
+# database to a filename. A manifest rather than deriving the filename at
+# request time, because the mapping is not mechanical: several activities are
+# not wiki page titles ("Rifts closed", "LMS - Rank") and a few skills use a
+# differently named file.
+#
+# A missing entry is normal, not an error. Jagex adds bosses and skills, and the
+# repo layer inserts unknown names on sight, so a name can exist in the database
+# before anyone has fetched an icon for it. Callers render nothing in that case.
+
+_MANIFEST = None
+
+
+def _manifest():
+    global _MANIFEST
+    if _MANIFEST is None:
+        import json
+        from pathlib import Path
+        path = Path(__file__).resolve().parent / "static" / "img" / "icon-manifest.json"
+        try:
+            _MANIFEST = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            _MANIFEST = {"skills": {}, "activities": {}}
+    return _MANIFEST
+
+
+def skill_icon(name):
+    """Static path for a skill icon, or None."""
+    filename = _manifest()["skills"].get(name)
+    return f"img/skills/{filename}" if filename else None
+
+
+def activity_icon(name):
+    """Static path for an activity icon, or None."""
+    filename = _manifest()["activities"].get(name)
+    return f"img/activities/{filename}" if filename else None
+
+
+# --------------------------------------------------------------------------- #
 # Discord markup
 # --------------------------------------------------------------------------- #
 # events.message is the exact text posted to Discord, so it arrives full of
@@ -197,5 +239,6 @@ def discord_markup(text):
 def register(app):
     for name, func in (("num", num), ("rank", rank), ("compact", compact),
                        ("ago", ago), ("stamp", stamp), ("day", day),
-                       ("medal", medal), ("discord_markup", discord_markup)):
+                       ("medal", medal), ("discord_markup", discord_markup),
+                       ("skill_icon", skill_icon), ("activity_icon", activity_icon)):
         app.jinja_env.filters[name] = func

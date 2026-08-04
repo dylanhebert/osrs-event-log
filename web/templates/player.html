@@ -44,7 +44,7 @@
         <tbody>
         {% for s in skills %}
           <tr{% if s.name == 'Overall' %} class="row-strong"{% endif %}>
-            <td>{{ s.name }}</td>
+            <td>{{ ui.skill_name(s.name) }}</td>
             <td class="n">{{ s.level | num }}</td>
             <td class="n">{{ s.xp | num }}</td>
             <td class="n">{{ s.rank | rank }}</td>
@@ -64,7 +64,7 @@
         <thead><tr><th>Activity</th><th class="n">Score</th><th class="n">Rank</th></tr></thead>
         <tbody>
         {% for a in activities %}
-          <tr><td>{{ a.name }}</td>
+          <tr><td>{{ ui.activity_name(a.name) }}</td>
             <td class="n">{{ a.score | num }}</td>
             <td class="n">{{ a.rank | rank }}</td></tr>
         {% endfor %}
