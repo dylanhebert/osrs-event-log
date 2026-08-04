@@ -109,6 +109,11 @@ CREATE TABLE players (
     -- emit an (empty) db_runescape entry for them or the round-trip breaks.
     tracked         INTEGER NOT NULL DEFAULT 0,
     first_seen      TEXT NOT NULL,
+    -- Last time the hiscores were fetched and parsed for this player, whether
+    -- or not anything had changed. NOT the last time their stats were written —
+    -- most players are unchanged on any given cycle, and a UI needs to tell
+    -- "nothing has changed since Tuesday" apart from "we have not been able to
+    -- reach this account since Tuesday". NULL means never successfully fetched.
     last_polled     TEXT
 );
 

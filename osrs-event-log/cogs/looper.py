@@ -131,6 +131,12 @@ async def thread_player(bot, rs_name, rs_data):
         logger.debug(f"{rs_name} not found! Skipping player.")
         return
 
+    # Fetched and parsed successfully. Recorded here rather than alongside the
+    # stats write, because most players are about to take the unchanged
+    # early-out and never reach it — which would leave last_polled meaning
+    # "last written" instead of "last seen".
+    await PLAYER_HANDLER.mark_polled(rs_name)
+
     # player has hiscore profile
     logger.debug(f"{rs_name}: found player...")
     overall_xp_changed = False

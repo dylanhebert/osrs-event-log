@@ -44,6 +44,27 @@ class LoopPlayerHandler:
         logger.debug(f"Finished GET PLAYER LOOPER INFO - Player: {rs_name}")
         return player_servers_all
 
+    async def mark_polled(self, rs_name):
+        """Record that this player's hiscores were successfully fetched.
+
+        Separate from save_player() on purpose. That only runs when something
+        actually changed, so last_polled used to mean "last written" — after two
+        full cycles only 3 of 70 players had it set, and those three only
+        because they have no Overall row and so always take the write path.
+
+        A UI showing "last updated" needs to distinguish "nothing has changed
+        since Tuesday" from "we have not been able to reach this account since
+        Tuesday", and last_polled is the column that answers that.
+
+        Best-effort: a bookkeeping column must never take down a poll cycle.
+        """
+        try:
+            player_id = repo.players.get_id(rs_name)
+            if player_id is not None:
+                repo.players.touch_polled(player_id)
+        except Exception as e:
+            logger.exception(f'{rs_name}: could not update last_polled -- {e}')
+
     async def save_player(self, rs_name, stats):
         """Persist one player's stats, appending history only where a value moved."""
         player_id = repo.players.get_id(rs_name)
