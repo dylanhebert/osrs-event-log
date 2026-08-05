@@ -393,9 +393,9 @@ def split_units(content, accept_bare_bold=None):
 def build_name_index():
     """{display name lowered: player_id}, longest names first when matching.
 
-    Matches on the display form ("Green Donut") because that is what the bot
-    prints; rs_name is the '+' form. Sorting by length stops "Green" claiming a
-    title that belongs to "Green Donut".
+    Matches on the display form ("Zezima Alt") because that is what the bot
+    prints; rs_name is the '+' form. Sorting by length stops "Zezima" claiming
+    a title that belongs to "Zezima Alt".
     """
     rows = repo.db.query("SELECT id, rs_name, display_name FROM players")
     index = {}
