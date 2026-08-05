@@ -112,7 +112,7 @@
         "pet" are two different useful facts about the same event.
       #}
       {%- if not (e.is_milestone and e.event_type == 'MILESTONE') %}
-        <span class="tag tag-{{ e.source }}">{{ e.event_type | lower }}</span>
+        <span class="tag tag-{{ e.source }}">{{ e | event_label }}</span>
       {%- endif %}
       {%- if show_player %}
         <a href="{{ url_for('player', rs_name=e.rs_name) }}">{{ e.display_name }}</a>

@@ -3,6 +3,33 @@
 {% block title %}OSRS Event Log{% endblock %}
 
 {% block content %}
+<section class="tiles">
+  <div class="tile">
+    <div class="tile-value">{{ player_count }}</div>
+    <div class="tile-label">accounts you can see</div>
+  </div>
+  <div class="tile">
+    <div class="tile-value">{{ nav_servers | length }}</div>
+    <div class="tile-label">{{ 'server' if nav_servers|length == 1 else 'servers' }}</div>
+  </div>
+  <div class="tile">
+    <div class="tile-value">
+      {%- if summary.current_skill %}{{ ui.skill_name(summary.current_skill) }}
+      {%- else %}-{% endif %}</div>
+    <div class="tile-label">skill of the week</div>
+  </div>
+  <div class="tile">
+    <div class="tile-value">
+      {%- if summary.current_boss %}{{ ui.activity_name(summary.current_boss) }}
+      {%- else %}-{% endif %}</div>
+    <div class="tile-label">boss of the week</div>
+  </div>
+  <div class="tile">
+    <div class="tile-value">{{ summary.last_poll | ago }}</div>
+    <div class="tile-label">last hiscores poll</div>
+  </div>
+</section>
+
 {# What changed most recently leads, because that is what anyone opens this for.
    The standings come next, and the ranked account list last: it is the slowest
    thing on the page to change and the one with its own dedicated page.
@@ -48,35 +75,6 @@
 </section>
 </div>
 
-{# The counts sit below the feeds rather than above them. Events are what
-   this site is for, so they get the top of the page; these change slowly
-   and are context for what you have just read, not a headline. #}
-<section class="tiles">
-  <div class="tile">
-    <div class="tile-value">{{ player_count }}</div>
-    <div class="tile-label">accounts you can see</div>
-  </div>
-  <div class="tile">
-    <div class="tile-value">{{ nav_servers | length }}</div>
-    <div class="tile-label">{{ 'server' if nav_servers|length == 1 else 'servers' }}</div>
-  </div>
-  <div class="tile">
-    <div class="tile-value">
-      {%- if summary.current_skill %}{{ ui.skill_name(summary.current_skill) }}
-      {%- else %}-{% endif %}</div>
-    <div class="tile-label">skill of the week</div>
-  </div>
-  <div class="tile">
-    <div class="tile-value">
-      {%- if summary.current_boss %}{{ ui.activity_name(summary.current_boss) }}
-      {%- else %}-{% endif %}</div>
-    <div class="tile-label">boss of the week</div>
-  </div>
-  <div class="tile">
-    <div class="tile-value">{{ summary.last_poll | ago }}</div>
-    <div class="tile-label">last hiscores poll</div>
-  </div>
-</section>
 
 {% if server %}
 <div class="cols">

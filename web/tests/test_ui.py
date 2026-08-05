@@ -123,6 +123,36 @@ def test_event_icons(db_path):
     check("levelling events resolve to many different skills",
           len(skill_icons) >= 20, f"{len(skill_icons)} distinct")
 
+    # The hiscores file every boss, raid and clue under one event_type,
+    # MINIGAME, so the badge has to work out which it was. Classified by
+    # exclusion: any list of bosses goes stale the day Jagex ships one.
+    from web.format import event_label
+
+    labels, by_label = {}, {}
+    for row in rows:
+        label = event_label(row)
+        labels[label] = labels.get(label, 0) + 1
+        by_label.setdefault(label, row["message"])
+
+    check("boss kills are labelled boss, not minigame",
+          labels.get("boss", 0) > 1000, f"{labels.get('boss', 0)} rows")
+    check("clue scrolls get their own label",
+          labels.get("clue", 0) > 100, f"{labels.get('clue', 0)} rows")
+    check("collection log entries get theirs",
+          labels.get("collection", 0) > 100, f"{labels.get('collection', 0)} rows")
+    check("no row is left saying the raw type",
+          "minigame" not in (by_label.get("boss", "") or "").lower())
+
+    # Whatever is still called a minigame must actually be one. This is the
+    # assertion that catches a new boss being mislabelled: it would land here.
+    from web.format import _activity_named_in, _NOT_A_BOSS
+    stragglers = {
+        _activity_named_in(r["message"], r["display_name"])
+        for r in rows if event_label(r) == "minigame"}
+    wrong = sorted(a for a in stragglers if a and a not in _NOT_A_BOSS)
+    check("everything still called a minigame really is one",
+          not wrong, f"these are bosses: {wrong[:4]}")
+
     # And a class that does not exist in the sprite would render an empty box.
     css = (ROOT / "web" / "static" / "css" / "icons.css").read_text(encoding="utf-8")
     defined = set(re.findall(r"\.ic-([a-z0-9-]+)\s*\{", css))
@@ -164,12 +194,12 @@ def test_rendered(db_path, password):
     # ordering is the kind of thing a later edit breaks without noticing.
     home = client.get("/").get_data(as_text=True)
     check("home shows a milestones panel", "Latest milestones" in home)
-    check("home leads with events, then milestones",
+    check("home opens with the counts",
+          home.index('class="tiles"') < home.index("Latest events"))
+    check("...then events, then milestones",
           home.index("Latest events") < home.index("Latest milestones"))
-    check("...then the counts",
-          home.index("Latest milestones") < home.index('class="tiles"'))
     check("...then the standings and the account list",
-          home.index('class="tiles"') < home.index("Top accounts"))
+          home.index("Latest milestones") < home.index("Top accounts"))
     check("feed rows carry an icon", 'class="ic ic-' in home)
 
     check("the header collapses behind a menu control",

@@ -196,6 +196,18 @@ for _tier in ("beginner", "easy", "medium", "hard", "elite", "master"):
     _NAME_ALIASES[f"{_tier} clue scrolls"] = f"Clue Scrolls ({_tier})"
     _NAME_ALIASES[f"{_tier} clue"] = f"Clue Scrolls ({_tier})"
 
+# The hiscores name several activities after the thing they COUNT rather than
+# after the content, and the messages use the content's name. "Rifts closed" is
+# the biggest of these: 424 events say "has completed Guardians of the Rift N
+# times" and matched nothing at all, so they drew the fallback icon.
+_NAME_ALIASES.update({
+    "guardians of the rift": "Rifts closed",
+    "fortis colosseum": "Colosseum Glory",
+    "last man standing": "LMS - Rank",
+    "soul wars": "Soul Wars Zeal",
+    "collection log": "Collections Logged",
+})
+
 # Types whose art is already in the sprite under another name. Fetching a
 # second copy of the same picture under a second name would only make the
 # sprite bigger. The keys not listed here are in the manifest's "types".
@@ -215,40 +227,115 @@ _MATCHER = None
 
 
 def _matcher():
-    """(compiled alternation, {lowercased match: css class}), built once.
+    """(pattern, {match: css class}, {match: canonical name}), built once.
 
     One regex rather than 121, because a feed page renders 50 messages and
     scanning each of them for every name separately is a hundredfold more work
     for the same answer. Alternation is ordered longest first so that at a
     given position the longest name wins: "Clue Scrolls (all)" must not lose to
     a shorter name that is a prefix of it.
+
+    The canonical name comes back alongside the class because the badge needs
+    to know WHICH activity was named, not just which picture to draw.
     """
     global _MATCHER
     if _MATCHER is None:
         import re
         manifest = _manifest()
-        lookup = {}
+        lookup, canonical = {}, {}
         for kind in ("skills", "activities"):
             for name, entry in manifest.get(kind, {}).items():
                 lookup[name.lower()] = entry["cls"]
+                canonical[name.lower()] = name
         for phrase, name in _NAME_ALIASES.items():
             cls = lookup.get(name.lower())
             if cls:
                 lookup[phrase] = cls
+                canonical[phrase] = name
         # A name the wiki spells with a leading "The" is written both ways in
         # practice ("set a new Royal Titans Personal Best").
         for name, entry in list(manifest.get("activities", {}).items()):
             if name.lower().startswith("the "):
                 lookup.setdefault(name[4:].lower(), entry["cls"])
+                canonical.setdefault(name[4:].lower(), name)
         pattern = "|".join(
             re.escape(k) for k in sorted(lookup, key=len, reverse=True))
-        _MATCHER = (re.compile(rf"\b(?:{pattern})\b", re.IGNORECASE), lookup)
+        _MATCHER = (re.compile(rf"\b(?:{pattern})\b", re.IGNORECASE),
+                    lookup, canonical)
     return _MATCHER
 
 
 def _borrowed(kind, name):
     entry = _manifest().get(kind, {}).get(name)
     return entry["cls"] if entry else None
+
+
+# --------------------------------------------------------------------------- #
+# What to call an event
+# --------------------------------------------------------------------------- #
+# The bot files every hiscores activity under one event_type, MINIGAME, because
+# that is what the hiscores call the whole second list. So a Vardorvis kill and
+# a clue scroll arrive with the same label, and "minigame" is wrong for both a
+# boss and a clue.
+#
+# CLASSIFIED BY EXCLUSION, NOT BY A LIST OF BOSSES.
+#
+# data/botw/all_bosses.json exists but is the Boss of the Week rotation pool,
+# not a classification: it is missing Araxxor, Nex, Skotizo and the Dagannoths
+# among others. Any list of bosses is out of date the day Jagex ships one, and
+# this list would need editing every time.
+#
+# The other side of the split does not grow. These nine things are the whole of
+# what the hiscores' activity list holds that is not a boss or raid, and Jagex
+# has added roughly one in a decade. Everything else is a boss, including one
+# released after this was written.
+_NOT_A_BOSS = {
+    "Bounty Hunter - Hunter", "Bounty Hunter - Rogue",
+    "Bounty Hunter (Legacy) - Hunter", "Bounty Hunter (Legacy) - Rogue",
+    "LMS - Rank", "PvP Arena - Rank", "Soul Wars Zeal", "Rifts closed",
+    "Colosseum Glory",
+}
+
+
+def _activity_named_in(message, display_name):
+    """The activity an event's text names, via the same matcher the icon uses."""
+    if not message:
+        return None
+    name = (display_name or "").strip()
+    if name and message[:120].lower().find(name.lower()) != -1:
+        cut = message.lower().index(name.lower(), 0, 120) + len(name)
+        message = message[cut:]
+    pattern, _, canonical = _matcher()
+    found = pattern.search(message)
+    return canonical.get(found.group(0).lower()) if found else None
+
+
+def event_label(event):
+    """The badge text for a feed row.
+
+    Only hiscores activity rows need deciding; everything else already says
+    what it is. This is a DISPLAY name -- events.event_type keeps the bot's own
+    vocabulary, which is what the feed filter still selects on.
+    """
+    event_type = (event["event_type"] or "").upper()
+    if event["source"] != "hiscores" or event_type != "MINIGAME":
+        return event_type.replace("_", " ").lower()
+
+    message = event["message"] or ""
+    # Checked before the activity, because a collection entry names the item
+    # and its source ("added Yew comp bow ... From: Clue Scrolls"), so matching
+    # on the activity would call it a clue.
+    if "Collection Log" in message:
+        return "collection"
+
+    activity = _activity_named_in(message, event["display_name"])
+    if activity is None:
+        return "minigame"
+    if activity.startswith("Clue Scrolls"):
+        return "clue"
+    if activity == "Collections Logged":
+        return "collection"
+    return "minigame" if activity in _NOT_A_BOSS else "boss"
 
 
 def event_icon(event):
@@ -267,7 +354,7 @@ def event_icon(event):
         cut = message.lower().index(name.lower(), 0, 120) + len(name)
         message = message[cut:]
 
-    pattern, lookup = _matcher()
+    pattern, lookup, _ = _matcher()
     found = pattern.search(message)
     if found:
         cls = lookup.get(found.group(0).lower())
@@ -423,7 +510,8 @@ def register(app):
                        ("ago", ago), ("stamp", stamp), ("day", day),
                        ("medal", medal), ("discord_markup", discord_markup),
                        ("skill_icon", skill_icon), ("activity_icon", activity_icon),
-                       ("event_icon", event_icon)):
+                       ("event_icon", event_icon),
+                       ("event_label", event_label)):
         app.jinja_env.filters[name] = func
     app.jinja_env.globals["page_numbers"] = page_numbers
     app.jinja_env.globals["page_count"] = page_count

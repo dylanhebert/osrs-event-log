@@ -48,9 +48,17 @@
   <label for="type">Type</label>
   <select id="type" name="type" onchange="this.form.submit()">
     <option value="">all</option>
+    {#
+      The menu selects on the stored event_type, so it must offer those values.
+      MINIGAME is the one whose name misleads: the hiscores file every boss,
+      raid and clue under it, and the rows themselves are labelled with the
+      specific one. Naming both here keeps the menu and the badges honest about
+      being the same thing.
+    #}
     {% for k in kinds %}
       <option value="{{ k.event_type }}" {% if event_type == k.event_type %}selected{% endif %}>
-        {{ k.event_type | lower }} ({{ k.n }})
+        {% if k.event_type == 'MINIGAME' %}bosses, raids and clues
+        {%- else %}{{ k.event_type | lower | replace('_', ' ') }}{% endif %} ({{ k.n }})
       </option>
     {% endfor %}
   </select>
