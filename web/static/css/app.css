@@ -520,3 +520,8 @@ a.pg:hover { color: var(--gold); border-color: var(--gold-dim); text-decoration:
   display: flex; gap: .9rem; align-items: center; flex-wrap: wrap;
   margin: .9rem 0 0;
 }
+
+/* A link that leaves the site. The arrow is generated rather than an icon, so
+   it costs no request and cannot fail to load. */
+.player-facts .external { color: var(--gold); white-space: nowrap; }
+.player-facts .external::after { content: " \2197"; font-size: .9em; }

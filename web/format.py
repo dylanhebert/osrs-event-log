@@ -116,6 +116,28 @@ def medal(rank_value):
     return {1: "1st", 2: "2nd", 3: "3rd"}.get(rank_value, f"{rank_value}th")
 
 
+def hiscores_url(rs_name):
+    """That account's page on the official Old School hiscores.
+
+    The hiscores want `user1=Lynx+Titan`, and rs_name is already stored in
+    exactly that form, so for every real name this hands back what it was
+    given. It exists to stop the value being url-encoded on the way out:
+    quoting `Lynx+Titan` naively gives `Lynx%2BTitan`, which looks up a name
+    with a literal plus sign in it and finds nobody. Decoding first and using
+    quote_plus keeps the space as `+` while still escaping anything that
+    genuinely needs it.
+
+    The human-facing page, not index_lite.json. This is a link for a person to
+    click; the bot moved to the JSON endpoint because Jagex 403s datacenter IPs
+    on this one, which does not apply to a reader's own browser.
+    """
+    if not rs_name:
+        return None
+    from urllib.parse import quote_plus
+    return ("https://secure.runescape.com/m=hiscore_oldschool/"
+            "hiscorepersonal?user1=" + quote_plus(str(rs_name).replace("+", " ")))
+
+
 # --------------------------------------------------------------------------- #
 # Skill and activity icons
 # --------------------------------------------------------------------------- #
@@ -511,7 +533,8 @@ def register(app):
                        ("medal", medal), ("discord_markup", discord_markup),
                        ("skill_icon", skill_icon), ("activity_icon", activity_icon),
                        ("event_icon", event_icon),
-                       ("event_label", event_label)):
+                       ("event_label", event_label),
+                       ("hiscores_url", hiscores_url)):
         app.jinja_env.filters[name] = func
     app.jinja_env.globals["page_numbers"] = page_numbers
     app.jinja_env.globals["page_count"] = page_count

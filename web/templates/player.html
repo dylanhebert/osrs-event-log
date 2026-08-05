@@ -13,6 +13,14 @@
     <span>rank <strong>{{ player.overall_rank | rank }}</strong></span>
     <span title="{{ player.last_polled | stamp }}">
       polled <strong>{{ player.last_polled | ago }}</strong></span>
+    {#
+      Straight to Jagex's own page for this account, which is the authority
+      this site is a record of. New tab because it leaves the site, and
+      noopener so the opened page cannot reach back through window.opener.
+      Referrer-Policy is same-origin site-wide, so the path is not passed on.
+    #}
+    <a class="external" href="{{ player.rs_name | hiscores_url }}"
+       target="_blank" rel="noopener noreferrer">Official hiscores</a>
   </div>
   <div class="player-servers">
     {% for s in servers %}{{ ui.server_chip(s) }}{% endfor %}

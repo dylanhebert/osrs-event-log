@@ -74,6 +74,27 @@ def test_page_numbers():
           all(1 <= n <= 963 for n in deep if n)
           and [n for n in deep if n] == sorted(n for n in deep if n))
 
+    # The one thing about this URL that can silently break: rs_name stores a
+    # space as "+", which is what the query string wants, so url-encoding it
+    # would send %2B and look up a name with a literal plus in it. Verified
+    # against the live hiscores once by hand -- "Lynx+Titan" returns that
+    # account's page -- but asserted offline here, because the suite should not
+    # depend on Jagex being reachable.
+    from web.format import hiscores_url
+
+    print("\nhiscores_url")
+    check("a space stays a plus, not %2B",
+          hiscores_url("Lynx+Titan").endswith("user1=Lynx+Titan"),
+          hiscores_url("Lynx+Titan"))
+    check("a name given with real spaces encodes the same way",
+          hiscores_url("Lynx Titan") == hiscores_url("Lynx+Titan"))
+    check("a name with no space is untouched",
+          hiscores_url("Zezima").endswith("user1=Zezima"))
+    check("it points at the Old School hiscores",
+          "m=hiscore_oldschool" in hiscores_url("Zezima"))
+    check("nothing in, nothing out", hiscores_url("") is None
+          and hiscores_url(None) is None)
+
     print("\npage_count")
     check("a full last page is not rounded up", page_count(100, 50) == 2)
     check("a partial last page counts", page_count(101, 50) == 3)
