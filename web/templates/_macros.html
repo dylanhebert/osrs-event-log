@@ -86,7 +86,15 @@
   <li class="{{ 'is-milestone' if e.is_milestone }}">
     <div class="feed-meta">
       {%- if e.is_milestone %}<span class="tag tag-milestone">milestone</span>{% endif %}
-      <span class="tag tag-{{ e.source }}">{{ e.event_type | lower }}</span>
+      {#
+        The type tag is dropped when it would only repeat the milestone tag.
+        A hiscores milestone has event_type MILESTONE as well, so both badges
+        say the same word; a Dink one keeps its type, because "milestone" and
+        "pet" are two different useful facts about the same event.
+      #}
+      {%- if not (e.is_milestone and e.event_type == 'MILESTONE') %}
+        <span class="tag tag-{{ e.source }}">{{ e.event_type | lower }}</span>
+      {%- endif %}
       {%- if show_player %}
         <a href="{{ url_for('player', rs_name=e.rs_name) }}">{{ e.display_name }}</a>
       {%- endif %}
