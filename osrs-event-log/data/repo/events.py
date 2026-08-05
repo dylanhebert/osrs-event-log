@@ -21,13 +21,23 @@ SOURCE_DINK = "dink"
 
 
 def log_event(player_id, server_id, source, event_type, message,
-              title=None, payload=None, posted=True, occurred_at=None):
+              title=None, payload=None, posted=True, occurred_at=None,
+              is_milestone=False):
+    """Record one event.
+
+    `is_milestone` is whether this was notable enough to ping the server's
+    role, which is a different question from event_type: a pet drop is a PET
+    event AND a milestone. Both sources produce them, hiscores through the
+    milestone bucket and Dink through a formatter returning notify=True.
+    """
     cur = db.execute(
         "INSERT INTO events (player_id, server_id, source, event_type, title,"
-        " message, payload, occurred_at, posted) VALUES (?,?,?,?,?,?,?,?,?)",
+        " message, payload, occurred_at, posted, is_milestone)"
+        " VALUES (?,?,?,?,?,?,?,?,?,?)",
         (player_id, server_id, source, event_type, title, message,
          json.dumps(payload) if payload is not None else None,
-         occurred_at or db.utcnow(), 1 if posted else 0))
+         occurred_at or db.utcnow(), 1 if posted else 0,
+         1 if is_milestone else 0))
     return cur.lastrowid
 
 

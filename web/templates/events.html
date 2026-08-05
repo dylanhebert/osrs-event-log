@@ -1,10 +1,23 @@
 {% extends "base.html" %}
+{% import "_macros.html" as ui %}
 {% block title %}Events - OSRS Event Log{% endblock %}
 
 {% block content %}
 <h1>Events</h1>
 
+<nav class="tabs">
+  <a class="{{ 'on' if not milestones_only }}"
+     href="{{ url_for('events', source=source, type=event_type,
+                      footers='1' if include_footers else None) }}">Everything</a>
+  <a class="{{ 'on' if milestones_only }}"
+     href="{{ url_for('events', source=source, type=event_type, milestones='1',
+                      footers='1' if include_footers else None) }}">Milestones only</a>
+</nav>
+
 <form class="filters" method="get">
+  {% if milestones_only %}<input type="hidden" name="milestones" value="1">{% endif %}
+  {% if include_footers %}<input type="hidden" name="footers" value="1">{% endif %}
+
   <label for="source">Source</label>
   <select id="source" name="source" onchange="this.form.submit()">
     <option value="">all</option>
@@ -25,42 +38,45 @@
 </form>
 
 {% if events %}
-  <p class="muted">{{ total | num }} matching events.</p>
-  <ul class="feed wide">
-    {% for e in events %}
-      <li>
-        <div class="feed-meta">
-          <span class="tag tag-{{ e.source }}">{{ e.event_type | lower }}</span>
-          <a href="{{ url_for('player', rs_name=e.rs_name) }}">{{ e.display_name }}</a>
-          <time title="{{ e.occurred_at | stamp }}">{{ e.occurred_at | ago }}</time>
-          {% if not e.posted %}<span class="chip warn">not posted to Discord</span>{% endif %}
-        </div>
-        {#
-          e.message only. events.payload holds the raw Dink body, which carries
-          dinkAccountHash among other things, and is never selected or rendered.
+  <p class="muted">
+    {{ total | num }} matching event{{ '' if total == 1 else 's' }}.
+    {#
+      The Overall, Skill of the Week and Boss of the Week lines are footers
+      appended to whichever player's update they rode in on, not events in
+      their own right. They are stored, but showing them turns roughly one row
+      in four into "Total level: 978".
+    #}
+    {% if include_footers %}
+      Including running totals.
+      <a href="{{ url_for('events', source=source, type=event_type,
+                          milestones='1' if milestones_only else None) }}">Hide them</a>.
+    {% else %}
+      <a href="{{ url_for('events', source=source, type=event_type, footers='1',
+                          milestones='1' if milestones_only else None) }}">Show
+        running totals</a> too.
+    {% endif %}
+  </p>
 
-          discord_markup returns HTML, and it escapes before it emits: Dink
-          message text comes from a player's RuneLite client via a public
-          endpoint, so it is treated as attacker-controlled. See
-          web/tests/test_markup.py.
-        #}
-        <div class="feed-msg">{{ e.message | discord_markup }}</div>
-      </li>
-    {% endfor %}
+  <ul class="feed wide">
+    {% for e in events %}{{ ui.event_row(e) }}{% endfor %}
   </ul>
 
   <nav class="pager">
     {% if page > 1 %}
-      <a href="{{ url_for('events', page=page-1, source=source, type=event_type) }}">Newer</a>
+      <a href="{{ url_for('events', page=page-1, source=source, type=event_type,
+                          milestones='1' if milestones_only else None,
+                          footers='1' if include_footers else None) }}">Newer</a>
     {% endif %}
     <span>page {{ page }} of {{ (total // per_page) + (1 if total % per_page else 0) }}</span>
     {% if page * per_page < total %}
-      <a href="{{ url_for('events', page=page+1, source=source, type=event_type) }}">Older</a>
+      <a href="{{ url_for('events', page=page+1, source=source, type=event_type,
+                          milestones='1' if milestones_only else None,
+                          footers='1' if include_footers else None) }}">Older</a>
     {% endif %}
   </nav>
 {% else %}
   <p class="empty">
-    {% if source or event_type %}
+    {% if source or event_type or milestones_only %}
       No events match that filter.
     {% else %}
       Nothing recorded yet. The events table is new: before the storage

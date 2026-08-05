@@ -515,8 +515,42 @@ def skills_with_movement(player_id):
 # is derivable from player_servers. So the feed filters by PLAYER, not by
 # server. Filtering on e.server_id would silently return nothing.
 
+# The Overall, Skill of the Week and Boss of the Week lines are FOOTERS, not
+# events. check_sotw_update() appends them to whichever list the player's
+# update happened to be in, so they have no independent existence: they are a
+# running total tacked onto someone else's message.
+#
+# The bot stores them as their own rows and this keeps doing that, because
+# throwing them away would lose a week's progress history. But they are hidden
+# from the feed by default: the Overall footer rides along on most updates, so
+# showing them turns roughly one row in four into "Total level: 978", and the
+# drops and levels drown.
+FOOTER_PREFIXES = ("```c\nTotal level:", "```Total level:",
+                   "```c\nSkill of the Week", "```Skill of the Week",
+                   "```c\nBoss of the Week", "```Boss of the Week")
+
+_NOT_FOOTER = " AND ".join(
+    f"e.message NOT LIKE '{prefix.replace(chr(10), '%')}%'"
+    for prefix in FOOTER_PREFIXES)
+
+
+def _feed_filters(sql, params, source, event_type, milestones_only,
+                  include_footers):
+    if source:
+        sql += " AND e.source = ?"
+        params.append(source)
+    if event_type:
+        sql += " AND e.event_type = ?"
+        params.append(event_type)
+    if milestones_only:
+        sql += " AND e.is_milestone = 1"
+    if not include_footers:
+        sql += f" AND ({_NOT_FOOTER})"
+    return sql, params
+
+
 def events_feed(player_ids, limit=50, offset=0, source=None, event_type=None,
-                player_id=None):
+                player_id=None, milestones_only=False, include_footers=False):
     """The activity feed, restricted to visible players.
 
     `payload` is never selected. It holds the raw Dink body, which carries
@@ -531,47 +565,42 @@ def events_feed(player_ids, limit=50, offset=0, source=None, event_type=None,
         ids = [player_id]
 
     sql = ("SELECT e.id, e.source, e.event_type, e.title, e.message,"
-           " e.occurred_at, e.posted, p.rs_name, p.display_name"
+           " e.occurred_at, e.posted, e.is_milestone,"
+           " p.rs_name, p.display_name"
            " FROM events e JOIN players p ON p.id = e.player_id"
            f" WHERE e.player_id IN ({_placeholders(ids)})")
-    params = list(ids)
-    if source:
-        sql += " AND e.source = ?"
-        params.append(source)
-    if event_type:
-        sql += " AND e.event_type = ?"
-        params.append(event_type)
+    sql, params = _feed_filters(sql, list(ids), source, event_type,
+                                milestones_only, include_footers)
     return repo.db.query(
         sql + " ORDER BY e.occurred_at DESC, e.id DESC LIMIT ? OFFSET ?",
         params + [limit, offset])
 
 
-def events_count(player_ids, source=None, event_type=None, player_id=None):
+def events_count(player_ids, source=None, event_type=None, player_id=None,
+                 milestones_only=False, include_footers=False):
     if not player_ids:
         return 0
     ids = [player_id] if player_id is not None and player_id in player_ids \
         else list(player_ids)
     sql = ("SELECT COUNT(*) FROM events e"
            f" WHERE e.player_id IN ({_placeholders(ids)})")
-    params = list(ids)
-    if source:
-        sql += " AND e.source = ?"
-        params.append(source)
-    if event_type:
-        sql += " AND e.event_type = ?"
-        params.append(event_type)
+    sql, params = _feed_filters(sql, list(ids), source, event_type,
+                                milestones_only, include_footers)
     return repo.db.scalar(sql, params, 0)
 
 
-def event_types(player_ids):
+def event_types(player_ids, include_footers=False):
     """Distinct (source, type) pairs present, for building the filter menu.
     Built from the data rather than hardcoded, because Dink adds event types."""
     if not player_ids:
         return []
+    sql = ("SELECT e.source, e.event_type, COUNT(*) AS n FROM events e"
+           f" WHERE e.player_id IN ({_placeholders(player_ids)})")
+    if not include_footers:
+        sql += f" AND ({_NOT_FOOTER})"
     return repo.db.query(
-        "SELECT e.source, e.event_type, COUNT(*) AS n FROM events e"
-        f" WHERE e.player_id IN ({_placeholders(player_ids)})"
-        " GROUP BY e.source, e.event_type ORDER BY n DESC", list(player_ids))
+        sql + " GROUP BY e.source, e.event_type ORDER BY n DESC",
+        list(player_ids))
 
 
 # --------------------------------------------------------------------------- #

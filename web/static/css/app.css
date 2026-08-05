@@ -227,6 +227,21 @@ h2 { font-size: 1.05rem; margin: 0 0 .75rem; }
 .feed { list-style: none; margin: 0; padding: 0; }
 .feed li { padding: .5rem 0; border-bottom: 1px solid var(--grid); }
 .feed li:last-child { border-bottom: 0; }
+
+/* A milestone is whatever pinged the server's role. In a feed that runs to
+   tens of thousands of rows, the whole value is being able to skim past the
+   hundredth Fishing level and land on the 99. Gold rule and a warmer wash,
+   matching the tone the rest of the page uses for things that matter. */
+.feed li.is-milestone {
+  border-left: 3px solid var(--gold);
+  padding-left: .7rem;
+  margin-left: -.7rem;
+  background: linear-gradient(90deg, rgba(255, 184, 63, .13), transparent 60%);
+}
+.feed li.is-milestone .feed-msg strong { color: var(--link-hover); }
+.tag-milestone {
+  background: var(--gold); color: #2b2417; font-weight: 700;
+}
 .feed-meta {
   display: flex; gap: .55rem; align-items: center; flex-wrap: wrap;
   color: var(--ink-dim); font-size: .8rem; margin-bottom: .2rem;

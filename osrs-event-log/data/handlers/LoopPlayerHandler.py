@@ -92,16 +92,20 @@ class LoopPlayerHandler:
             player_id = repo.players.get_id(rs_name)
             if player_id is None:
                 return 0
-            buckets = (('MILESTONE', update.milestones),
-                       ('SKILL', update.skills),
-                       ('MINIGAME', update.minigames))
+            # The milestone bucket is exactly what PlayerUpdate decided was
+            # worth pinging the role for, so it is the authority for the
+            # is_milestone flag rather than anything re-derived from the text.
+            buckets = (('MILESTONE', update.milestones, True),
+                       ('SKILL', update.skills, False),
+                       ('MINIGAME', update.minigames, False))
             written = 0
             with repo.transaction():
-                for event_type, messages in buckets:
+                for event_type, messages, milestone in buckets:
                     for message in messages:
                         repo.events.log_event(
                             player_id, None, repo.events.SOURCE_HISCORES,
-                            event_type, message, posted=posted)
+                            event_type, message, posted=posted,
+                            is_milestone=milestone)
                         written += 1
             return written
         except Exception as e:

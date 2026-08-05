@@ -101,9 +101,13 @@ PAGE = 100
 # One unit: an optional bold title, optional text between it and the code
 # block (the MAXED message has an italic line in between), then a code block.
 # Non-greedy throughout so consecutive units do not swallow each other.
+# The language tag is only a language tag when a NEWLINE follows it. Without
+# that requirement the matcher eats the first word of an untagged block, so
+# ```Skill of the Week - ...``` parses with a body of " of the Week - ..." and
+# stops looking like the footer it is. Older messages had no tag at all.
 UNIT = re.compile(
     r"(?:\*\*(?P<title>.+?)\*\*(?P<between>[^`]*?))?"
-    r"```(?P<lang>[A-Za-z0-9+#-]*)\n?(?P<body>.*?)```",
+    r"```(?:(?P<lang>[A-Za-z0-9+#-]*)\n)?(?P<body>.*?)```",
     re.DOTALL)
 
 # Trailing mentions appended by post_update: role then member, either of which
@@ -112,6 +116,47 @@ TRAILING = re.compile(r"(?:\s|<@[!&]?\d+>|@here|@everyone)+$")
 
 # A bold run, used to spot units the UNIT pattern could not claim.
 BOLD = re.compile(r"\*\*(.+?)\*\*", re.DOTALL)
+
+# An older format put the mentions FIRST, as their own bold line:
+#
+#     **~ <@123> ~**
+#     **Someone levelled up Hunter to 97**```c ... ```
+#
+# Left alone that line is taken as the unit's title, which costs the real title
+# (so the event classifies as a generic UPDATE) and stores a raw Discord member
+# id in the message text. A real event title never contains a mention: the
+# current code appends them outside the bold entirely, and the old code put
+# them in a line of their own. So a bold run containing a mention is never a
+# title, and dropping it fixes the classification and removes the id together.
+#
+# Two shapes, because the mention did not always resolve to a real mention:
+#   **~ <@123> ~**        an actual mention
+#   **~ chickenbuster ~**  the role written out as plain text
+# The tildes are the constant, so a bold run wrapped in them is a mention line
+# whether or not it contains an id.
+MENTION_LINE = re.compile(
+    r"\*\*(?:[^*]*<@[!&]?\d+>[^*]*|\s*~[^*]*~\s*)\*\*\s*", re.DOTALL)
+
+# THE MILESTONE MARKER.
+#
+# A milestone is whatever was worth pinging the server's role for, and it is
+# not a kind of event: a pet drop is a PET event AND a milestone. Both sources
+# produce them:
+#
+#   hiscores  the ten triggers in PlayerUpdate.py that append to
+#             self.milestones, sent as
+#             f'{all_milestones}{mention_role} {mention_member}'
+#   dink      a formatter returning notify=True, sent as
+#             f'{message}{mention_role} {mention_member}'
+#
+# A routine update gets f'{...}{mention_member}' with NO role. So the ROLE
+# mention is the signal, and it survives the format change: the old messages
+# carried it in a leading "**~ @role ~**" line, the current ones append it.
+# ;milestones keys on exactly this.
+#
+# @here is included because get_mention_role() falls back to it when a server
+# has set no role.
+ROLE_MENTION = re.compile(r"<@&\d+>|@here|@everyone")
 
 FOOTERS = (
     ("Total level:", "OVERALL"),
@@ -153,6 +198,14 @@ HISCORES_MARKERS = (
     "Current rank:", "XP gained", "Overall XP:", "Total level:",
     "Skill of the Week", "Boss of the Week", "clues completed",
     "on the Hiscores", "Overall rank:", "logged:",
+    # Title phrases, needed because an older format emitted the header ALONE
+    # with no code block, so there is no body to carry a marker:
+    #     **Someone has killed Abyssal Sire at least 500 times**
+    # Without these those units match no side and are reported as unknown.
+    # They come before the Dink check, so "completed ... enough times to be on
+    # the hiscores" cannot be mistaken for a Dink quest completion.
+    "levelled up", "leveled up", "has killed", "has achieved",
+    "at least", "HAS MAXED", "on the hiscores", "Clue Scroll",
 )
 
 # Dink types, taken from dink_messages/ rather than guessed from output. The
@@ -222,7 +275,10 @@ def source_of(text):
     return "unknown"
 
 _STRIP_TITLE = re.compile(r"^\*\*.*?\*\*", re.DOTALL)
-_CODE_BODY = re.compile(r"```[A-Za-z0-9+#-]*\n?(.*?)```", re.DOTALL)
+# Same newline requirement as UNIT, and for the same reason: this is what the
+# footer checks read, so eating the first word of an untagged block is what
+# made "Skill of the Week - ..." unrecognisable.
+_CODE_BODY = re.compile(r"```(?:[A-Za-z0-9+#-]*\n)?(.*?)```", re.DOTALL)
 
 
 def classify(title, text):
@@ -246,6 +302,7 @@ def classify(title, text):
 
     source = source_of(haystack)
     if source == "dink":
+        # Dink keeps its payload type, which is what the live webhook stores.
         for needle, kind in DINK_HINTS:
             if needle in haystack:
                 return "dink", kind
@@ -253,10 +310,16 @@ def classify(title, text):
     if source == "unknown":
         return "unknown", "UPDATE"
 
-    for needle, kind in TYPE_HINTS:
-        if needle in haystack:
-            return "hiscores", kind
-    return "hiscores", "UPDATE"
+    # Hiscores uses the live bot's own three buckets rather than a finer set
+    # invented here, so backfilled rows are indistinguishable from recorded
+    # ones. MILESTONE is decided by the role mention, not by wording, and is
+    # applied by the caller; what is left is telling a skill update from an
+    # activity update, which is what PlayerUpdate's two lists mean.
+    if any(marker in haystack for marker in
+           ("XP gained", "levelled up", "leveled up", "Total level:",
+            "Overall XP:", "on the Hiscores", "Skill of the Week")):
+        return "hiscores", "SKILL"
+    return "hiscores", "MINIGAME"
 
 
 def split_units(content, accept_bare_bold=None):
@@ -273,7 +336,7 @@ def split_units(content, accept_bare_bold=None):
     milestone or a quest with no completion counts. Matching only the
     block-terminated shape drops those on the floor.
     """
-    trimmed = TRAILING.sub("", content)
+    trimmed = MENTION_LINE.sub("", TRAILING.sub("", content))
 
     units, spans = [], []
     for match in UNIT.finditer(trimmed):
@@ -634,6 +697,8 @@ def main(argv=None):
                 stats["empty"] += 1
                 continue
 
+            # Read the role mention before split_units() strips it away.
+            milestone = bool(ROLE_MENTION.search(content))
             units, leftover = split_units(
                 content,
                 accept_bare_bold=lambda t: looks_like_event_header(
@@ -677,6 +742,12 @@ def main(argv=None):
                 if not deduper.accept(owner, text, occurred):
                     continue
                 source, kind = classify(title, text)
+                # A hiscores milestone is stored as MILESTONE, matching the
+                # live bucket name. Dink keeps its payload type either way,
+                # because that is what the webhook records; the flag is what
+                # carries "this pinged the role" for both sources.
+                if milestone and source == "hiscores":
+                    kind = "MILESTONE"
                 if source == "dink" and not args.include_dink:
                     stats["dink_skipped"] += 1
                     continue
@@ -692,8 +763,11 @@ def main(argv=None):
                 if kind == "UPDATE" and len(unclassified) < args.samples:
                     unclassified.append(text[:150].replace("\n", "\\n"))
                 rows.append((owner, None, source, kind, None,
-                             text, None, occurred, 1, message_id))
+                             text, None, occurred, 1, message_id,
+                             1 if milestone else 0))
                 stats["rows"] += 1
+                if milestone:
+                    stats["milestones"] += 1
                 kept_any = True
             if kept_any:
                 per_year[occurred[:4]] += 1
@@ -723,6 +797,8 @@ def main(argv=None):
         print("  because the duplicate check has already seen the events):")
         for name, count in per_channel.most_common():
             print(f"    #{name:<24} {count:>7} messages")
+
+    print(f"\n  milestones (pinged the role)  {stats['milestones']:>7}")
 
     if types:
         print("\n  by event_type:")
@@ -766,8 +842,9 @@ def main(argv=None):
     with repo.transaction():
         repo.db.executemany(
             "INSERT INTO events (player_id, server_id, source, event_type,"
-            " title, message, payload, occurred_at, posted, discord_message_id)"
-            " VALUES (?,?,?,?,?,?,?,?,?,?)", rows)
+            " title, message, payload, occurred_at, posted,"
+            " discord_message_id, is_milestone)"
+            " VALUES (?,?,?,?,?,?,?,?,?,?,?)", rows)
     total = repo.db.scalar("SELECT COUNT(*) FROM events", (), 0)
     print(f"Done. events now holds {total} rows.")
     return 0

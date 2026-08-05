@@ -18,16 +18,11 @@
 {%- endmacro %}
 
 {#
-  Skill and activity icons, vendored from the OSRS Wiki.
+  Skill and activity icons, from the vendored sprite.
 
   A name with no icon renders the name alone rather than a broken image or a
   gap: Jagex adds bosses and skills, and the repo layer inserts unknown names on
   sight, so a name can reach the page before anyone has fetched an icon for it.
-#}
-{#
-  Sprite spans, not <img> tags. One page can reference over a hundred icons;
-  as separate images that is a hundred round trips for 3 KB files, and any one
-  of them can fail on its own. The sprite is a single cached request.
 #}
 {% macro skill_name(name) -%}
   {%- set icon = name | skill_icon -%}
@@ -43,12 +38,6 @@
     {%- if icon %}<i class="ic ic-{{ icon }}" aria-hidden="true"></i>{% endif -%}
     {{ name }}
   </span>
-{%- endmacro %}
-
-{% macro server_tab(server, href, active=False) -%}
-  <a class="{{ 'on' if active }}" href="{{ href }}">
-    {{ server_icon(server) }}{{ server.label }}
-  </a>
 {%- endmacro %}
 
 {#
@@ -71,8 +60,47 @@
   </span>
 {%- endmacro %}
 
+{% macro server_tab(server, href, active=False) -%}
+  <a class="{{ 'on' if active }}" href="{{ href }}">
+    {{ server_icon(server) }}{{ server.label }}
+  </a>
+{%- endmacro %}
+
 {% macro server_chip(server) -%}
   <span class="chip {{ '' if server.is_active else 'muted' }}">
     {{ server_icon(server, 16) }}{{ server.label }}
   </span>
+{%- endmacro %}
+
+{#
+  One row of the activity feed.
+
+  A milestone is whatever pinged the server's role: the ten triggers in
+  PlayerUpdate that append to self.milestones, plus any Dink formatter that
+  returned notify=True. It is NOT an event_type, which is why it reads off its
+  own column: a pet drop is a PET event AND a milestone, and both matter.
+
+  `show_player` is off on a player's own page, where every row is theirs.
+#}
+{% macro event_row(e, show_player=True) -%}
+  <li class="{{ 'is-milestone' if e.is_milestone }}">
+    <div class="feed-meta">
+      {%- if e.is_milestone %}<span class="tag tag-milestone">milestone</span>{% endif %}
+      <span class="tag tag-{{ e.source }}">{{ e.event_type | lower }}</span>
+      {%- if show_player %}
+        <a href="{{ url_for('player', rs_name=e.rs_name) }}">{{ e.display_name }}</a>
+      {%- endif %}
+      <time title="{{ e.occurred_at | stamp }}">{{ e.occurred_at | ago }}</time>
+      {%- if not e.posted %}<span class="chip warn">not posted to Discord</span>{% endif %}
+    </div>
+    {#
+      e.message only. events.payload holds the raw Dink body, which carries
+      dinkAccountHash among other things, and is never selected or rendered.
+
+      discord_markup returns HTML and escapes before it emits: Dink text comes
+      from a player's RuneLite client via a public endpoint, so it is treated
+      as attacker-controlled. See web/tests/test_markup.py.
+    #}
+    <div class="feed-msg">{{ e.message | discord_markup }}</div>
+  </li>
 {%- endmacro %}

@@ -232,10 +232,15 @@ class DinkWebhook(commands.Cog):
         try:
             player_id = repo.players.get_id(name_rs)
             if player_id is not None:
+                # should_notify is what decided whether the role was pinged,
+                # which is the same thing the hiscores milestone bucket means:
+                # pets and TOA purples always, loot/clue/quest/diary when the
+                # formatter judged them worth it.
                 repo.events.log_event(
                     player_id, None, repo.events.SOURCE_DINK,
                     event_type or 'UNKNOWN', message,
-                    payload=payload, posted=posted_anywhere)
+                    payload=payload, posted=posted_anywhere,
+                    is_milestone=bool(should_notify))
         except Exception as e:
             logger.exception(f"Could not record Dink event for {name_rs} -- {e}")
 

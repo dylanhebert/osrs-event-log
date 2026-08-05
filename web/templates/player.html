@@ -134,13 +134,7 @@
     {% if events %}
       <ul class="feed">
         {% for e in events %}
-          <li>
-            <div class="feed-meta">
-              <span class="tag tag-{{ e.source }}">{{ e.event_type | lower }}</span>
-              <time title="{{ e.occurred_at | stamp }}">{{ e.occurred_at | ago }}</time>
-            </div>
-            <div class="feed-msg">{{ e.message | discord_markup }}</div>
-          </li>
+          {{ ui.event_row(e, show_player=False) }}
         {% endfor %}
       </ul>
     {% else %}

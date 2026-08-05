@@ -241,15 +241,25 @@ def create_app(env=None):
         per_page = 50
         source = request.args.get("source") or None
         event_type = request.args.get("type") or None
-        total = queries.events_count(g.player_ids, source=source,
-                                     event_type=event_type)
-        rows = queries.events_feed(
-            g.player_ids, limit=per_page, offset=(page - 1) * per_page,
-            source=source, event_type=event_type)
+        milestones_only = request.args.get("milestones") == "1"
+        # Footers (Overall, SOTW, BOTW totals) are stored but hidden by
+        # default. They ride along on other players' updates rather than being
+        # events, and there are enough of them to bury everything else.
+        include_footers = request.args.get("footers") == "1"
+        filters = dict(source=source, event_type=event_type,
+                       milestones_only=milestones_only,
+                       include_footers=include_footers)
         return render_template(
-            "events.html", events=rows, page=page, per_page=per_page,
-            total=total, source=source, event_type=event_type,
-            kinds=queries.event_types(g.player_ids))
+            "events.html",
+            events=queries.events_feed(
+                g.player_ids, limit=per_page, offset=(page - 1) * per_page,
+                **filters),
+            total=queries.events_count(g.player_ids, **filters),
+            page=page, per_page=per_page,
+            source=source, event_type=event_type,
+            milestones_only=milestones_only, include_footers=include_footers,
+            kinds=queries.event_types(g.player_ids,
+                                      include_footers=include_footers))
 
     # ----------------------------------------------------------------- #
     # Competitions

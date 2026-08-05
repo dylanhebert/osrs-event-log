@@ -9,6 +9,7 @@ other half.
         servers.icon_hash     guild icon, so it can show one
     v4  discord_members       who owns an account: name and avatar hash
     v5  events.discord_message_id  so a Discord backfill can re-run safely
+    v6  events.is_milestone       did this event ping the role
 
 It is idempotent and additive: it creates tables, an index and nullable columns,
 rewrites no existing row, and drops nothing. Safe to run more than once and safe
@@ -25,7 +26,7 @@ import sqlite3
 import sys
 from datetime import datetime, timezone
 
-SCHEMA_VERSION = 5
+SCHEMA_VERSION = 6
 
 NEW_TABLES = ["web_credentials", "discord_members"]
 
@@ -60,6 +61,7 @@ NEW_COLUMNS = [
     ("servers", "name", "TEXT"),
     ("servers", "icon_hash", "TEXT"),
     ("events", "discord_message_id", "INTEGER"),
+    ("events", "is_milestone", "INTEGER NOT NULL DEFAULT 0"),
 ]
 
 # Partial indexes on the new columns, created after the columns exist.
@@ -149,6 +151,14 @@ def main(argv=None):
             # After the columns exist, not before.
             for statement in LATE_DDL:
                 conn.execute(statement)
+            # Existing hiscores rows already record this in event_type, so
+            # backfilling the flag from them is exact rather than a guess.
+            # Dink rows cannot be recovered this way and stay 0 until a
+            # Discord sweep re-reads them.
+            if "is_milestone" in {c for _, c, _ in missing_columns}:
+                conn.execute(
+                    "UPDATE events SET is_milestone = 1"
+                    " WHERE source = 'hiscores' AND event_type = 'MILESTONE'")
             if version < SCHEMA_VERSION:
                 conn.execute(
                     "INSERT INTO schema_version (version, applied_at) VALUES (?, ?)",

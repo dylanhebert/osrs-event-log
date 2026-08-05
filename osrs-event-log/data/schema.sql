@@ -336,6 +336,24 @@ CREATE TABLE events (
     payload     TEXT,              -- raw Dink body as JSON, NULL for hiscores
     occurred_at TEXT    NOT NULL,
     posted      INTEGER NOT NULL DEFAULT 0,
+    -- Whether this event was notable enough to ping the server's role
+    -- (schema version 6). It is NOT an event_type: a pet drop is a PET event
+    -- AND a milestone, and the two answer different questions. event_type says
+    -- what happened; this says whether anyone was called over to look.
+    --
+    -- It spans both sources, which is why it needs its own column:
+    --   hiscores  the ten triggers in PlayerUpdate.py that append to
+    --             self.milestones (99s, 2000/2200/max total, XP thresholds
+    --             above 10M, clue and KC thresholds, a first kill of a boss
+    --             listed in custom_messages)
+    --   dink      the formatters that return notify=True: pets and TOA
+    --             purples always, loot/clue/quest/diary conditionally
+    --
+    -- In a posted message the observable signal is the ROLE mention, which
+    -- only these carry; a routine update gets the member mention alone. That
+    -- is what ;milestones keys on, and it is how the Discord backfill
+    -- recovers this for events that predate the column.
+    is_milestone INTEGER NOT NULL DEFAULT 0,
     -- The Discord message this row was recovered from, for rows imported by
     -- tools/backfill_events_from_discord.py (schema version 5). NULL for
     -- everything the bot records live, which is the normal case.

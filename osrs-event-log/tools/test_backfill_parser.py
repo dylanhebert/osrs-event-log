@@ -25,6 +25,7 @@ split_units = _ns["split_units"]
 classify = _ns["classify"]
 attribute = _ns["attribute"]
 looks_like_event_header = _ns["looks_like_event_header"]
+ROLE_MENTION = _ns["ROLE_MENTION"]
 
 INDEX = {"zezima alt": 1, "woox major": 2, "hey jase": 3, "alt 2": 4,
          "zezima": 9}
@@ -53,6 +54,24 @@ def parse(content):
     return units, leftover, owner
 
 
+def kind_of(content, index=0):
+    """(source, event_type) the real caller would store, milestone applied.
+
+    Milestone is decided by the ROLE mention, not by wording, and the caller
+    promotes hiscores units to MILESTONE when it is present. Dink keeps its
+    payload type either way.
+    """
+    units, _, _ = parse(content)
+    source, kind = classify(*units[index])
+    if ROLE_MENTION.search(content) and source == "hiscores":
+        kind = "MILESTONE"
+    return source, kind
+
+
+def is_milestone(content):
+    return bool(ROLE_MENTION.search(content))
+
+
 def main():
     print("real shapes from PlayerUpdate.py")
 
@@ -64,7 +83,7 @@ def main():
           f"got {len(units)}")
     check("...attributed to the right player", owner == 1)
     check("...mentions stripped", "<@" not in units[-1][1])
-    check("...first is LEVEL", classify(*units[0]) == ("hiscores", "LEVEL"))
+    check("...first is a SKILL update", classify(*units[0]) == ("hiscores", "SKILL"))
     check("...second is OVERALL", classify(*units[1]) == ("hiscores", "OVERALL"))
 
     units, leftover, owner = parse(
@@ -81,21 +100,24 @@ def main():
         "**Woox Major levelled up Sailing to 1**```This is the first time "
         "this skill is on the Hiscores```")
     check("a code block with no language tag still parses", len(units) == 1)
-    check("...FIRST is recognised", classify(*units[0]) == ("hiscores", "FIRST"))
+    check("...first-time-on-hiscores is a SKILL update",
+          classify(*units[0]) == ("hiscores", "SKILL"))
 
     units, _, owner = parse(
         "**Woox Major HAS MAXED!!** \U0001F44F \n*Now you can finally play "
         "the game.*```c\nOverall XP: 4,600,000,000 | Overall rank: 1```")
     check("text between the bold and the block does not break the unit",
           len(units) == 1)
-    check("...MAXED is recognised", classify(*units[0]) == ("hiscores", "MAXED"))
+    check("...MAXED is a hiscores unit; milestone comes from the role mention",
+          classify(*units[0]) == ("hiscores", "SKILL"))
     check("...attributed", owner == 2)
 
     units, _, owner = parse(
         "**Alt 2 killed Zulrah for the first time! bad snek.**```c\n"
         "Total kill count: 1 | Current rank: 120,000```")
     check("a name containing a digit attributes", owner == 4)
-    check("...FIRST beats KC in the hint order", classify(*units[0]) == ("hiscores", "FIRST"))
+    check("...a boss first kill is a MINIGAME update",
+          classify(*units[0]) == ("hiscores", "MINIGAME"))
 
     units, _, owner = parse(
         "**Zezima Alt levelled up Mining to 70**```c\n5,000 XP gained | Total "
@@ -136,6 +158,82 @@ def main():
     check("...and reports an unknown source rather than guessing",
           classify(*units[0]) == ("unknown", "UPDATE"))
     check("...still attributed to the player", owner == 1)
+
+    print("\nolder formats, found by sweeping six years of real history")
+
+    # Mentions used to lead the message on their own bold line. Left alone that
+    # line becomes the unit's title, which loses the real one AND stores a raw
+    # Discord member id in the message text.
+    units, _, owner = parse(
+        "**~ <@111122223333444455> ~**\n"
+        "**Zezima Alt levelled up Hunter to 97. So close.**```c\n"
+        "4,800 XP gained | Total Hunter XP: 10,000```")
+    check("a leading mention line does not become the title", len(units) == 1,
+          f"got {len(units)}")
+    check("...the real title is used instead",
+          classify(*units[0]) == ("hiscores", "SKILL"))
+    check("...attributed to the player, not lost", owner == 1)
+    check("...and no Discord id survives into the stored text",
+          "<@" not in units[0][1])
+
+    units, _, owner = parse(
+        "**~ <@&555566667777888899> somebody ~**\n"
+        "**Zezima Alt has achieved 110,000,000 Strength XP**```c\n"
+        "369,915 XP gained | Total Strength XP: 110,000,000```")
+    check("a role mention with a trailing name is also stripped",
+          "<@" not in units[0][1] and owner == 1)
+
+    # An older format emitted the header alone, with no code block, so there is
+    # no body for a marker to live in.
+    units, _, owner = parse(
+        "**Zezima Alt has killed Abyssal Sire at least 500 times**")
+    check("bold-only hiscores is recognised as hiscores, not dink",
+          classify(*units[0])[0] == "hiscores",
+          str(classify(*units[0])))
+
+    units, _, owner = parse(
+        "**Zezima Alt completed Chambers of Xeric enough times to be on the "
+        "hiscores!**")
+    check("...even when the wording reads like a Dink quest completion",
+          classify(*units[0])[0] == "hiscores", str(classify(*units[0])))
+
+    print("\nmilestones: the role mention, not the wording")
+    # post_update sends milestones as f'{...}{mention_role} {mention_member}'
+    # and routine updates as f'{...}{mention_member}'. The ROLE mention is the
+    # only difference, and it is the same signal ;milestones keys on.
+    role_ping = ("**Zezima Alt levelled up Attack to 99**```c\n"
+                 "1 XP gained | Total Attack XP: 13,034,431``` <@&123> <@456>")
+    member_only = ("**Zezima Alt levelled up Mining to 70**```c\n"
+                   "5,000 XP gained | Total Mining XP: 737,627``` <@456>")
+    check("a role mention marks a milestone", is_milestone(role_ping))
+    check("...and it is stored as MILESTONE",
+          kind_of(role_ping) == ("hiscores", "MILESTONE"))
+    check("a member mention alone is a routine update",
+          not is_milestone(member_only))
+    check("...and stays SKILL", kind_of(member_only) == ("hiscores", "SKILL"))
+
+    here_ping = ("**Zezima Alt levelled up Attack to 99**```c\n"
+                 "1 XP gained | Total Attack XP: 13,034,431``` @here <@456>")
+    check("@here counts, since it is the fallback when no role is set",
+          is_milestone(here_ping))
+
+    old_ping = ("**~ <@&123> ~**\n**Zezima Alt has achieved 100,000,000 "
+                "Strength XP**```c\n1 XP gained | Total Strength XP: 100,000,000```")
+    check("the old leading-mention format is detected too",
+          is_milestone(old_ping) and kind_of(old_ping) == ("hiscores", "MILESTONE"))
+
+    # THE CASE THAT MAKES is_milestone A COLUMN RATHER THAN AN event_type.
+    pet = ("**Zezima Alt just received Herbi!**```c\n"
+           "Milestone: 12,875,356``` <@&123> <@456>")
+    check("a Dink pet pings the role, so it IS a milestone", is_milestone(pet))
+    check("...but keeps its PET type rather than becoming MILESTONE",
+          kind_of(pet) == ("dink", "PET"))
+
+    collection = ("**Zezima Alt added Shark paint to their Collection Log**"
+                  "```c\nEntries: 31/1712 | Price: 5,400 gp``` <@456>")
+    check("a Dink collection entry does not ping, so it is not a milestone",
+          not is_milestone(collection))
+    check("...and keeps its type", kind_of(collection) == ("dink", "COLLECTION"))
 
     print("\nname matching")
     check("a longer name wins over a shorter prefix",
