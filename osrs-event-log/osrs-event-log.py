@@ -1,5 +1,5 @@
 # OSRS Activity Log Bot: main.py
-# - A Discord Bot by Dylan Hebert (The Green Donut)
+# - A Discord bot for tracking Old School RuneScape activity
 # - Scrapes and posts players' OSRS events to a specific channel in Discord
 # - See README.md for setup instructions
 #

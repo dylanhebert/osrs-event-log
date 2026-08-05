@@ -18,6 +18,10 @@ from . import db
 def sync(member_id, username, display_name, avatar_hash=None):
     """Record or refresh one member. Called by the bot only.
 
+    `display_name` is the caller's ACCOUNT-WIDE name for this member, not a
+    per-server nickname: see the note in cogs/cmds/web.py:sync_member. It may
+    be None, and readers fall back to `username`.
+
     Skips the write when nothing has changed: this runs for every linked member
     on every on_ready, and a no-op UPDATE would still dirty a page and wake the
     WAL for nothing.

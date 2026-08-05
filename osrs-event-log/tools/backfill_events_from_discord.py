@@ -131,7 +131,7 @@ BOLD = re.compile(r"\*\*(.+?)\*\*", re.DOTALL)
 #
 # Two shapes, because the mention did not always resolve to a real mention:
 #   **~ <@123> ~**        an actual mention
-#   **~ chickenbuster ~**  the role written out as plain text
+#   **~ somename ~**       the role written out as plain text
 # The tildes are the constant, so a bold run wrapped in them is a mention line
 # whether or not it contains an id.
 MENTION_LINE = re.compile(

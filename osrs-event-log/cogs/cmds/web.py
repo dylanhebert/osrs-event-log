@@ -73,13 +73,27 @@ class WebCommands(commands.Cog, name="Web UI"):
             return False
 
     def sync_member(self, member):
-        """Record one Discord member's name and avatar. Best-effort."""
+        """Record one Discord member's name and avatar. Best-effort.
+
+        THE GLOBAL NAME, NOT member.display_name.
+
+        display_name is the per-server nickname when one is set, so the value
+        stored depended on which guild this loop happened to reach last. Two
+        servers with two nicknames meant the name on the site flipped between
+        them for no reason a reader could see, and neither was the identity the
+        person actually goes by everywhere.
+
+        global_name is the account-wide display name. It is None on accounts
+        that never set one and on older library versions, in which case
+        repo.members falls back to the @handle, which is unique and always
+        present.
+        """
         try:
             avatar = getattr(member, 'avatar', None)
             return repo.members.sync(
                 member.id,
                 getattr(member, 'name', None),
-                member.display_name,
+                getattr(member, 'global_name', None),
                 getattr(avatar, 'key', None))
         except Exception as e:
             logger.exception(f'could not sync member {member.id} -- {e}')

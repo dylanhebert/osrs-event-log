@@ -105,7 +105,7 @@ CREATE TABLE servers (
 
 CREATE TABLE players (
     id              INTEGER PRIMARY KEY AUTOINCREMENT,
-    -- Stored in RS form with '+' for spaces ("Green+Donut"), matching the JSON
+    -- Stored in RS form with '+' for spaces ("Amber+Quill"), matching the JSON
     -- keys and util.name_to_rs(). NOCASE so a differently-cased RSN from Dink
     -- cannot create a duplicate player.
     rs_name         TEXT NOT NULL UNIQUE COLLATE NOCASE,
@@ -224,8 +224,12 @@ CREATE UNIQUE INDEX idx_web_credentials_hash ON web_credentials(token_hash);
 -- custom avatar or not yet seen, and the UI falls back to a monogram.
 CREATE TABLE discord_members (
     member_id     INTEGER PRIMARY KEY,
-    username      TEXT,               -- the @handle
-    display_name  TEXT,               -- server nickname or global display name
+    username      TEXT,               -- the @handle, unique and always present
+    -- The ACCOUNT-WIDE display name (Discord's global_name), never a per-server
+    -- nickname. A nickname differs between servers, so storing one meant the
+    -- name shown depended on which guild the sync loop reached last. NULL for
+    -- accounts that never set one; readers fall back to the @handle.
+    display_name  TEXT,
     avatar_hash   TEXT,
     updated_at    TEXT NOT NULL
 ) WITHOUT ROWID;

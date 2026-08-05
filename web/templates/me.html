@@ -10,6 +10,12 @@
 
 {% block content %}
 <h1 class="me-head">{{ ui.member_badge(me, 32) }}</h1>
+{% if me.handle %}
+  <p class="muted small">
+    <a href="{{ url_for('member', handle=me.handle) }}">How your accounts look to
+      everyone else</a>
+  </p>
+{% endif %}
 <p class="muted">
   {{ accounts | length }} account{{ '' if accounts | length == 1 else 's' }} in the
   log across {{ nav_servers | length }}

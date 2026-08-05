@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% import "_macros.html" as ui %}
+{% block title %}{{ member.name }} - OSRS Event Log{% endblock %}
+
+{#
+  One Discord member and their accounts.
+
+  Everything here is already filtered by the route: the member is one the
+  viewer shares an active server with, the accounts are intersected with the
+  viewer's own visible players, and the servers listed are only the shared
+  ones. A member's other servers and other accounts are not this viewer's to
+  see, and saying "and 2 more" would leak the fact that they exist.
+#}
+
+{% block content %}
+<div class="player-head">
+  <h1 class="me-head">
+    {{ ui.member_badge(member, 32) }}
+    {% if is_you %}<span class="chip">you</span>{% endif %}
+  </h1>
+  {% if servers %}
+    <div class="player-servers">
+      {% for s in servers %}{{ ui.server_chip(s) }}{% endfor %}
+    </div>
+  {% endif %}
+</div>
+
+<section class="panel">
+  <h2>Accounts</h2>
+  {% if accounts %}
+    <table class="grid">
+      <thead>
+        <tr>
+          <th>Account</th>
+          <th class="n">Total level</th>
+          <th class="n">Overall XP</th>
+          <th class="n opt">Rank</th>
+          <th class="n opt">Events</th>
+          <th class="opt">Last polled</th>
+        </tr>
+      </thead>
+      <tbody>
+      {% for a in accounts %}
+        <tr>
+          <td><a href="{{ url_for('player', rs_name=a.rs_name) }}">{{ a.display_name }}</a></td>
+          <td class="n">{{ a.total_level | num }}</td>
+          <td class="n">{{ a.total_xp | num }}</td>
+          <td class="n opt">{{ a.overall_rank | rank }}</td>
+          <td class="n opt">
+            <a href="{{ url_for('events', player=a.rs_name) }}">{{ a.event_count | num }}</a>
+          </td>
+          <td class="opt" title="{{ a.last_polled | stamp }}">{{ a.last_polled | ago }}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <p class="empty">
+      No accounts you can see. They are in one of your servers but every
+      account they own is linked somewhere else.
+    </p>
+  {% endif %}
+</section>
+
+<p class="muted"><a href="{{ url_for('members') }}">All members</a></p>
+{% endblock %}

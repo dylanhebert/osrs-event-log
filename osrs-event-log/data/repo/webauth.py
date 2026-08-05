@@ -8,7 +8,7 @@ Two processes touch this module and they touch different halves of it:
     and never writes anything
 
 Sign-in identity is the DISCORD MEMBER, not the player. A member may own up to
-three RuneScape accounts, and the access rule Dylan asked for — "see everyone
+three RuneScape accounts, and the access rule this site uses — "see everyone
 you share a server with" — is a property of the member, not of any one account.
 player_servers.member_id is the only place membership is recorded, so it is the
 anchor for both halves.
@@ -169,6 +169,27 @@ def visible_server_ids(member_id):
         " JOIN servers s ON s.id = ps.server_id"
         " WHERE ps.member_id = ? AND s.is_active = 1"
         " ORDER BY ps.server_id", (member_id,))]
+
+
+def visible_member_ids(member_id):
+    """Every member who owns an account in an active server this member is in.
+
+    The member-level half of the same rule as visible_player_ids. "You can see
+    who you share a server with" is the whole of it: a member with no link into
+    any of your servers is not visible, and neither is one whose only shared
+    server has been removed.
+
+    Kept here beside the other half deliberately. A permission boundary split
+    across two packages is one nobody can read in a single sitting, and this
+    way the bot's own tests can exercise it without importing Flask.
+    """
+    return [r["member_id"] for r in db.query(
+        "SELECT DISTINCT ps.member_id FROM player_servers ps"
+        " WHERE ps.member_id IS NOT NULL AND ps.server_id IN ("
+        "   SELECT ps2.server_id FROM player_servers ps2"
+        "   JOIN servers s ON s.id = ps2.server_id"
+        "   WHERE ps2.member_id = ? AND s.is_active = 1)",
+        (member_id,))]
 
 
 def own_player_names(member_id):

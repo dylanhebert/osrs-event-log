@@ -47,17 +47,28 @@
   an id is allowed to reach a page. It is only ever rendered on an
   authenticated page, to someone who shares a server with them and can already
   read the same id in Discord. Everywhere else, ids stay in the database.
+
+  `link` turns the badge into a link to that member's page. Off by default, so
+  the header on /me does not link to the page it is already on. The URL carries
+  an opaque handle and never the Discord id: test_privacy.py has a case for an
+  id inside `/members/<id>` precisely because that is the tempting mistake.
 #}
-{% macro member_badge(member, size=20) -%}
-  <span class="member">
-    {%- if member.avatar -%}
-      <img class="avatar" src="{{ member.avatar }}" alt="" width="{{ size }}"
-           height="{{ size }}" loading="lazy" referrerpolicy="no-referrer">
-    {%- else -%}
-      <span class="avatar avatar-mono" aria-hidden="true">{{ member.monogram }}</span>
-    {%- endif -%}
-    {{ member.name }}
-  </span>
+{% macro member_avatar(member, size) -%}
+  {%- if member.avatar -%}
+    <img class="avatar" src="{{ member.avatar }}" alt="" width="{{ size }}"
+         height="{{ size }}" loading="lazy" referrerpolicy="no-referrer">
+  {%- else -%}
+    <span class="avatar avatar-mono" aria-hidden="true">{{ member.monogram }}</span>
+  {%- endif -%}
+{%- endmacro %}
+
+{% macro member_badge(member, size=20, link=False) -%}
+  {%- if link and member.handle -%}
+    <a class="member" href="{{ url_for('member', handle=member.handle) }}"
+      >{{ member_avatar(member, size) }}{{ member.name }}</a>
+  {%- else -%}
+    <span class="member">{{ member_avatar(member, size) }}{{ member.name }}</span>
+  {%- endif -%}
 {%- endmacro %}
 
 {% macro server_tab(server, href, active=False) -%}

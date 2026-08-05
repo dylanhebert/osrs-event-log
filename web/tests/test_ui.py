@@ -177,6 +177,58 @@ def test_rendered(db_path, password):
     # Static files are cached for a day, so a changed one has to arrive under a
     # changed URL or nobody sees it. This is not hypothetical: the CDN served a
     # whole stylesheet rewrite from cache after the deploy that shipped it.
+    print("\nthe feed narrowed to one account")
+    import sqlite3 as _sq
+    conn = _sq.connect(f"file:{db_path}?mode=ro", uri=True)
+    conn.row_factory = _sq.Row
+    who = conn.execute(
+        "SELECT p.rs_name, COUNT(*) n FROM events e JOIN players p ON p.id = e.player_id"
+        " GROUP BY p.rs_name ORDER BY n DESC LIMIT 1").fetchone()
+    name = who["rs_name"]
+
+    one = client.get(f"/events?player={name}")
+    check("a player-scoped feed renders", one.status_code == 200, str(one.status_code))
+    body = one.get_data(as_text=True)
+
+    # The `+` in a RuneScape name is the encoding OF a space in a query string,
+    # so it comes back decoded and the lookup has to fold it back.
+    if " " in name.replace("+", " "):
+        spaced = client.get("/events?player=" + name.replace("+", " "))
+        check("a name whose spaces arrived decoded still resolves",
+              spaced.status_code == 200, str(spaced.status_code))
+
+    # Every link has to carry the filter, or one click silently widens the feed
+    # back to everybody.
+    links = re.findall(r'href="(/events\?[^"]*)"', body)
+    without = [l for l in links if "player=" not in l and "page=" in l]
+    check("paging keeps the account", not without, str(without[:2]))
+    tabs = [l for l in links if "milestones=1" in l]
+    check("the milestones tab keeps the account",
+          all("player=" in l for l in tabs), str(tabs[:2]))
+
+    check("a player outside the member's servers 404s",
+          client.get("/events?player=Definitely+Not+A+Real+Account").status_code == 404)
+
+    print("\nmember pages")
+    members_page = client.get("/members")
+    check("the members index renders", members_page.status_code == 200,
+          str(members_page.status_code))
+    handles = re.findall(r'href="/members/([0-9a-f]{16})"',
+                         members_page.get_data(as_text=True))
+    check("it links to member pages by an opaque handle", bool(handles),
+          "no /members/<handle> links found")
+    if handles:
+        one_member = client.get(f"/members/{handles[0]}")
+        check("a member page renders", one_member.status_code == 200,
+              str(one_member.status_code))
+
+    # The handle is a digest, so a wrong one must behave exactly like a member
+    # the viewer cannot see: 404, with nothing to distinguish the two.
+    check("an unknown handle 404s",
+          client.get("/members/" + "0" * 16).status_code == 404)
+    check("a member id is not accepted as a handle",
+          client.get("/members/123456789012345678").status_code == 404)
+
     print("\nstatic cache busting")
     css_url = re.search(r'href="(/static/css/app\.css[^"]*)"', signed_out)
     check("the stylesheet URL carries a version",

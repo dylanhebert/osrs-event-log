@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% import "_macros.html" as ui %}
+{% block title %}Members - OSRS Event Log{% endblock %}
+
+{#
+  Everyone the signed-in member shares an active server with.
+
+  The account list beside each person is of accounts THIS viewer can see, so
+  two people can honestly see different counts for the same person. Nothing
+  here reveals a server the viewer is not in.
+#}
+
+{% block content %}
+<h1>Members</h1>
+<p class="muted">
+  {{ members | length }} {{ 'person' if members | length == 1 else 'people' }}
+  in your server{{ '' if nav_servers | length == 1 else 's' }}.
+</p>
+
+{% if members %}
+  <table class="grid">
+    <thead>
+      <tr>
+        <th>Member</th>
+        <th class="n">Accounts</th>
+        <th class="opt">Which</th>
+      </tr>
+    </thead>
+    <tbody>
+    {% for m in members %}
+      <tr>
+        <td>
+          {{ ui.member_badge(m, 22, link=True) }}
+          {% if m.is_you %}<span class="chip">you</span>{% endif %}
+        </td>
+        <td class="n">{{ m.accounts | length }}</td>
+        <td class="opt">
+          {% if m.accounts %}
+            {% for name in m.accounts %}
+              <a href="{{ url_for('player', rs_name=name) }}">{{ name }}</a>
+              {%- if not loop.last %}, {% endif %}
+            {% endfor %}
+          {% else %}
+            <span class="muted">none you can see</span>
+          {% endif %}
+        </td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+{% else %}
+  <p class="empty">Nobody to show. That means no account in your servers has an
+    owner recorded yet, which the bot fills in on its next start.</p>
+{% endif %}
+{% endblock %}

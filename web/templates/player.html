@@ -20,7 +20,7 @@
   {% if owners %}
     <div class="player-owner muted small">
       {{ 'Played by' if owners | length == 1 else 'Linked to' }}
-      {% for o in owners %}{{ ui.member_badge(o, 18) }}{% if not loop.last %}, {% endif %}{% endfor %}
+      {% for o in owners %}{{ ui.member_badge(o, 18, link=True) }}{% if not loop.last %}, {% endif %}{% endfor %}
     </div>
   {% endif %}
 </header>
@@ -109,8 +109,9 @@
         {% endif %}
       </select>
       <span class="muted small">
-        Stepped: a flat run means the value did not change, not that data is
-        missing.
+        A flat step means the value did not change. A dashed run is history
+        recovered from old Discord posts, which is sparser, so it is joined
+        straight rather than stepped.
       </span>
     </div>
     <div class="chart-box"><canvas id="history"></canvas></div>
@@ -144,6 +145,18 @@
           {{ ui.event_row(e, show_player=False) }}
         {% endfor %}
       </ul>
+      {#
+        Straight to the events page rather than a longer list here. That page
+        already has the Everything / Milestones tabs, the source and type
+        menus and a pager, all of which would otherwise have to be built a
+        second time on this one.
+      #}
+      <p class="feed-more">
+        <a class="btn" href="{{ url_for('events', player=player.rs_name) }}">All
+          {{ event_count | num }} events</a>
+        <a href="{{ url_for('events', player=player.rs_name, milestones='1') }}">Milestones
+          only</a>
+      </p>
     {% else %}
       <p class="empty">No events recorded for this account yet.</p>
     {% endif %}

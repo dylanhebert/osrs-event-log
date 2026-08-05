@@ -14,7 +14,7 @@ def format_achievement_diary(payload: dict, user_tag: str) -> str:
     area_tasks_total = extra.get("areaTasksTotal")
 
     # ---- HEADER ----
-    # Example: "Green Donut completed the **HARD Varrock** Achievement Diary"
+    # Example: "Amber Quill completed the **HARD Varrock** Achievement Diary"
     header = (
         f"**{user_tag} completed the {difficulty} {area} Achievement Diary**"
     )

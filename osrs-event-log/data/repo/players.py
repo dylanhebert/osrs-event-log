@@ -4,7 +4,7 @@ Everything here takes plain ids and strings — no discord.py objects. That is
 what lets the future read-only web UI import this module directly, and what lets
 the test harness run without a bot token or a Discord connection.
 
-`rs_name` is always the RS form with '+' for spaces ("Green+Donut"), matching
+`rs_name` is always the RS form with '+' for spaces ("Amber+Quill"), matching
 the old JSON keys. The column is COLLATE NOCASE, so lookups are case-insensitive
 and a differently-cased RSN from Dink cannot create a duplicate player.
 """

@@ -1,22 +1,42 @@
 {% extends "base.html" %}
 {% import "_macros.html" as ui %}
-{% block title %}Events - OSRS Event Log{% endblock %}
+{% block title %}
+  {%- if player %}{{ player.display_name }} events{% else %}Events{% endif %} - OSRS Event Log
+{%- endblock %}
+
+{#
+  `player` is set when the feed is narrowed to one account, which is how the
+  player page links here. EVERY link on this page has to carry it, or changing
+  tab, source, type or page silently widens back to everybody.
+#}
+{% set scope = {'player': player.rs_name if player else None} %}
 
 {% block content %}
-<h1>Events</h1>
+{% if player %}
+  <h1>{{ player.display_name }}</h1>
+  <p class="muted">
+    Events for this account only.
+    <a href="{{ url_for('events') }}">Show everyone</a> ·
+    <a href="{{ url_for('player', rs_name=player.rs_name) }}">Back to their page</a>
+  </p>
+{% else %}
+  <h1>Events</h1>
+{% endif %}
 
 <nav class="tabs">
   <a class="{{ 'on' if not milestones_only }}"
      href="{{ url_for('events', source=source, type=event_type,
-                      footers='1' if include_footers else None) }}">Everything</a>
+                      footers='1' if include_footers else None, **scope) }}">Everything</a>
   <a class="{{ 'on' if milestones_only }}"
      href="{{ url_for('events', source=source, type=event_type, milestones='1',
-                      footers='1' if include_footers else None) }}">Milestones only</a>
+                      footers='1' if include_footers else None, **scope) }}">Milestones only</a>
 </nav>
 
 <form class="filters" method="get">
   {% if milestones_only %}<input type="hidden" name="milestones" value="1">{% endif %}
   {% if include_footers %}<input type="hidden" name="footers" value="1">{% endif %}
+  {# Without this the first use of the source or type menu drops the account. #}
+  {% if player %}<input type="hidden" name="player" value="{{ player.rs_name }}">{% endif %}
 
   <label for="source">Source</label>
   <select id="source" name="source" onchange="this.form.submit()">
@@ -49,26 +69,33 @@
     {% if include_footers %}
       Including running totals.
       <a href="{{ url_for('events', source=source, type=event_type,
-                          milestones='1' if milestones_only else None) }}">Hide them</a>.
+                          milestones='1' if milestones_only else None,
+                          **scope) }}">Hide them</a>.
     {% else %}
       <a href="{{ url_for('events', source=source, type=event_type, footers='1',
-                          milestones='1' if milestones_only else None) }}">Show
+                          milestones='1' if milestones_only else None,
+                          **scope) }}">Show
         running totals</a> too.
     {% endif %}
   </p>
 
+  {# Narrowed to one account, every row names the same person, so the name is
+     dropped from the row the way it is on the player's own page. #}
   <ul class="feed wide">
-    {% for e in events %}{{ ui.event_row(e) }}{% endfor %}
+    {% for e in events %}{{ ui.event_row(e, show_player=not player) }}{% endfor %}
   </ul>
 
   {{ ui.pager('events', page, page_count(total, per_page), {
        'source': source, 'type': event_type,
+       'player': player.rs_name if player else None,
        'milestones': '1' if milestones_only else None,
        'footers': '1' if include_footers else None}) }}
 {% else %}
   <p class="empty">
     {% if source or event_type or milestones_only %}
-      No events match that filter.
+      No events match that filter{% if player %} for this account{% endif %}.
+    {% elif player %}
+      No events recorded for this account yet.
     {% else %}
       Nothing recorded yet. The events table is new: before the storage
       migration, Dink drops, pets, quests and clues were posted to Discord and

@@ -514,3 +514,9 @@ a.pg:hover { color: var(--gold); border-color: var(--gold-dim); text-decoration:
   .grid { font-size: .8rem; }
   .pg-step { display: none; }
 }
+
+/* The link out of a panel's short feed into the full, filterable one. */
+.feed-more {
+  display: flex; gap: .9rem; align-items: center; flex-wrap: wrap;
+  margin: .9rem 0 0;
+}

@@ -240,6 +240,7 @@ def create_app(env=None):
             servers=queries.player_server_labels(
                 player_id, app.config["SERVER_NAMES"]),
             events=queries.events_feed(g.player_ids, limit=15, player_id=player_id),
+            event_count=queries.events_count(g.player_ids, player_id=player_id),
             owners=queries.player_owners(player_id),
             depth=queries.history_depth(player_id),
             movers=moved,
@@ -249,6 +250,41 @@ def create_app(env=None):
                 player_id, row["rs_name"], "sotw", server_ids),
             botw_podiums=queries.player_podiums(
                 player_id, row["rs_name"], "botw", server_ids),
+        )
+
+    @app.route("/members")
+    @auth.require_login
+    def members():
+        return render_template(
+            "members.html",
+            members=queries.members_index(g.member_id, g.player_ids))
+
+    @app.route("/members/<handle>")
+    @auth.require_login
+    def member(handle):
+        """One Discord member and the accounts they own.
+
+        Addressed by an opaque handle rather than by Discord id: a member id
+        may appear on this site only inside an avatar URL, and `/members/<id>`
+        is one of the cases test_privacy.py exists to catch.
+
+        Visibility is the same rule as everywhere else and is applied twice
+        over. member_by_handle only considers members who share an active
+        server with the viewer, so an unknown handle and somebody else's handle
+        are indistinguishable; and the accounts listed are intersected with the
+        viewer's own visible players, so an account this member owns in a
+        server the viewer is not in does not appear.
+        """
+        row = queries.member_by_handle(handle, g.member_id)
+        if row is None:
+            abort(404)
+        return render_template(
+            "member.html",
+            member=row,
+            is_you=row["id"] == g.member_id,
+            accounts=queries.member_accounts(row["id"], g.player_ids),
+            servers=queries.member_shared_servers(
+                row["id"], g.member_id, app.config["SERVER_NAMES"]),
         )
 
     @app.route("/players/<rs_name>/history.json")
@@ -296,7 +332,26 @@ def create_app(env=None):
         # default. They ride along on other players' updates rather than being
         # events, and there are enough of them to bury everything else.
         include_footers = request.args.get("footers") == "1"
+
+        # ?player=<rs_name> narrows the feed to one account, which is how the
+        # player page links here: the tabs, the type menu and the pager are all
+        # already built, so this reuses them rather than growing a second feed
+        # on the player page that would need its own copy of each.
+        #
+        # Resolved through player_by_name, which is the SAME visibility rule
+        # the player page itself uses. A name outside the member's servers 404s
+        # rather than silently widening to everybody, so this cannot be used to
+        # confirm that an account exists.
+        player_name = request.args.get("player") or None
+        player = None
+        if player_name:
+            player = queries.player_by_name(player_name, g.player_ids)
+            if player is None:
+                abort(404)
+
+        player_id = player["id"] if player else None
         filters = dict(source=source, event_type=event_type,
+                       player_id=player_id,
                        milestones_only=milestones_only,
                        include_footers=include_footers)
         return render_template(
@@ -307,9 +362,11 @@ def create_app(env=None):
             total=queries.events_count(g.player_ids, **filters),
             page=page, per_page=per_page,
             source=source, event_type=event_type,
+            player=player,
             milestones_only=milestones_only, include_footers=include_footers,
             kinds=queries.event_types(g.player_ids,
-                                      include_footers=include_footers))
+                                      include_footers=include_footers,
+                                      player_id=player_id))
 
     # ----------------------------------------------------------------- #
     # Competitions

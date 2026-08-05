@@ -33,6 +33,8 @@ in this file, including through repo helpers: repo.players.get() does
 web/tests/test_privacy.py enforces all of this against real rendered pages.
 """
 
+import collections
+
 from . import config  # noqa: F401  (sys.path)
 
 from flask import g  # noqa: E402
@@ -253,9 +255,17 @@ def player_by_name(rs_name, player_ids):
 
     The visibility check is part of the query rather than a separate `if`, so
     there is no code path that fetches the row first and forgets to check.
+
+    Spaces are folded to `+` first. rs_name stores a RuneScape name with `+`
+    for each space, which survives a path segment untouched but NOT a query
+    string, where `+` is the encoding OF a space and comes back decoded. So
+    `/players/Amber+Quill` and `/events?player=Amber+Quill` hand this function
+    two different strings for the same account, and without this the second one
+    404s. Accepting both is also what tools/merge_players.py does.
     """
     if not player_ids:
         return None
+    rs_name = (rs_name or "").replace(" ", "+")
     return repo.db.one(
         f"SELECT {_PLAYER_COLUMNS}, {_TOTALS}"
         f" FROM players p {_OVERALL_JOIN}"
@@ -309,8 +319,8 @@ def player_server_labels(player_id, names):
 # THE ONE SANCTIONED EXCEPTION TO "member_id NEVER LEAVES THE DATABASE".
 #
 # A Discord avatar lives at cdn.discordapp.com/avatars/<user_id>/<hash>, so the
-# user id is unavoidably in the URL and therefore in the page. Dylan accepted
-# that trade deliberately: the page is only ever served to someone who shares a
+# user id is unavoidably in the URL and therefore in the page. That trade was
+# taken deliberately: the page is only ever served to someone who shares a
 # Discord server with that member, and they can already read the same id in
 # Discord with developer mode on.
 #
@@ -327,8 +337,24 @@ def member_avatar_url(member_id, avatar_hash, size=64):
             f".{extension}?size={size}")
 
 
+def member_handle(member_id):
+    """The opaque id a member is addressed by in a URL.
+
+    NOT the Discord id. A member id may appear in exactly one place on this
+    site, inside an avatar URL on Discord's CDN, and `/members/<id>` is one of
+    the cases test_privacy.py exists to catch. So the URL carries a digest of
+    the id instead: stable, so links keep working, and derived only one way.
+
+    Sixteen hex characters. This is an addressing scheme, not a secret -- the
+    page behind it is access-controlled on its own, and anyone who can open it
+    already shares a Discord server with that member.
+    """
+    import hashlib
+    return hashlib.sha256(f"member:{member_id}".encode()).hexdigest()[:16]
+
+
 def member_view(row):
-    """{'name', 'avatar', 'monogram'} from a discord_members row.
+    """{'name', 'avatar', 'monogram', 'handle'} from a discord_members row.
 
     A member the bot has not recorded yet renders as "Unknown" with a neutral
     monogram rather than exposing the raw id as a label.
@@ -341,7 +367,119 @@ def member_view(row):
         "avatar": member_avatar_url(row["member_id"], avatar_hash)
         if row is not None else None,
         "monogram": name[:1].upper(),
+        "handle": member_handle(row["member_id"]) if row is not None else None,
     }
+
+
+# --------------------------------------------------------------------------- #
+# One member's page
+# --------------------------------------------------------------------------- #
+
+def member_by_handle(handle, viewer_member_id):
+    """The member a handle addresses, or None if the viewer cannot see them.
+
+    Resolved by hashing the candidates rather than by reversing the handle,
+    and the candidate list is the viewer's own visible set. A handle for
+    somebody outside it therefore behaves exactly like one that does not exist,
+    so this cannot be used to test whether a member id is in the log.
+    """
+    if not handle:
+        return None
+    for member_id in repo.webauth.visible_member_ids(viewer_member_id):
+        if member_handle(member_id) == handle:
+            row = repo.members.get(member_id)
+            view = member_view({"member_id": member_id, **row} if row else None)
+            if row is None:
+                # Linked to a server but never synced by the bot. Still a real
+                # member with real accounts, so the page renders rather than
+                # 404ing; only the name and avatar are missing.
+                view["handle"] = member_handle(member_id)
+            return {"id": member_id, **view}
+    return None
+
+
+def members_index(viewer_member_id, viewer_player_ids):
+    """Everyone the viewer shares a server with, and how many accounts each has.
+
+    The account count is of accounts the VIEWER can see, not of everything the
+    member owns, so two people looking at the same person can honestly see
+    different numbers.
+    """
+    ids = repo.webauth.visible_member_ids(viewer_member_id)
+    if not ids or not viewer_player_ids:
+        return []
+    visible = set(viewer_player_ids)
+    owned = collections.defaultdict(list)
+    for row in repo.db.query(
+            "SELECT DISTINCT ps.member_id, ps.player_id, p.display_name"
+            " FROM player_servers ps"
+            " JOIN players p ON p.id = ps.player_id"
+            " JOIN servers s ON s.id = ps.server_id"
+            f" WHERE s.is_active = 1 AND ps.member_id IN ({_placeholders(ids)})",
+            list(ids)):
+        if row["player_id"] in visible:
+            owned[row["member_id"]].append(row["display_name"])
+
+    out = []
+    for member_id in ids:
+        row = repo.members.get(member_id)
+        view = member_view({"member_id": member_id, **row} if row else None)
+        view["handle"] = member_handle(member_id)
+        names = sorted(owned.get(member_id, []))
+        view["accounts"] = names
+        view["is_you"] = member_id == viewer_member_id
+        out.append(view)
+    # People with accounts first: a member linked only to a server the viewer
+    # cannot see has nothing to show on their page.
+    out.sort(key=lambda m: (-len(m["accounts"]), m["name"].lower()))
+    return out
+
+
+def member_accounts(member_id, viewer_player_ids):
+    """The accounts a member owns, restricted to what the viewer may see.
+
+    Ownership is per (player, server), so an account can be linked to this
+    member in one server and to somebody else in another. Only links in servers
+    the viewer shares count, which is the same reason the viewer's player list
+    is passed in rather than recomputed here.
+    """
+    if not viewer_player_ids:
+        return []
+    placeholders = _placeholders(viewer_player_ids)
+    return repo.db.query(
+        "SELECT p.id, p.rs_name, p.display_name, p.last_polled,"
+        "  COALESCE(o.level, 0) AS total_level,"
+        "  COALESCE(o.xp, 0)    AS total_xp,"
+        "  o.rank               AS overall_rank,"
+        "  (SELECT COUNT(*) FROM events e WHERE e.player_id = p.id) AS event_count,"
+        "  (SELECT COUNT(*) FROM player_activity_current pa"
+        "     WHERE pa.player_id = p.id) AS activity_rows"
+        f" FROM players p {_OVERALL_JOIN}"
+        f" WHERE p.id IN ({placeholders})"
+        "   AND p.id IN (SELECT ps.player_id FROM player_servers ps"
+        "                JOIN servers s ON s.id = ps.server_id"
+        "                WHERE ps.member_id = ? AND s.is_active = 1)"
+        " ORDER BY total_level DESC, total_xp DESC, p.rs_name",
+        list(viewer_player_ids) + [member_id])
+
+
+def member_shared_servers(member_id, viewer_member_id, names):
+    """Active servers both the viewer and this member belong to.
+
+    Intersected rather than listing theirs: a member may be in servers the
+    viewer is not, and naming those would say more about them than the access
+    rule allows.
+    """
+    all_active = repo.servers.active_ids()
+    mine = set(repo.webauth.visible_server_ids(viewer_member_id))
+    rows = repo.db.query(
+        "SELECT DISTINCT ps.server_id FROM player_servers ps"
+        " JOIN servers s ON s.id = ps.server_id"
+        " WHERE ps.member_id = ? AND s.is_active = 1 ORDER BY ps.server_id",
+        (member_id,))
+    return [server_view(r["server_id"], names, all_active.index(r["server_id"]) + 1)
+            for r in rows
+            if r["server_id"] in mine and r["server_id"] in all_active]
 
 
 def player_owners(player_id):
@@ -605,8 +743,15 @@ def events_count(player_ids, source=None, event_type=None, player_id=None,
                  milestones_only=False, include_footers=False):
     if not player_ids:
         return 0
-    ids = [player_id] if player_id is not None and player_id in player_ids \
-        else list(player_ids)
+    # Narrowed exactly the way events_feed narrows, including refusing a player
+    # outside the visible set. Falling back to everybody there would report a
+    # page count for rows the feed is never going to return.
+    if player_id is not None:
+        if player_id not in player_ids:
+            return 0
+        ids = [player_id]
+    else:
+        ids = list(player_ids)
     sql = ("SELECT COUNT(*) FROM events e"
            f" WHERE e.player_id IN ({_placeholders(ids)})")
     sql, params = _feed_filters(sql, list(ids), source, event_type,
@@ -614,11 +759,19 @@ def events_count(player_ids, source=None, event_type=None, player_id=None,
     return repo.db.scalar(sql, params, 0)
 
 
-def event_types(player_ids, include_footers=False):
+def event_types(player_ids, include_footers=False, player_id=None):
     """Distinct (source, type) pairs present, for building the filter menu.
-    Built from the data rather than hardcoded, because Dink adds event types."""
+
+    Built from the data rather than hardcoded, because Dink adds event types.
+    Narrowed to one player when the feed is, so the menu offers the types that
+    player actually has rather than every type anybody has.
+    """
     if not player_ids:
         return []
+    if player_id is not None:
+        if player_id not in player_ids:
+            return []
+        player_ids = [player_id]
     sql = ("SELECT e.source, e.event_type, COUNT(*) AS n FROM events e"
            f" WHERE e.player_id IN ({_placeholders(player_ids)})")
     if not include_footers:

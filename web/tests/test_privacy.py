@@ -210,6 +210,23 @@ def main():
     paths += [f"/leaderboards?skill=Slayer&server={s}" for s in own_servers]
     paths += [f"/players/{n}" for n in visible]
     paths += [f"/players/{n}/history.json?skill=Overall" for n in visible[:10]]
+    # Feeds narrowed to one account. The player name is in the query string, so
+    # these are the event pages most likely to echo something back.
+    paths += [f"/events?player={n}" for n in visible[:10]]
+    paths += [f"/events?player={n}&milestones=1" for n in visible[:5]]
+
+    # MEMBER PAGES ARE THE ONES THIS TEST EXISTS FOR.
+    #
+    # They are built entirely out of Discord member ids and render an avatar
+    # per member, which is the single sanctioned place an id may appear. Every
+    # other appearance -- the URL above all, since /members/<id> is the obvious
+    # way to build this and is wrong -- has to be caught here.
+    sys.path.insert(0, str(ROOT))
+    from web import queries as q
+    from data import repo
+    member_ids = repo.webauth.visible_member_ids(member_id)
+    paths += ["/members"]
+    paths += [f"/members/{q.member_handle(m)}" for m in member_ids]
 
     print(f"\n2. crawling {len(paths)} pages signed in")
     checked = 0
