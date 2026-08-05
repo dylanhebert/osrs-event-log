@@ -391,17 +391,22 @@ config and cannot move. Two hostnames, two Caddy blocks, one droplet.
 ```bash
 ssh <deploy-user>@<host>
 
+# 0. an atomic snapshot to roll back to. Not a copy: see the WAL note below.
+sqlite3 $APP_DIR/data/osrs.db ".backup $BACKUPS/pre-webui-deploy.db"
+sqlite3 $BACKUPS/pre-webui-deploy.db "pragma integrity_check;"
+
 # 1. code
 git -C $APP_ROOT pull
 
-# 2. the new table. Idempotent, additive, safe to run more than once.
+# 2. the new tables and columns. Idempotent, additive, safe to run twice.
 cd $APP_DIR
 python tools/migrate_add_web_auth.py --report
 python tools/migrate_add_web_auth.py --db data/osrs.db
 
-# 3. the UI's own venv
+# 3. the UI's own venv. `python` here is the pyenv shim, so it depends on
+#    .python-version naming a version that is actually installed.
 cd $APP_ROOT
-pyenv local 3.14
+python -V                          # must succeed before the next line
 python -m venv web/.venv
 web/.venv/bin/pip install -r requirements-web.txt
 
@@ -409,9 +414,52 @@ web/.venv/bin/pip install -r requirements-web.txt
 $WEB_VENV/bin/gunicorn web.wsgi:app --workers 2 --bind 127.0.0.1:8007
 ```
 
-This deploy **does** change bot code (the new cog and one line in
+The migration can run against the live database with the bot up. Adding a
+column takes a brief write lock and rewrites no row, and every statement in the
+bot enumerates its columns, so the running process keeps working against the
+new schema until it is restarted.
+
+### `.python-version` has to name an installed version
+
+Step 3 is the first thing in a deploy that goes through a pyenv shim. The bot
+never does: systemd invokes `.venv/bin/python` by absolute path, so a
+`.python-version` naming an uninstalled release can sit there indefinitely
+without the running service noticing, and then fail the first time somebody
+creates a virtualenv:
+
+```
+pyenv: version `3.11.2' is not installed
+```
+
+The file is tracked, so fixing it only on the server gets reverted by the next
+pull. It names a *prefix* (`3.14`), which pyenv resolves to whichever patch
+release is installed, so a server-side patch upgrade needs no commit here.
+
+### Order matters: DNS before Caddy
+
+Caddy asks Let's Encrypt for a certificate the moment the new block loads, and
+the challenge is served through Cloudflare. **Add the A record first.** Restart
+Caddy against a name that does not resolve yet and the issuance fails and backs
+off, so the site 502s for a while after everything is otherwise correct.
+
+Working order:
+
+1. Cloudflare A record → the droplet, proxied
+2. restart the bot, if bot code moved
+3. install, `enable --now`, and check the web unit
+4. append the Caddy block and restart Caddy
+
+### Nobody can sign in until a password is issued
+
+A freshly deployed instance has **zero rows in `web_credentials`**, and the UI
+has no way to create one — by design, the bot is the only writer. The last step
+of a deploy is running `;webpassword` in Discord. Until then every sign-in
+attempt correctly fails and the site shows only the anonymous aggregate page,
+which looks identical to a broken deploy from the outside.
+
+The first deploy also changes bot code (the new cog and one line in
 `initial_extensions`), so the bot needs restarting once. Later UI-only deploys
-do not.
+do not — check with the `git diff --stat -- osrs-event-log/` above.
 
 ### systemd
 
@@ -442,6 +490,29 @@ bug, not a theoretical one.
 
 `SECURE_COOKIES=1` behind Caddy. A secure cookie is not sent over plain http, so
 setting it locally silently breaks sign-in.
+
+`SERVER_NAMES` is optional and usually better left out. The bot already syncs
+real guild names into `servers.name` and keeps them in step through a rename;
+setting this overrides them everywhere and has to be maintained by hand.
+
+**Name the unit for the service, not for the subdomain.** The convention
+elsewhere on this host is `<subdomain>.service`, which here would give
+`osrseventlog.service` sitting next to the bot's `osrs-event-log.service` —
+two names differing only by hyphens, where picking the wrong one takes down the
+Dink webhook. `osrs-event-log-web.service` cannot be confused with it.
+
+Write the unit file with `SECRET_KEY` already substituted rather than pasting
+the value through a terminal, and delete whatever staged it afterwards:
+
+```bash
+python -c "import secrets; print(secrets.token_hex(32))" > /tmp/k && chmod 600 /tmp/k
+# ... build the unit from it ...
+sudo install -o root -g root -m 644 /tmp/<unit> /etc/systemd/system/<unit>
+shred -u /tmp/k /tmp/<unit>
+```
+
+Rotating `SECRET_KEY` invalidates every session cookie, so it signs everyone
+out but costs nothing else: the credentials themselves live in the database.
 
 ### Caddy
 
