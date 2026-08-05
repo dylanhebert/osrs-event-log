@@ -117,7 +117,13 @@
       {%- if show_player %}
         <a href="{{ url_for('player', rs_name=e.rs_name) }}">{{ e.display_name }}</a>
       {%- endif %}
-      <time title="{{ e.occurred_at | stamp }}">{{ e.occurred_at | ago }}</time>
+      {#
+        The exact moment, with the relative form on hover rather than the other
+        way round. The feed goes back to 2019, and past a few weeks "8 months
+        ago" stops being an answer to when something happened.
+      #}
+      <time datetime="{{ e.occurred_at }}" title="{{ e.occurred_at | ago }}"
+        >{{ e.occurred_at | stamp }}</time>
       {%- if not e.posted %}<span class="chip warn">not posted to Discord</span>{% endif %}
     </div>
     {#

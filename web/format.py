@@ -83,7 +83,15 @@ def ago(value, now=None):
 
 
 def stamp(value):
-    """Absolute UTC, for title attributes. Never guesses a local timezone."""
+    """The exact moment, in UTC.
+
+    Never guesses a local timezone: this is rendered on the server, which has
+    no idea where the reader is, and a wrong timezone is worse than a labelled
+    one. UTC is what the database holds and what the label says.
+
+    Used as visible text in the event feed, and as the title attribute wherever
+    a relative time is shown instead.
+    """
     moment = parse_ts(value)
     return moment.strftime("%Y-%m-%d %H:%M UTC") if moment else "unknown"
 
