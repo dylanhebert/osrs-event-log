@@ -158,6 +158,41 @@ MENTION_LINE = re.compile(
 # has set no role.
 ROLE_MENTION = re.compile(r"<@&\d+>|@here|@everyone")
 
+# THE OLD FORMAT LOST THE @.
+#
+# Messages from 2020-21 put the mentions in a leading bold line, and in that
+# line the role arrives as bare text with no @ and no mention syntax at all:
+#
+#     **- <@123> -**            routine: the member alone
+#     **- here <@123> -**       MILESTONE: "here" is the @here that pinged
+#     **here somename -**       MILESTONE: both written out as plain text
+#
+# Discord confirms it is not a real mention -- mention_everyone is False and
+# mention_roles is empty on these -- so ROLE_MENTION cannot see them and 25
+# genuine 99s, among others, were filed as routine updates.
+#
+# Anchored hard, because "here" is an ordinary English word and matching it
+# loosely would turn every drop message that happened to contain one into a
+# milestone. All three conditions are required:
+#
+#   * it opens the message
+#   * "here" is the first token inside the bold, after an optional - or ~
+#     wrapper, which is where the role sat and where a player name never is
+#   * the bold run closes and the line ends, so a real event title -- which is
+#     followed on the same line by its ``` block -- cannot match
+OLD_ROLE_LINE = re.compile(
+    r"^\*\*\s*[-~]?\s*here(?![A-Za-z])[^*]*\*\*[ \t]*\r?\n", re.IGNORECASE)
+
+
+def has_role_ping(content):
+    """Whether a message pinged the server's role, in any format it has used.
+
+    The current format appends a real mention, which ROLE_MENTION sees. The old
+    one put it in a leading bold line with the @ lost, which it cannot.
+    """
+    content = content or ""
+    return bool(ROLE_MENTION.search(content) or OLD_ROLE_LINE.match(content))
+
 FOOTERS = (
     ("Total level:", "OVERALL"),
     ("Skill of the Week", "SOTW"),
@@ -604,6 +639,11 @@ def main(argv=None):
                         help="also import units whose source could not be "
                              "determined. Off by default: filing them under a "
                              "guessed source is worse than leaving them out.")
+    parser.add_argument("--refresh-milestones", action="store_true",
+                        help="also re-read the role ping on messages already "
+                             "imported, and correct is_milestone on their rows. "
+                             "For when the ping rule has been fixed since the "
+                             "rows were written.")
     parser.add_argument("--apply", action="store_true",
                         help="write. Without this nothing is written.")
     parser.add_argument("--samples", type=int, default=8)
@@ -670,6 +710,7 @@ def main(argv=None):
     if already:
         print(f"{len(already)} messages already imported, they will be skipped")
 
+    refreshed = []          # (event_id, wanted_flag, source, event_type)
     deduper = Deduper(args.dedupe_window)
     print(f"{deduper.load_existing()} existing events loaded for duplicate checking")
     print()
@@ -696,17 +737,34 @@ def main(argv=None):
             stats["messages"] += 1
 
             message_id = int(message["id"])
+            content = message.get("content") or ""
+
             if message_id in already:
                 stats["skipped_already"] += 1
+                # A message already imported still has something to say when
+                # the milestone rule has been corrected since: the rows exist
+                # but carry the old verdict. --refresh-milestones re-reads the
+                # ping and updates them in place, which is the only way to fix
+                # history without deleting and re-importing it.
+                if args.refresh_milestones and content.strip():
+                    want = 1 if has_role_ping(content) else 0
+                    changed = [
+                        r for r in repo.db.query(
+                            "SELECT id, source, event_type, is_milestone FROM events"
+                            " WHERE discord_message_id = ?", (message_id,))
+                        if r["is_milestone"] != want]
+                    for row in changed:
+                        refreshed.append((row["id"], want, row["source"],
+                                          row["event_type"]))
+                        stats["milestones_changed"] += 1
                 continue
 
-            content = message.get("content") or ""
             if not content.strip():
                 stats["empty"] += 1
                 continue
 
-            # Read the role mention before split_units() strips it away.
-            milestone = bool(ROLE_MENTION.search(content))
+            # Read the role ping before split_units() strips it away.
+            milestone = has_role_ping(content)
             units, leftover = split_units(
                 content,
                 accept_bare_bold=lambda t: looks_like_event_header(
@@ -808,6 +866,24 @@ def main(argv=None):
 
     print(f"\n  milestones (pinged the role)  {stats['milestones']:>7}")
 
+    if args.refresh_milestones:
+        gained = [r for r in refreshed if r[1] == 1]
+        lost = [r for r in refreshed if r[1] == 0]
+        print("\n  ROWS ALREADY IMPORTED, re-read for the role ping:")
+        print(f"    now a milestone            {len(gained):>7}")
+        print(f"    no longer a milestone      {len(lost):>7}")
+        if gained:
+            for kind, count in Counter(
+                    f"{r[2]}/{r[3]}" for r in gained).most_common(8):
+                print(f"      {kind:<22} {count:>6}")
+        if lost:
+            # The rule only ever widened, so nothing should lose its flag.
+            print("    LOSSES ARE SUSPICIOUS: the rule only widened, so a row")
+            print("    losing its flag means something else changed too.")
+            for kind, count in Counter(
+                    f"{r[2]}/{r[3]}" for r in lost).most_common(5):
+                print(f"      {kind:<22} {count:>6}")
+
     if types:
         print("\n  by event_type:")
         for kind, count in types.most_common():
@@ -842,8 +918,23 @@ def main(argv=None):
         print("\nDry run. Nothing was written. Re-run with --apply to insert.")
         return 0
 
+    if refreshed:
+        print(f"\nCorrecting is_milestone on {len(refreshed)} existing rows...")
+        with repo.transaction():
+            for event_id, want, source, kind in refreshed:
+                # event_type mirrors the flag on hiscores rows, matching the
+                # live bucket name, so the two must not be left disagreeing.
+                if source == "hiscores" and want and kind in ("SKILL", "MINIGAME"):
+                    repo.db.execute(
+                        "UPDATE events SET is_milestone = 1,"
+                        " event_type = 'MILESTONE' WHERE id = ?", (event_id,))
+                else:
+                    repo.db.execute(
+                        "UPDATE events SET is_milestone = ? WHERE id = ?",
+                        (want, event_id))
+
     if not rows:
-        print("\nNothing to insert.")
+        print("\nNothing new to insert.")
         return 0
 
     print(f"\nInserting {len(rows)} rows...")

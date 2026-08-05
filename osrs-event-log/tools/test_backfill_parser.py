@@ -26,6 +26,7 @@ classify = _ns["classify"]
 attribute = _ns["attribute"]
 looks_like_event_header = _ns["looks_like_event_header"]
 ROLE_MENTION = _ns["ROLE_MENTION"]
+has_role_ping = _ns["has_role_ping"]
 
 INDEX = {"zezima alt": 1, "woox major": 2, "hey jase": 3, "alt 2": 4,
          "zezima": 9}
@@ -63,13 +64,13 @@ def kind_of(content, index=0):
     """
     units, _, _ = parse(content)
     source, kind = classify(*units[index])
-    if ROLE_MENTION.search(content) and source == "hiscores":
+    if has_role_ping(content) and source == "hiscores":
         kind = "MILESTONE"
     return source, kind
 
 
 def is_milestone(content):
-    return bool(ROLE_MENTION.search(content))
+    return has_role_ping(content)
 
 
 def main():
@@ -225,6 +226,35 @@ def main():
                 "Strength XP**```c\n1 XP gained | Total Strength XP: 100,000,000```")
     check("the old leading-mention format is detected too",
           is_milestone(old_ping) and kind_of(old_ping) == ("hiscores", "MILESTONE"))
+
+    # THE 2020 FORMAT LOST THE @, so none of these carry a real mention and
+    # Discord itself reports mention_roles as empty on them. The role sits at
+    # the front of a leading bold line as bare text. Missing this filed 25
+    # genuine 99s, among much else, as routine updates.
+    body = ("**Zezima Alt levelled up Attack to 99**```c\n"
+            "1 XP gained | Total Attack XP: 13,034,431```")
+    check("plain-text 'here' beside a real member mention is a role ping",
+          is_milestone("**- here <@456> -**\n" + body))
+    check("...and both written out as plain text",
+          is_milestone("**here zezima -**\n" + body))
+    check("...and it promotes the row to MILESTONE",
+          kind_of("**here zezima -**\n" + body) == ("hiscores", "MILESTONE"))
+    check("the member alone on that line is still a routine update",
+          not is_milestone("**- <@456> -**\n" + body))
+    check("...and a plain-text member alone likewise",
+          not is_milestone("**- zezima -**\n" + body))
+
+    # "here" is an ordinary word. It only counts at the front of a leading bold
+    # line that ends there, which is where the role sat and where nothing else
+    # ever is.
+    check("'here' inside an event title is not a role ping",
+          not is_milestone("**Zezima Alt found something here**```c\nx```"))
+    check("'here' in a message body is not a role ping",
+          not is_milestone(body + "\nthey were here first"))
+    check("a word merely starting with here is not a role ping",
+          not is_milestone("**- hereford <@456> -**\n" + body))
+    check("a title on its own line is not mistaken for a mention line",
+          not is_milestone("**Zezima Alt completed Here Be Dragons**"))
 
     # THE CASE THAT MAKES is_milestone A COLUMN RATHER THAN AN event_type.
     pet = ("**Zezima Alt just received Herbi!**```c\n"
