@@ -116,15 +116,8 @@
       </tbody>
     </table>
 
-    <nav class="pager">
-      {% if page > 1 %}
-        <a href="{{ url_for('competitions', kind=kind, server=server.id, page=page-1) }}">Newer</a>
-      {% endif %}
-      <span>page {{ page }} of {{ (weeks_total // per_page) + (1 if weeks_total % per_page else 0) }}</span>
-      {% if page * per_page < weeks_total %}
-        <a href="{{ url_for('competitions', kind=kind, server=server.id, page=page+1) }}">Older</a>
-      {% endif %}
-    </nav>
+    {{ ui.pager('competitions', page, page_count(weeks_total, per_page),
+                {'kind': kind, 'server': server.id}) }}
   {% else %}
     <p class="empty">No weeks recorded for this server.</p>
   {% endif %}

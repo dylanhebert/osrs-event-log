@@ -11,11 +11,42 @@ for original artwork if that ever stops being true.
 | `crier.png` | Header mark: the Varrock town crier's chathead, at 2x for high-DPI screens |
 | `favicon.ico` | The same, padded to square, at 16/32/48/64 |
 | `icon-32.png`, `icon-180.png` | PNG favicon and Apple touch icon |
-| **`icons.png`** | **The sprite actually served: all 114 icons in one 12x10 grid** |
+| **`icons.png`** | **The sprite actually served: all 121 icons in one 12x11 grid** |
 | `../css/icons.css` | Generated `.ic-*` classes, one background-position per icon |
 | `skills/*.png` | Source art for 25 skills. Not served; kept so the sprite can be rebuilt offline |
 | `activities/*.png` | Source art for 89 bosses, raids and minigames. Same |
+| `types/*.png` | Source art for 7 event types, see below |
 | `icon-manifest.json` | Maps a database name to `{file, cls}` |
+
+## The seven event-type icons
+
+The activity feed puts an icon on every row, chosen by reading the skill or
+boss out of the message text. That works for 99.3% of hiscores events, because
+their wording always names what happened. Dink events often do not: they name a
+quest, an item or another player, none of which the hiscores track.
+
+These seven cover what is left. Each is a wiki page's lead image, chosen in
+`web/tools/fetch_icons.py`:
+
+| event type | wiki page |
+|---|---|
+| `QUEST` | Quest point |
+| `GRAND_EXCHANGE` | Grand Exchange |
+| `DEATH` | Grave |
+| `COMBAT_ACHIEVEMENT` | Combat Achievements |
+| `ACHIEVEMENT_DIARY` | Achievement Diary |
+| `LOOT` | Coins |
+| `PET` | Rocky |
+
+`PET` is one pet standing for all of them: no page depicts pets in general, and
+the one that comes closest illustrates itself with a menagerie scene that is
+unreadable at 20px.
+
+Four more types needed no new art because the sprite already had the right
+picture under an activity or skill name: `COLLECTION` borrows Collections
+Logged, `CLUE` borrows Clue Scrolls (all), `SLAYER` borrows the Slayer skill,
+and `PLAYER_KILL` borrows Bounty Hunter. Those borrows live in `web/format.py`
+rather than here, since they are a mapping and not a file.
 
 ## Why a sprite
 

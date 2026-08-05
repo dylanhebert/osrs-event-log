@@ -458,5 +458,35 @@
       "cls": "sk-woodcutting",
       "file": "woodcutting.png"
     }
+  },
+  "types": {
+    "ACHIEVEMENT_DIARY": {
+      "cls": "ty-achievement-diary",
+      "file": "achievement-diary.png"
+    },
+    "COMBAT_ACHIEVEMENT": {
+      "cls": "ty-combat-achievement",
+      "file": "combat-achievement.png"
+    },
+    "DEATH": {
+      "cls": "ty-death",
+      "file": "death.png"
+    },
+    "GRAND_EXCHANGE": {
+      "cls": "ty-grand-exchange",
+      "file": "grand-exchange.png"
+    },
+    "LOOT": {
+      "cls": "ty-loot",
+      "file": "loot.png"
+    },
+    "PET": {
+      "cls": "ty-pet",
+      "file": "pet.png"
+    },
+    "QUEST": {
+      "cls": "ty-quest",
+      "file": "quest.png"
+    }
   }
 }

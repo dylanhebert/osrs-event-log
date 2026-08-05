@@ -44,6 +44,21 @@
 
 * { box-sizing: border-box; }
 
+/* The tiled stone feel of the hiscores frame, done with a gradient so there is
+   no extra asset to ship.
+
+   IT MUST TILE, AND IT MUST NOT BE `background-attachment: fixed`.
+
+   The first version painted a 180deg gradient over the viewport and pinned it
+   with `fixed`. That gradient has an end, so it only covers the page at all
+   because it is glued to the window -- and `fixed` is exactly the declaration
+   mobile browsers handle worst. iOS Safari does not scroll it, and several
+   Android browsers stop repainting it partway down a long page, which is what
+   made the background vanish into flat black on the way down a 90-row table.
+
+   The 45deg stripes repeat forever, so every scroll position looks identical
+   with no attachment trickery, and the colour underneath is a flat one that
+   cannot run out. It also drops a full-viewport repaint on every scroll frame. */
 body {
   margin: 0;
   color: var(--ink);
@@ -246,6 +261,12 @@ h2 { font-size: 1.05rem; margin: 0 0 .75rem; }
   display: flex; gap: .55rem; align-items: center; flex-wrap: wrap;
   color: var(--ink-dim); font-size: .8rem; margin-bottom: .2rem;
 }
+/* The row's own icon, first on the meta line.
+   Left at the sprite's own 20px. Resizing it would mean overriding
+   background-size, and every .ic-* offset in icons.css is expressed in 20px
+   cells against a 240x200 sheet: change the size and every icon in the sprite
+   shows a slice of its neighbour. Scale with transform if it ever has to move. */
+.feed-icon { margin-right: -.1rem; }
 /* Rendered Discord markup. NOT pre-wrap: the renderer emits <br> itself, so
    pre-wrap here would double every line break. */
 .feed-msg { font-size: .92rem; }
@@ -300,12 +321,36 @@ select, input[type=password] {
 }
 input[type=password] { width: 100%; margin: .3rem 0 .8rem; }
 
+/* Numbered pages, not a lone "Older" link. The events feed is 963 pages of six
+   years of history, and stepping to the far end one click at a time is not a
+   thing anyone will do. */
 .pager {
-  display: flex; gap: 1rem; align-items: center; justify-content: center;
-  color: #cbbf9e; font-size: .88rem; margin-top: 1rem;
+  display: flex; gap: .25rem; align-items: center; justify-content: center;
+  flex-wrap: wrap; margin-top: 1.15rem;
+}
+.pg {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 2.05rem; padding: .3rem .5rem; border-radius: 3px;
+  border: 1px solid var(--stone-line);
+  background: linear-gradient(180deg, #4a4234 0%, #332d24 100%);
+  color: #e4d7b4; font-size: .86rem; font-variant-numeric: tabular-nums;
   text-shadow: 1px 1px 0 rgba(0,0,0,.5);
 }
-.pager a { color: var(--gold); }
+a.pg:hover { color: var(--gold); border-color: var(--gold-dim); text-decoration: none; }
+.pg.on {
+  background: linear-gradient(180deg, var(--parch) 0%, var(--parch-2) 100%);
+  color: var(--ink); border-color: var(--parch-edge);
+  font-weight: 700; text-shadow: none;
+}
+/* The ellipsis is a spacer, not a control: no border, nothing to click. */
+.pg.gap {
+  border-color: transparent; background: none; min-width: 1.1rem;
+  padding-inline: .1rem; color: #a2967a;
+}
+/* Prev and Next keep their place at both ends so the row does not shift
+   sideways as you page through it. */
+.pg-step { min-width: auto; }
+.pg-step.is-off { opacity: .35; }
 
 .player-head { margin-bottom: 1.15rem; }
 .player-facts {

@@ -41,12 +41,17 @@ def _filename(entry):
     return entry["file"] if isinstance(entry, dict) else entry
 
 
+# The class prefix is the kind's first two letters: sk-, ac-, ty-. Distinct
+# prefixes matter because a name can appear in more than one kind -- Slayer is
+# both a skill and, as SLAYER, an event type.
+KINDS = ("skills", "activities", "types")
+
 entries = []   # (css_class, source_path)
-for kind, folder in (("skills", "skills"), ("activities", "activities")):
-    for name, entry in sorted(manifest[kind].items()):
+for kind in KINDS:
+    for name, entry in sorted(manifest.get(kind, {}).items()):
         filename = _filename(entry)
         entries.append((f"{kind[:2]}-{pathlib.Path(filename).stem}",
-                        IMG / folder / filename))
+                        IMG / kind / filename))
 
 cols = 12
 rows = math.ceil(len(entries) / cols)
@@ -96,11 +101,11 @@ for css_class, (col, row) in sorted(positions.items()):
 
 # The manifest gains the css class per name, so the template does not have to
 # recompute a slug that must stay in step with this script.
-for kind in ("skills", "activities"):
+for kind in KINDS:
     manifest[kind] = {
         name: {"file": _filename(entry),
                "cls": f"{kind[:2]}-{pathlib.Path(_filename(entry)).stem}"}
-        for name, entry in manifest[kind].items()}
+        for name, entry in manifest.get(kind, {}).items()}
 (IMG / "icon-manifest.json").write_text(
     json.dumps(manifest, indent=2, sort_keys=True), encoding="utf-8")
 

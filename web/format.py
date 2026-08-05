@@ -156,6 +156,131 @@ def activity_icon(name):
 
 
 # --------------------------------------------------------------------------- #
+# The icon for one feed row
+# --------------------------------------------------------------------------- #
+# An event has no skill or activity column. It has the text that was posted to
+# Discord, and for anything from the hiscores that text always names what
+# happened: "levelled up Hitpoints to 57", "has killed Zulrah 500 times".
+# Reading the name back out of it gives the exact icon, which is worth far more
+# than one generic badge per event_type: the whole feed is levelling events, and
+# the skill is the only thing that distinguishes one from the next.
+#
+# Measured over 64,155 real events spanning 2019-2026: 99.3% of hiscores rows
+# resolve this way, and 97.7% of all rows. What is left is Dink events whose
+# text names a quest, an item or another player, and those fall back to an icon
+# for the type. Nothing renders without one.
+#
+# Matching is against the icon manifest rather than the database. The manifest
+# is the set of names an icon actually exists for, so a name it does not know
+# could not be drawn anyway, and the lookup needs no query.
+
+# Wording the hiscores uses that is not the name stored in the database. The
+# clue tiers are the whole list: the message says "14 Beginner Clue Scrolls",
+# the activity is "Clue Scrolls (beginner)". Without these, clue rows are the
+# only hiscores events that miss, and there are thousands of them.
+_NAME_ALIASES = {
+    "total clue scrolls": "Clue Scrolls (all)",
+    "total clues": "Clue Scrolls (all)",
+    "clues completed": "Clue Scrolls (all)",
+    "clue scrolls": "Clue Scrolls (all)",
+}
+for _tier in ("beginner", "easy", "medium", "hard", "elite", "master"):
+    _NAME_ALIASES[f"{_tier} clue scrolls"] = f"Clue Scrolls ({_tier})"
+    _NAME_ALIASES[f"{_tier} clue"] = f"Clue Scrolls ({_tier})"
+
+# Types whose art is already in the sprite under another name. Fetching a
+# second copy of the same picture under a second name would only make the
+# sprite bigger. The keys not listed here are in the manifest's "types".
+_TYPE_BORROWS = {
+    "COLLECTION": ("activities", "Collections Logged"),
+    "CLUE": ("activities", "Clue Scrolls (all)"),
+    "SLAYER": ("skills", "Slayer"),
+    "PLAYER_KILL": ("activities", "Bounty Hunter - Hunter"),
+}
+
+# The last resort, for a type nobody has drawn and text that named nothing.
+# Overall borrows the hiscores stats icon, which is the right shape for "some
+# event happened" and is already loaded.
+_FALLBACK = ("skills", "Overall")
+
+_MATCHER = None
+
+
+def _matcher():
+    """(compiled alternation, {lowercased match: css class}), built once.
+
+    One regex rather than 121, because a feed page renders 50 messages and
+    scanning each of them for every name separately is a hundredfold more work
+    for the same answer. Alternation is ordered longest first so that at a
+    given position the longest name wins: "Clue Scrolls (all)" must not lose to
+    a shorter name that is a prefix of it.
+    """
+    global _MATCHER
+    if _MATCHER is None:
+        import re
+        manifest = _manifest()
+        lookup = {}
+        for kind in ("skills", "activities"):
+            for name, entry in manifest.get(kind, {}).items():
+                lookup[name.lower()] = entry["cls"]
+        for phrase, name in _NAME_ALIASES.items():
+            cls = lookup.get(name.lower())
+            if cls:
+                lookup[phrase] = cls
+        # A name the wiki spells with a leading "The" is written both ways in
+        # practice ("set a new Royal Titans Personal Best").
+        for name, entry in list(manifest.get("activities", {}).items()):
+            if name.lower().startswith("the "):
+                lookup.setdefault(name[4:].lower(), entry["cls"])
+        pattern = "|".join(
+            re.escape(k) for k in sorted(lookup, key=len, reverse=True))
+        _MATCHER = (re.compile(rf"\b(?:{pattern})\b", re.IGNORECASE), lookup)
+    return _MATCHER
+
+
+def _borrowed(kind, name):
+    entry = _manifest().get(kind, {}).get(name)
+    return entry["cls"] if entry else None
+
+
+def event_icon(event):
+    """Sprite CSS class for one feed row. Never None.
+
+    `event` is a row from queries.events_feed: source, event_type, message and
+    display_name.
+    """
+    message = event["message"] or ""
+
+    # The message opens with the player's own name, and a player is free to be
+    # called Sailing. Dropping the name first stops an account being mistaken
+    # for the thing that happened to it.
+    name = (event["display_name"] or "").strip()
+    if name and message[:120].lower().find(name.lower()) != -1:
+        cut = message.lower().index(name.lower(), 0, 120) + len(name)
+        message = message[cut:]
+
+    pattern, lookup = _matcher()
+    found = pattern.search(message)
+    if found:
+        cls = lookup.get(found.group(0).lower())
+        if cls:
+            return cls
+
+    event_type = event["event_type"] or ""
+    borrow = _TYPE_BORROWS.get(event_type)
+    if borrow:
+        cls = _borrowed(*borrow)
+        if cls:
+            return cls
+
+    entry = _manifest().get("types", {}).get(event_type)
+    if entry:
+        return entry["cls"]
+
+    return _borrowed(*_FALLBACK)
+
+
+# --------------------------------------------------------------------------- #
 # Discord markup
 # --------------------------------------------------------------------------- #
 # events.message is the exact text posted to Discord, so it arrives full of
@@ -241,9 +366,56 @@ def discord_markup(text):
     return Markup(working)
 
 
+# --------------------------------------------------------------------------- #
+# Pagination
+# --------------------------------------------------------------------------- #
+
+def page_numbers(page, total_pages, window=2, edge=1):
+    """Page numbers to offer, with None marking a run that was left out.
+
+    The events feed runs to 963 pages, so listing them all is not an option and
+    a bare "Older" link is not either: it makes the far end of six years of
+    history reachable only by clicking a thousand times. This gives the shape
+    every paginated site uses, `1 ... 5 6 7 ... 963`, which is enough to step
+    one page, jump to either end, or land near where you were.
+
+    `window` is how many pages either side of the current one; `edge` is how
+    many at each end. A gap is only drawn when it actually skips something --
+    eliding a single page would take the same width as showing it.
+    """
+    if total_pages < 1:
+        return []
+    page = min(max(page, 1), total_pages)
+    wanted = set(range(1, min(edge, total_pages) + 1))
+    wanted |= set(range(max(total_pages - edge + 1, 1), total_pages + 1))
+    wanted |= set(range(max(page - window, 1), min(page + window, total_pages) + 1))
+
+    out, previous = [], 0
+    for number in sorted(wanted):
+        if previous and number > previous + 1:
+            # Only worth a gap if more than one page is hidden by it.
+            if number == previous + 2:
+                out.append(previous + 1)
+            else:
+                out.append(None)
+        out.append(number)
+        previous = number
+    return out
+
+
+def page_count(total, per_page):
+    """How many pages `total` rows fill. At least 1, so "page 1 of 0" cannot happen."""
+    if per_page <= 0:
+        return 1
+    return max(1, (total + per_page - 1) // per_page)
+
+
 def register(app):
     for name, func in (("num", num), ("rank", rank), ("compact", compact),
                        ("ago", ago), ("stamp", stamp), ("day", day),
                        ("medal", medal), ("discord_markup", discord_markup),
-                       ("skill_icon", skill_icon), ("activity_icon", activity_icon)):
+                       ("skill_icon", skill_icon), ("activity_icon", activity_icon),
+                       ("event_icon", event_icon)):
         app.jinja_env.filters[name] = func
+    app.jinja_env.globals["page_numbers"] = page_numbers
+    app.jinja_env.globals["page_count"] = page_count

@@ -85,6 +85,14 @@
 {% macro event_row(e, show_player=True) -%}
   <li class="{{ 'is-milestone' if e.is_milestone }}">
     <div class="feed-meta">
+      {#
+        The icon is read out of the message text, because an event row records
+        what was posted rather than which skill it was about, and for anything
+        from the hiscores the text always names it. See event_icon in
+        format.py: it resolves every row in the live database, so this never
+        leaves a hole at the start of the line.
+      #}
+      <i class="ic ic-{{ e | event_icon }} feed-icon" aria-hidden="true"></i>
       {%- if e.is_milestone %}<span class="tag tag-milestone">milestone</span>{% endif %}
       {#
         The type tag is dropped when it would only repeat the milestone tag.
@@ -111,4 +119,42 @@
     #}
     <div class="feed-msg">{{ e.message | discord_markup }}</div>
   </li>
+{%- endmacro %}
+
+
+{#
+  A numbered page chooser.
+
+  `params` carries whatever query string the current view is filtered by, so
+  changing page keeps the filter. `page_numbers` puts None where a run of pages
+  was elided.
+#}
+{% macro pager(endpoint, page, total_pages, params={}) -%}
+  {%- if total_pages > 1 %}
+  <nav class="pager" aria-label="Pagination">
+    {%- if page > 1 %}
+      <a class="pg pg-step" rel="prev"
+         href="{{ url_for(endpoint, page=page-1, **params) }}">&lsaquo; Prev</a>
+    {%- else %}
+      <span class="pg pg-step is-off" aria-hidden="true">&lsaquo; Prev</span>
+    {%- endif %}
+
+    {%- for n in page_numbers(page, total_pages) %}
+      {%- if n is none %}
+        <span class="pg gap" aria-hidden="true">&hellip;</span>
+      {%- elif n == page %}
+        <span class="pg on" aria-current="page">{{ n }}</span>
+      {%- else %}
+        <a class="pg" href="{{ url_for(endpoint, page=n, **params) }}">{{ n }}</a>
+      {%- endif %}
+    {%- endfor %}
+
+    {%- if page < total_pages %}
+      <a class="pg pg-step" rel="next"
+         href="{{ url_for(endpoint, page=page+1, **params) }}">Next &rsaquo;</a>
+    {%- else %}
+      <span class="pg pg-step is-off" aria-hidden="true">Next &rsaquo;</span>
+    {%- endif %}
+  </nav>
+  {%- endif %}
 {%- endmacro %}

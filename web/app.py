@@ -96,6 +96,12 @@ def create_app(env=None):
 
         players = queries.players_index(g.player_ids)
         events = queries.events_feed(g.player_ids, limit=8)
+        # Milestones separately rather than filtered out of the list above.
+        # They are 2.5% of the feed, so the most recent eight of them can be
+        # weeks older than the most recent eight events, and a single query
+        # cannot answer both questions.
+        milestones = queries.events_feed(g.player_ids, limit=8,
+                                         milestones_only=True)
         server = g.servers[0] if g.servers else None
         return render_template(
             "home.html",
@@ -103,6 +109,7 @@ def create_app(env=None):
             players=players[:8],
             player_count=len(players),
             events=events,
+            milestones=milestones,
             server=server,
             sotw=queries.live_standings(server["id"], "sotw", limit=5) if server else [],
             botw=queries.live_standings(server["id"], "botw", limit=5) if server else [],

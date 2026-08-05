@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% import "_macros.html" as ui %}
 {% block title %}OSRS Event Log{% endblock %}
 
 {#
@@ -55,11 +56,15 @@
   <div class="pair">
     <div>
       <div class="pair-label">Skill of the Week</div>
-      <div class="pair-value">{{ summary.current_skill or 'not set' }}</div>
+      <div class="pair-value">
+        {%- if summary.current_skill %}{{ ui.skill_name(summary.current_skill) }}
+        {%- else %}not set{% endif %}</div>
     </div>
     <div>
       <div class="pair-label">Boss of the Week</div>
-      <div class="pair-value">{{ summary.current_boss or 'not set' }}</div>
+      <div class="pair-value">
+        {%- if summary.current_boss %}{{ ui.activity_name(summary.current_boss) }}
+        {%- else %}not set{% endif %}</div>
     </div>
   </div>
 </section>

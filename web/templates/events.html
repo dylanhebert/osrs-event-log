@@ -61,19 +61,10 @@
     {% for e in events %}{{ ui.event_row(e) }}{% endfor %}
   </ul>
 
-  <nav class="pager">
-    {% if page > 1 %}
-      <a href="{{ url_for('events', page=page-1, source=source, type=event_type,
-                          milestones='1' if milestones_only else None,
-                          footers='1' if include_footers else None) }}">Newer</a>
-    {% endif %}
-    <span>page {{ page }} of {{ (total // per_page) + (1 if total % per_page else 0) }}</span>
-    {% if page * per_page < total %}
-      <a href="{{ url_for('events', page=page+1, source=source, type=event_type,
-                          milestones='1' if milestones_only else None,
-                          footers='1' if include_footers else None) }}">Older</a>
-    {% endif %}
-  </nav>
+  {{ ui.pager('events', page, page_count(total, per_page), {
+       'source': source, 'type': event_type,
+       'milestones': '1' if milestones_only else None,
+       'footers': '1' if include_footers else None}) }}
 {% else %}
   <p class="empty">
     {% if source or event_type or milestones_only %}

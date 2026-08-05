@@ -13,11 +13,15 @@
     <div class="tile-label">{{ 'server' if nav_servers|length == 1 else 'servers' }}</div>
   </div>
   <div class="tile">
-    <div class="tile-value">{{ summary.current_skill or '-' }}</div>
+    <div class="tile-value">
+      {%- if summary.current_skill %}{{ ui.skill_name(summary.current_skill) }}
+      {%- else %}-{% endif %}</div>
     <div class="tile-label">skill of the week</div>
   </div>
   <div class="tile">
-    <div class="tile-value">{{ summary.current_boss or '-' }}</div>
+    <div class="tile-value">
+      {%- if summary.current_boss %}{{ ui.activity_name(summary.current_boss) }}
+      {%- else %}-{% endif %}</div>
     <div class="tile-label">boss of the week</div>
   </div>
   <div class="tile">
@@ -26,53 +30,56 @@
   </div>
 </section>
 
-<div class="cols">
-  <section class="panel">
-    <h2>Top accounts</h2>
-    {% if players %}
-      <table class="grid">
-        <thead><tr><th>Account</th><th class="n">Total level</th><th class="n">Overall XP</th></tr></thead>
-        <tbody>
-        {% for p in players %}
-          <tr>
-            <td><a href="{{ url_for('player', rs_name=p.rs_name) }}">{{ p.display_name }}</a>
-              {% if p.rs_name in own_players %}<span class="chip">yours</span>{% endif %}</td>
-            <td class="n">{{ p.total_level | num }}</td>
-            <td class="n">{{ p.total_xp | num }}</td>
-          </tr>
-        {% endfor %}
-        </tbody>
-      </table>
-      <p><a href="{{ url_for('players') }}">All {{ player_count }} accounts</a></p>
-    {% else %}
-      <p class="empty">No accounts visible.</p>
-    {% endif %}
-  </section>
+{# What changed most recently leads, because that is what anyone opens this for.
+   The standings come next, and the ranked account list last: it is the slowest
+   thing on the page to change and the one with its own dedicated page.
 
-  <section class="panel">
-    <h2>Latest events</h2>
-    {% if events %}
-      <ul class="feed">
-        {% for e in events %}
-          {{ ui.event_row(e, show_player=True) }}
-        {% endfor %}
-      </ul>
-      <p><a href="{{ url_for('events') }}">Full feed</a></p>
-    {% else %}
-      {# The events table is genuinely new: nothing wrote to it before the
-         SQLite migration, so an empty feed here is expected, not broken. #}
-      <p class="empty">
-        Nothing recorded yet. Event logging started at the storage migration, so
-        this fills up as levels, drops and pets come in.
-      </p>
-    {% endif %}
-  </section>
+   Events and milestones sit side by side where there is room. They answer
+   "what just happened" and "what actually mattered", and the pair is far more
+   useful read together than one after the other down a long scroll. #}
+<div class="cols">
+<section class="panel">
+  <h2>Latest events</h2>
+  {% if events %}
+    <ul class="feed">
+      {% for e in events %}
+        {{ ui.event_row(e, show_player=True) }}
+      {% endfor %}
+    </ul>
+    <p><a href="{{ url_for('events') }}">Full feed</a></p>
+  {% else %}
+    {# The events table is genuinely new: nothing wrote to it before the
+       SQLite migration, so an empty feed here is expected, not broken. #}
+    <p class="empty">
+      Nothing recorded yet. Event logging started at the storage migration, so
+      this fills up as levels, drops and pets come in.
+    </p>
+  {% endif %}
+</section>
+
+{# A milestone is whatever pinged the server's role. They are a fortieth of the
+   feed, so the eight most recent are often much older than the eight above and
+   are worth their own panel rather than being lost among the levelling. #}
+<section class="panel">
+  <h2>Latest milestones</h2>
+  {% if milestones %}
+    <ul class="feed">
+      {% for e in milestones %}
+        {{ ui.event_row(e, show_player=True) }}
+      {% endfor %}
+    </ul>
+    <p><a href="{{ url_for('events', milestones='1') }}">All milestones</a></p>
+  {% else %}
+    <p class="empty">No milestones recorded yet.</p>
+  {% endif %}
+</section>
 </div>
 
 {% if server %}
 <div class="cols">
   <section class="panel">
-    <h2>Skill of the Week{% if summary.current_skill %}: {{ summary.current_skill }}{% endif %}</h2>
+    <h2>Skill of the Week{% if summary.current_skill %}:
+      {{ ui.skill_name(summary.current_skill) }}{% endif %}</h2>
     {% if sotw %}
       <ol class="rank">
         {% for r in sotw %}
@@ -87,7 +94,8 @@
   </section>
 
   <section class="panel">
-    <h2>Boss of the Week{% if summary.current_boss %}: {{ summary.current_boss }}{% endif %}</h2>
+    <h2>Boss of the Week{% if summary.current_boss %}:
+      {{ ui.activity_name(summary.current_boss) }}{% endif %}</h2>
     {% if botw %}
       <ol class="rank">
         {% for r in botw %}
@@ -102,4 +110,26 @@
   </section>
 </div>
 {% endif %}
+
+<section class="panel">
+  <h2>Top accounts</h2>
+  {% if players %}
+    <table class="grid">
+      <thead><tr><th>Account</th><th class="n">Total level</th><th class="n">Overall XP</th></tr></thead>
+      <tbody>
+      {% for p in players %}
+        <tr>
+          <td><a href="{{ url_for('player', rs_name=p.rs_name) }}">{{ p.display_name }}</a>
+            {% if p.rs_name in own_players %}<span class="chip">yours</span>{% endif %}</td>
+          <td class="n">{{ p.total_level | num }}</td>
+          <td class="n">{{ p.total_xp | num }}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    <p><a href="{{ url_for('players') }}">All {{ player_count }} accounts</a></p>
+  {% else %}
+    <p class="empty">No accounts visible.</p>
+  {% endif %}
+</section>
 {% endblock %}

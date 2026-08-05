@@ -6,7 +6,7 @@
   display: inline-block; flex: none;
   width: 20px; height: 20px;
   background-image: url(../img/icons.png);
-  background-size: 240px 200px;
+  background-size: 240px 220px;
   background-repeat: no-repeat;
   image-rendering: -webkit-optimize-contrast;
 }
@@ -125,3 +125,10 @@
 .ic-sk-strength { background-position: -200px -20px; }
 .ic-sk-thieving { background-position: -220px -20px; }
 .ic-sk-woodcutting { background-position: 0px -40px; }
+.ic-ty-achievement-diary { background-position: -120px -180px; }
+.ic-ty-combat-achievement { background-position: -140px -180px; }
+.ic-ty-death { background-position: -160px -180px; }
+.ic-ty-grand-exchange { background-position: -180px -180px; }
+.ic-ty-loot { background-position: -200px -180px; }
+.ic-ty-pet { background-position: -220px -180px; }
+.ic-ty-quest { background-position: 0px -200px; }
