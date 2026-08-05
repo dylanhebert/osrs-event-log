@@ -13,7 +13,25 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from tools.backfill_history_from_events import read_totals, title_owner  # noqa: E402
+from tools.backfill_history_from_events import (  # noqa: E402
+    read_activity_totals, read_totals, title_owner)
+
+# A handful of real activity names, including the shapes that make matching
+# awkward: one name that is a prefix of another, and the parenthesised clues.
+ACTIVITIES = [
+    "Vardorvis", "Zulrah", "Barrows Chests", "Collections Logged",
+    "Chambers of Xeric", "Chambers of Xeric: Challenge Mode",
+    "Theatre of Blood", "Clue Scrolls (all)", "Clue Scrolls (hard)",
+    "Clue Scrolls (beginner)",
+]
+ACTIVITY_INDEX = {
+    "by_name": {name.lower(): name for name in ACTIVITIES},
+    "ordered": sorted((name.lower() for name in ACTIVITIES), key=len, reverse=True),
+}
+
+
+def activities(message):
+    return read_activity_totals(message, ACTIVITY_INDEX)
 
 failures = []
 
@@ -76,6 +94,70 @@ def main():
           read_totals("**Someone got 1x Dragon nails from Frost dragon**```c\n"
                       "Value: 568,347 gp```"), [])
     check("chat is not a stat line", read_totals("Pog"), [])
+
+    print("\nbosses and minigames state the total in the TITLE")
+    check(
+        "a kill count comes from the title, not the delta beside it",
+        activities("**Someone has killed Vardorvis 84 times**```c\n"
+                   "New kills logged: 6 | Current rank: 147,117```"),
+        [("Vardorvis", 84)])
+    check(
+        "'at least' wording still yields the number",
+        activities("**Someone has killed Zulrah at least 1,000 times**```c\n"
+                   "New kills logged: 3 | Current rank: 12,004```"),
+        [("Zulrah", 1000)])
+    check(
+        "completions read the same way",
+        activities("**Someone has completed Theatre of Blood 244 times**```c\n"
+                   "New completions logged: 1 | Current rank: 900```"),
+        [("Theatre of Blood", 244)])
+    check(
+        "a first appearance takes its count from the block",
+        activities("**Someone killed Vardorvis enough times to be on the "
+                   "hiscores!**```c\nTotal kill count: 1 | Current rank: --```"),
+        [("Vardorvis", 1)])
+    check(
+        "progress lines count too",
+        activities("**Someone has progressed Collections Logged 267 times**```c\n"
+                   "New collections logged: 2 | Current rank: --```"),
+        [("Collections Logged", 267)])
+    check(
+        "a named total describes itself",
+        activities("**Someone has killed Barrows Chests 512 times**```c\n"
+                   "Total Barrows Chests count: 512```"),
+        [("Barrows Chests", 512)])
+    check(
+        "a longer activity name is not mistaken for the shorter one",
+        activities("**Someone has completed Chambers of Xeric: Challenge Mode "
+                   "40 times**```c\nNew completions logged: 1```"),
+        [("Chambers of Xeric: Challenge Mode", 40)])
+    check(
+        "clue tiers from the title",
+        activities("**Someone has completed at least 100 Hard Clue Scrolls**"),
+        [("Clue Scrolls (hard)", 100)])
+    check(
+        "clue counts from the block, per tier and overall",
+        activities("**Someone has completed 14 Beginner Clue Scrolls**```c\n"
+                   "Beginner clues completed: 14 | Total clues completed: 254```"),
+        [("Clue Scrolls (beginner)", 14), ("Clue Scrolls (all)", 254)])
+
+    print("\nDELTAS AND WEEKLY ACCUMULATORS ARE NOT TOTALS")
+    check(
+        "Boss of the Week is ignored, like its skill counterpart",
+        activities("```c\nBoss of the Week - Current Zulrah kills: 1```"),
+        [])
+    check(
+        "a bare delta yields nothing at all",
+        activities("```c\nNew kills logged: 6 | Current rank: 147,117```"),
+        [])
+    check(
+        "a rank is not a score",
+        activities("```c\nCurrent rank: 147,117```"),
+        [])
+    check(
+        "an unknown boss is skipped rather than guessed",
+        activities("**Someone has killed Some New Boss 5 times**"),
+        [])
 
     print("\nattribution")
     # Invented names. The pair that matters is one being a prefix of the other,

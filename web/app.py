@@ -227,6 +227,7 @@ def create_app(env=None):
         player_id = row["id"]
         server_ids = [s["id"] for s in g.servers]
         moved = queries.skills_with_movement(player_id)
+        moved_activities = queries.activities_with_movement(player_id)
         skills = queries.player_skills(player_id)
         default_skill = moved[0] if moved else (
             "Overall" if any(s["name"] == "Overall" for s in skills)
@@ -242,6 +243,7 @@ def create_app(env=None):
             owners=queries.player_owners(player_id),
             depth=queries.history_depth(player_id),
             movers=moved,
+            active_movers=moved_activities,
             default_skill=default_skill,
             sotw_podiums=queries.player_podiums(
                 player_id, row["rs_name"], "sotw", server_ids),
@@ -261,7 +263,8 @@ def create_app(env=None):
         if activity:
             rows = queries.activity_history(row["id"], activity)
             series = [{"t": fmt.parse_ts(r["recorded_at"]).timestamp() * 1000,
-                       "y": r["score"], "at": r["recorded_at"]}
+                       "y": r["score"], "at": r["recorded_at"],
+                       "r": r["recovered"]}
                       for r in rows if fmt.parse_ts(r["recorded_at"])]
             return jsonify({"label": activity, "unit": "KC", "points": series})
 

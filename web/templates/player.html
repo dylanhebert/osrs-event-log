@@ -93,8 +93,15 @@
             <option value="skill:{{ s.name }}">{{ s.name }}</option>
           {% endfor %}
         </optgroup>
+        {% if active_movers %}
+        <optgroup label="Bosses and minigames that have moved">
+          {% for name in active_movers %}
+            <option value="activity:{{ name }}">{{ name }}</option>
+          {% endfor %}
+        </optgroup>
+        {% endif %}
         {% if activities %}
-        <optgroup label="Activities">
+        <optgroup label="All bosses and minigames">
           {% for a in activities %}
             <option value="activity:{{ a.name }}">{{ a.name }}</option>
           {% endfor %}

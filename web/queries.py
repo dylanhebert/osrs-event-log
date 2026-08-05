@@ -475,9 +475,11 @@ def skill_history(player_id, skill_name, limit=4000):
         " ORDER BY h.recorded_at LIMIT ?", (player_id, skill_name, limit))
 
 
-def activity_history(player_id, activity_name, limit=2000):
+def activity_history(player_id, activity_name, limit=4000):
+    """One activity's recorded scores, oldest first. See skill_history on
+    why `recovered` comes back with them."""
     return repo.db.query(
-        "SELECT h.score, h.rank, h.recorded_at"
+        "SELECT h.score, h.rank, h.recorded_at, h.recovered"
         " FROM player_activity_history h JOIN activities a ON a.id = h.activity_id"
         " WHERE h.player_id = ? AND a.name = ?"
         " ORDER BY h.recorded_at LIMIT ?", (player_id, activity_name, limit))
@@ -512,6 +514,21 @@ def skills_with_movement(player_id):
         " FROM player_skill_history h JOIN skills sk ON sk.id = h.skill_id"
         " WHERE h.player_id = ? GROUP BY sk.name HAVING n > 1"
         " ORDER BY n DESC, sk.sort_order", (player_id,))]
+
+
+def activities_with_movement(player_id):
+    """Activities with more than one recorded value.
+
+    Worth its own list for the same reason the skill one is: a player can be
+    on the hiscores for eighty bosses and have a chart worth looking at for
+    six of them, and hunting for those six in an alphabetical list of eighty
+    is how a populated chart goes unnoticed.
+    """
+    return [r["name"] for r in repo.db.query(
+        "SELECT a.name, COUNT(DISTINCT h.recorded_at) n"
+        " FROM player_activity_history h JOIN activities a ON a.id = h.activity_id"
+        " WHERE h.player_id = ? GROUP BY a.name HAVING n > 1"
+        " ORDER BY n DESC, a.sort_order", (player_id,))]
 
 
 # --------------------------------------------------------------------------- #
