@@ -51,7 +51,7 @@
     #}
     <table class="grid tight">
       <thead><tr><th class="n">#</th><th>Account</th><th class="n">1st</th>
-        <th class="n">2nd</th><th class="n">3rd</th><th class="n">Weeks</th>
+        <th class="n opt">2nd</th><th class="n opt">3rd</th><th class="n opt">Weeks</th>
         <th class="n">Total {{ 'XP' if kind == 'sotw' else 'kills' }}</th></tr></thead>
       <tbody>
       {% for s in standings %}
@@ -67,9 +67,9 @@
             {% endif %}
           </td>
           <td class="n">{{ s.rank_1 }}</td>
-          <td class="n">{{ s.rank_2 }}</td>
-          <td class="n">{{ s.rank_3 }}</td>
-          <td class="n">{{ s.weeks_placed }}</td>
+          <td class="n opt">{{ s.rank_2 }}</td>
+          <td class="n opt">{{ s.rank_3 }}</td>
+          <td class="n opt">{{ s.weeks_placed }}</td>
           <td class="n">{{ s.total | num }}</td>
         </tr>
       {% endfor %}

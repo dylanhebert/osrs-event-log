@@ -40,14 +40,14 @@
     <h2>Skills</h2>
     {% if skills %}
       <table class="grid tight">
-        <thead><tr><th>Skill</th><th class="n">Level</th><th class="n">XP</th><th class="n">Rank</th></tr></thead>
+        <thead><tr><th>Skill</th><th class="n">Level</th><th class="n">XP</th><th class="n opt">Rank</th></tr></thead>
         <tbody>
         {% for s in skills %}
           <tr{% if s.name == 'Overall' %} class="row-strong"{% endif %}>
             <td>{{ ui.skill_name(s.name) }}</td>
             <td class="n">{{ s.level | num }}</td>
             <td class="n">{{ s.xp | num }}</td>
-            <td class="n">{{ s.rank | rank }}</td>
+            <td class="n opt">{{ s.rank | rank }}</td>
           </tr>
         {% endfor %}
         </tbody>
@@ -61,12 +61,12 @@
     <h2>Bosses and minigames</h2>
     {% if activities %}
       <table class="grid tight">
-        <thead><tr><th>Activity</th><th class="n">Score</th><th class="n">Rank</th></tr></thead>
+        <thead><tr><th>Activity</th><th class="n">Score</th><th class="n opt">Rank</th></tr></thead>
         <tbody>
         {% for a in activities %}
           <tr><td>{{ ui.activity_name(a.name) }}</td>
             <td class="n">{{ a.score | num }}</td>
-            <td class="n">{{ a.rank | rank }}</td></tr>
+            <td class="n opt">{{ a.rank | rank }}</td></tr>
         {% endfor %}
         </tbody>
       </table>

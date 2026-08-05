@@ -62,13 +62,9 @@
 body {
   margin: 0;
   color: var(--ink);
-  background: var(--stone-dark);
-  /* The tiled stone feel of the hiscores frame, done with gradients so there
-     is no extra asset to ship. */
+  background-color: #332d24;
   background-image:
-    repeating-linear-gradient(45deg, rgba(0,0,0,.16) 0 2px, transparent 2px 6px),
-    linear-gradient(180deg, #423a2d 0%, #2a251d 100%);
-  background-attachment: fixed;
+    repeating-linear-gradient(45deg, rgba(0,0,0,.16) 0 2px, transparent 2px 6px);
   font: 15px/1.55 ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
 }
 
@@ -106,6 +102,16 @@ code {
 .nav a, .nav-right { color: #e4d7b4; text-shadow: 1px 1px 0 rgba(0,0,0,.5); }
 .nav a:hover, .nav-right:hover { color: var(--gold); text-decoration: none; }
 .nav-right { margin-left: auto; white-space: nowrap; }
+
+/* Wide screens: the panel is not a box, so its children lay out as though the
+   wrapper were not there at all. */
+.menu-panel { display: contents; }
+.nav-toggle, .menu-btn { display: none; }
+
+.sr {
+  position: absolute; width: 1px; height: 1px; overflow: hidden;
+  clip-path: inset(50%); white-space: nowrap;
+}
 
 .signout button, .btn, button[type=submit] {
   background: linear-gradient(180deg, #6b5c3f 0%, #4a3f2a 100%);
@@ -385,9 +391,11 @@ a.pg:hover { color: var(--gold); border-color: var(--gold-dim); text-decoration:
     --accent-dim: #4e4634;
     --warn: #e0a458; --good: #7fc97f;
   }
-  body { background-image:
-    repeating-linear-gradient(45deg, rgba(0,0,0,.22) 0 2px, transparent 2px 6px),
-    linear-gradient(180deg, #23201a 0%, #16140f 100%); }
+  body {
+    background-color: #1d1a14;
+    background-image:
+      repeating-linear-gradient(45deg, rgba(0,0,0,.22) 0 2px, transparent 2px 6px);
+  }
   .panel h1, .panel h2, .panel h3 { color: var(--ink); }
   .grid tbody tr:nth-child(even) { background: rgba(255, 255, 255, .04); }
   .grid tbody tr:hover { background: rgba(255, 184, 63, .12); }
@@ -398,4 +406,111 @@ a.pg:hover { color: var(--gold); border-color: var(--gold-dim); text-decoration:
   .feed-msg pre { background: rgba(0,0,0,.28); }
   .tabs a.on { color: var(--ink); }
   select, input[type=password] { background: #201c15; color: var(--ink); }
+}
+
+/* ------------------------------------------------------------------ *
+   Narrow screens
+
+   Two rules drive all of this:
+
+   1. NO HORIZONTAL SCROLL. A table that scrolls sideways on a phone hides
+      the column you were reading and gives no sign it is there. Columns
+      marked `opt` are dropped instead: they are the ones repeated on the
+      row's own page, so nothing becomes unreachable.
+   2. The chrome shrinks before the content does. A header and a row of stat
+      tiles that take half the screen leave nothing for what you came to read.
+ * ------------------------------------------------------------------ */
+
+@media (max-width: 760px) {
+  .topbar { padding: .45rem .8rem; gap: .55rem; }
+  .brand { font-size: 1rem; gap: .4rem; }
+  .crier { height: 21px; }
+
+  /* Off-screen rather than display:none, so it keeps its place in the tab
+     order and can still be toggled from the keyboard. */
+  .nav-toggle {
+    position: absolute; width: 1px; height: 1px;
+    opacity: 0; margin: 0; pointer-events: none;
+  }
+  .menu-btn {
+    display: inline-flex; align-items: center; justify-content: center;
+    margin-left: auto; width: 2.2rem; height: 2.2rem; flex: none;
+    border: 1px solid var(--gold-dim); border-radius: 3px; cursor: pointer;
+    background: linear-gradient(180deg, #6b5c3f 0%, #4a3f2a 100%);
+  }
+  /* Three bars from one element: no icon font, no second image request. */
+  .bars, .bars::before, .bars::after {
+    display: block; width: 16px; height: 2px;
+    background: #f0e4c2; border-radius: 1px;
+  }
+  .bars { position: relative; }
+  .bars::before, .bars::after { content: ""; position: absolute; left: 0; }
+  .bars::before { top: -5px; }
+  .bars::after { top: 5px; }
+  .nav-toggle:focus-visible + .menu-btn {
+    outline: 2px solid var(--gold); outline-offset: 2px;
+  }
+
+  /* Its own row below the bar, so opening the menu never squeezes the brand. */
+  .menu-panel {
+    display: none; flex-basis: 100%; width: 100%;
+    margin-top: .45rem; padding-top: .5rem;
+    border-top: 1px solid var(--stone-line);
+  }
+  .nav-toggle:checked ~ .menu-panel { display: block; }
+  .menu-panel .nav { flex-direction: column; gap: 0; }
+  .menu-panel .nav a, .menu-panel .nav-right {
+    display: block; padding: .55rem .15rem;
+    border-bottom: 1px solid rgba(0,0,0,.28);
+  }
+  .menu-panel .nav-right { margin-left: 0; }
+  .menu-panel .signout { margin-top: .65rem; }
+  .menu-panel .signout button { width: 100%; padding-block: .5rem; }
+
+  .wrap { padding: 1rem .7rem 2rem; }
+  .panel { padding: .8rem .75rem; margin-bottom: .8rem; }
+  h1 { font-size: 1.25rem; }
+
+  /* Two up rather than one, and small enough that a wrapped label like
+     "19 minutes ago" no longer triples the height of the row. */
+  .tiles {
+    grid-template-columns: repeat(auto-fit, minmax(104px, 1fr));
+    gap: .45rem; margin-bottom: .8rem;
+  }
+  .tile { padding: .45rem .55rem; }
+  .tile-value { font-size: .98rem; line-height: 1.25; }
+  .tile-label { font-size: .67rem; margin-top: 0; }
+
+  .grid { font-size: .84rem; }
+  .grid th, .grid td { padding: .4rem .3rem; }
+  .grid.tight th, .grid.tight td { padding: .3rem .25rem; }
+  .grid th { font-size: .74rem; }
+  .opt { display: none; }
+
+  /* Numbers are what force a table wide. Let the name column give way first
+     and keep every figure on one line. */
+  .grid td.n, .grid th.n { white-space: nowrap; }
+  .grid td:first-child { word-break: break-word; }
+
+  .feed.wide .feed-msg { max-width: none; }
+  .feed-msg { font-size: .88rem; }
+  .feed-meta { gap: .4rem; font-size: .75rem; }
+
+  .pair { gap: 1.2rem; }
+  .tabs { gap: .2rem; }
+  .tabs a { padding: .3rem .6rem; font-size: .82rem; }
+  .chart-box { height: 240px; }
+  .player-facts { gap: .8rem; font-size: .86rem; }
+  .pg { min-width: 1.9rem; padding: .3rem .4rem; font-size: .82rem; }
+}
+
+/* Phones proper. The stat row goes to two columns rather than trying to fit
+   five, and the last of the optional table columns goes. */
+@media (max-width: 430px) {
+  .tiles { grid-template-columns: 1fr 1fr; }
+  .brand { font-size: .92rem; }
+  .wrap { padding: .8rem .55rem 2rem; }
+  .panel { padding: .7rem .6rem; }
+  .grid { font-size: .8rem; }
+  .pg-step { display: none; }
 }

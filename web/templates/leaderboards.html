@@ -60,8 +60,8 @@
         <tr>
           <th class="n">#</th><th>Account</th>
           {% if activity %}<th class="n">Score</th>
-          {% else %}<th class="n">Level</th><th class="n">XP</th>{% endif %}
-          <th class="n">Hiscores rank</th>
+          {% else %}<th class="n opt">Level</th><th class="n">XP</th>{% endif %}
+          <th class="n opt">Hiscores rank</th>
         </tr>
       </thead>
       <tbody>
@@ -73,10 +73,10 @@
           {% if activity %}
             <td class="n">{{ r.score | num }}</td>
           {% else %}
-            <td class="n">{{ r.level | num }}</td>
+            <td class="n opt">{{ r.level | num }}</td>
             <td class="n">{{ r.xp | num }}</td>
           {% endif %}
-          <td class="n">{{ r.rank | rank }}</td>
+          <td class="n opt">{{ r.rank | rank }}</td>
         </tr>
       {% endfor %}
       </tbody>

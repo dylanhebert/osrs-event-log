@@ -17,12 +17,15 @@
 <table class="grid sortable">
   <thead>
     <tr>
+      {# `opt` marks a column that is dropped on a phone rather than pushing
+         the table into a horizontal scroll. Account, level and XP are what the
+         list is for; the rest are all on the player's own page. #}
       <th>Account</th>
       <th class="n">Total level</th>
       <th class="n">Overall XP</th>
-      <th class="n">Rank</th>
-      <th class="n">Bosses</th>
-      <th>Last polled</th>
+      <th class="n opt">Rank</th>
+      <th class="n opt">Bosses</th>
+      <th class="opt">Last polled</th>
     </tr>
   </thead>
   <tbody>
@@ -35,9 +38,9 @@
       </td>
       <td class="n">{{ p.total_level | num }}</td>
       <td class="n">{{ p.total_xp | num }}</td>
-      <td class="n">{{ p.overall_rank | rank }}</td>
-      <td class="n">{{ p.activity_rows }}</td>
-      <td title="{{ p.last_polled | stamp }}">{{ p.last_polled | ago }}</td>
+      <td class="n opt">{{ p.overall_rank | rank }}</td>
+      <td class="n opt">{{ p.activity_rows }}</td>
+      <td class="opt" title="{{ p.last_polled | stamp }}">{{ p.last_polled | ago }}</td>
     </tr>
   {% else %}
     <tr><td colspan="6" class="empty">No players visible.</td></tr>

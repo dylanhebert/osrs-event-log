@@ -164,6 +164,10 @@ def test_rendered(db_path, password):
           home.index("Latest events") < home.index("Top accounts"))
     check("feed rows carry an icon", 'class="ic ic-' in home)
 
+    check("the header collapses behind a menu control",
+          'class="nav-toggle"' in home and 'class="menu-btn"' in home)
+    check("events is the first nav link",
+          home.index('href="/events"') < home.index('href="/players"'))
 
     public = client.get("/logout")  # noqa: F841
     signed_out = client.get("/").get_data(as_text=True)
