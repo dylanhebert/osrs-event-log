@@ -65,6 +65,12 @@
 <footer class="foot">
   <span>Read-only view of the Discord bot's database. Nothing here writes.</span>
 </footer>
+{#
+  Rewrites the UTC times the server rendered into the reader's own timezone.
+  Deferred and entirely optional: every <time> is already correct and labelled
+  before this runs, so a failure here costs the local reading and nothing else.
+#}
+<script defer src="{{ url_for('static', filename='js/localtime.js') }}"></script>
 {% block scripts %}{% endblock %}
 </body>
 </html>

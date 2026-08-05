@@ -229,6 +229,30 @@ def test_rendered(db_path, password):
     check("a member id is not accepted as a handle",
           client.get("/members/123456789012345678").status_code == 404)
 
+    # The server renders UTC and a script rewrites it to the reader's zone.
+    # The script is optional, so what has to hold server-side is that the page
+    # is already correct without it: a readable labelled time as the text, and
+    # the machine-readable instant the script needs in datetime.
+    print("\nevent timestamps")
+    feed_page = client.get("/events").get_data(as_text=True)
+    stamps = re.findall(r"<time[^>]*>([^<]+)</time>", feed_page)
+    check("times render as an exact moment, not a relative one",
+          bool(stamps) and all(re.match(r"\d{4}-\d{2}-\d{2} \d{2}:\d{2} UTC", s.strip())
+                               for s in stamps),
+          str(stamps[:2]))
+    check("the timezone is stated rather than implied",
+          all("UTC" in s for s in stamps))
+    machine = re.findall(r'<time datetime="([^"]+)"', feed_page)
+    check("each carries a machine-readable instant for the localiser",
+          len(machine) == len(stamps) and all(t.endswith("Z") for t in machine),
+          str(machine[:2]))
+    check("the relative form moved to the hover",
+          bool(re.search(r'<time[^>]*title="[^"]*(ago|now)[^"]*"', feed_page)))
+    check("the localiser is loaded on every page",
+          "js/localtime.js" in feed_page)
+    check("the localiser is deferred, so it never blocks the feed",
+          bool(re.search(r'<script defer src="[^"]*localtime\.js', feed_page)))
+
     print("\nstatic cache busting")
     css_url = re.search(r'href="(/static/css/app\.css[^"]*)"', signed_out)
     check("the stylesheet URL carries a version",
