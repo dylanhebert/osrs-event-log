@@ -35,6 +35,53 @@
   </p>
 {% endif %}
 
+{# What this account has been doing leads, the same way it does on the home
+   page. The stat tables below are the current state and change slowly; these
+   are the reason someone opened the page. #}
+<div class="cols">
+  <section class="panel">
+    <h2>Recent events</h2>
+    {% if events %}
+      <ul class="feed">
+        {% for e in events %}{{ ui.event_row(e, show_player=False) }}{% endfor %}
+      </ul>
+      {#
+        Straight to the events page rather than a longer list here. That page
+        already has the Everything / Milestones tabs, the source and type
+        menus and a pager, all of which would otherwise have to be built a
+        second time on this one.
+      #}
+      <p class="feed-more">
+        <a class="btn" href="{{ url_for('events', player=player.rs_name) }}">All
+          {{ event_count | num }} events</a>
+      </p>
+    {% else %}
+      <p class="empty">No events recorded for this account yet.</p>
+    {% endif %}
+  </section>
+
+  <section class="panel">
+    <h2>Recent milestones</h2>
+    {% if milestones %}
+      <ul class="feed">
+        {% for e in milestones %}{{ ui.event_row(e, show_player=False) }}{% endfor %}
+      </ul>
+      <p class="feed-more">
+        <a class="btn" href="{{ url_for('events', player=player.rs_name,
+                                        milestones='1') }}">All
+          {{ milestone_count | num }} milestones</a>
+      </p>
+    {% else %}
+      {# A milestone is whatever pinged the server's role. Plenty of accounts
+         genuinely have none: routine levelling never does. #}
+      <p class="empty">
+        No milestones recorded. Ordinary levels and kills do not count as one:
+        a milestone is something that pinged the server's role.
+      </p>
+    {% endif %}
+  </section>
+</div>
+
 <div class="cols">
   <section class="panel">
     <h2>Skills</h2>
@@ -136,53 +183,26 @@
   {% endif %}
 </section>
 
-<div class="cols">
-  <section class="panel">
-    <h2>Recent events</h2>
-    {% if events %}
-      <ul class="feed">
-        {% for e in events %}
-          {{ ui.event_row(e, show_player=False) }}
-        {% endfor %}
-      </ul>
-      {#
-        Straight to the events page rather than a longer list here. That page
-        already has the Everything / Milestones tabs, the source and type
-        menus and a pager, all of which would otherwise have to be built a
-        second time on this one.
-      #}
-      <p class="feed-more">
-        <a class="btn" href="{{ url_for('events', player=player.rs_name) }}">All
-          {{ event_count | num }} events</a>
-        <a href="{{ url_for('events', player=player.rs_name, milestones='1') }}">Milestones
-          only</a>
-      </p>
-    {% else %}
-      <p class="empty">No events recorded for this account yet.</p>
-    {% endif %}
-  </section>
-
-  <section class="panel">
-    <h2>Podium finishes</h2>
-    {% if sotw_podiums or botw_podiums %}
-      <table class="grid tight">
-        <thead><tr><th>Week</th><th>Event</th><th class="n">Place</th><th class="n">Score</th></tr></thead>
-        <tbody>
-        {% for p in sotw_podiums %}
-          <tr><td>{{ p.ended_on | day }}</td><td>{{ p.name }}</td>
-            <td class="n">{{ p.rank | medal }}</td><td class="n">{{ p.score | num }} XP</td></tr>
-        {% endfor %}
-        {% for p in botw_podiums %}
-          <tr><td>{{ p.ended_on | day }}</td><td>{{ p.name }}</td>
-            <td class="n">{{ p.rank | medal }}</td><td class="n">{{ p.score | num }} kills</td></tr>
-        {% endfor %}
-        </tbody>
-      </table>
-    {% else %}
-      <p class="empty">No top-three finishes recorded.</p>
-    {% endif %}
-  </section>
-</div>
+<section class="panel">
+  <h2>Podium finishes</h2>
+  {% if sotw_podiums or botw_podiums %}
+    <table class="grid tight">
+      <thead><tr><th>Week</th><th>Event</th><th class="n">Place</th><th class="n">Score</th></tr></thead>
+      <tbody>
+      {% for p in sotw_podiums %}
+        <tr><td>{{ p.ended_on | day }}</td><td>{{ p.name }}</td>
+          <td class="n">{{ p.rank | medal }}</td><td class="n">{{ p.score | num }} XP</td></tr>
+      {% endfor %}
+      {% for p in botw_podiums %}
+        <tr><td>{{ p.ended_on | day }}</td><td>{{ p.name }}</td>
+          <td class="n">{{ p.rank | medal }}</td><td class="n">{{ p.score | num }} kills</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <p class="empty">No top-three finishes recorded.</p>
+  {% endif %}
+</section>
 {% endblock %}
 
 {% block scripts %}

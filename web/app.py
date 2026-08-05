@@ -239,8 +239,19 @@ def create_app(env=None):
             activities=queries.player_activities(player_id),
             servers=queries.player_server_labels(
                 player_id, app.config["SERVER_NAMES"]),
-            events=queries.events_feed(g.player_ids, limit=15, player_id=player_id),
+            # Two queries, not one filtered in the template, for the reason the
+            # home page needs two: milestones are a fortieth of the feed, so
+            # this account's ten most recent can be years older than its ten
+            # most recent events.
+            events=queries.events_feed(g.player_ids, limit=10,
+                                       player_id=player_id),
             event_count=queries.events_count(g.player_ids, player_id=player_id),
+            milestones=queries.events_feed(g.player_ids, limit=10,
+                                           player_id=player_id,
+                                           milestones_only=True),
+            milestone_count=queries.events_count(g.player_ids,
+                                                 player_id=player_id,
+                                                 milestones_only=True),
             owners=queries.player_owners(player_id),
             depth=queries.history_depth(player_id),
             movers=moved,

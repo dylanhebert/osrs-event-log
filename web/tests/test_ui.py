@@ -19,6 +19,7 @@ import re
 import sqlite3
 import sys
 from pathlib import Path
+from urllib.parse import quote_plus
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
@@ -158,10 +159,17 @@ def test_rendered(db_path, password):
     check("a deep page still renders", last.status_code == 200,
           str(last.status_code))
 
+    # The feeds lead every page that has them. Events are what the site is
+    # for, so anything that pushes them below the fold is a regression, and
+    # ordering is the kind of thing a later edit breaks without noticing.
     home = client.get("/").get_data(as_text=True)
     check("home shows a milestones panel", "Latest milestones" in home)
-    check("home shows events above accounts",
-          home.index("Latest events") < home.index("Top accounts"))
+    check("home leads with events, then milestones",
+          home.index("Latest events") < home.index("Latest milestones"))
+    check("...then the counts",
+          home.index("Latest milestones") < home.index('class="tiles"'))
+    check("...then the standings and the account list",
+          home.index('class="tiles"') < home.index("Top accounts"))
     check("feed rows carry an icon", 'class="ic ic-' in home)
 
     check("the header collapses behind a menu control",
@@ -208,6 +216,17 @@ def test_rendered(db_path, password):
 
     check("a player outside the member's servers 404s",
           client.get("/events?player=Definitely+Not+A+Real+Account").status_code == 404)
+
+    # A player page leads with the same pair for the same reason the home page
+    # does. Ordering is exactly the kind of thing a later edit undoes quietly.
+    one_player = client.get(f"/players/{name}").get_data(as_text=True)
+    check("a player page carries both feeds too",
+          "Recent events" in one_player and "Recent milestones" in one_player)
+    check("...and leads with them, above the stat tables",
+          one_player.index("Recent events") < one_player.index("<h2>Skills</h2>"))
+    check("...each linking to its own filtered feed",
+          f"/events?player={quote_plus(name)}"
+          in one_player.replace("&amp;", "&"))
 
     print("\nmember pages")
     members_page = client.get("/members")
