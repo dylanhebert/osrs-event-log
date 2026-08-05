@@ -119,13 +119,22 @@ def main(argv=None):
         (merge_missed if beyond_placements else left_the_log).append(summary)
 
     if merge_missed:
-        print("\n  MERGE MISSED, these need attention:")
+        print("\n  Holding more than placements, worth a look:")
         for line in merge_missed:
             print(f"    {line}")
-        print('\n    tools/merge_players.py --from "<old>" --to "<new>"')
-        problems += len(merge_missed)
+        print('\n    If any of these were TRANSFERRED to a new name rather than')
+        print('    removed, their records belong to the successor:')
+        print('      tools/merge_players.py --from "<old>" --to "<new>"')
+        print('\n    If they simply left, this is correct as it stands and the')
+        print('    records rightly stay with them.')
+        # NOT counted as a problem. Nothing in the database records WHY a
+        # player retired, so this cannot be decided here. Before the Discord
+        # backfill it looked decidable, because only a missed merge left events
+        # behind; now a departed player legitimately has years of recovered
+        # history, and calling that a defect trains everyone to ignore the
+        # report. The unambiguous checks are below.
     else:
-        print("\n  none holding anything beyond placements. No merge left records behind.")
+        print("\n  none holding anything beyond placements.")
 
     if left_the_log:
         print(f"\n  Left the log, holding only placements ({len(left_the_log)}), "

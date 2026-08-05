@@ -84,7 +84,10 @@ def main():
     check("...attributed to the right player", owner == 1)
     check("...mentions stripped", "<@" not in units[-1][1])
     check("...first is a SKILL update", classify(*units[0]) == ("hiscores", "SKILL"))
-    check("...second is OVERALL", classify(*units[1]) == ("hiscores", "OVERALL"))
+    # Footers are stored as SKILL, matching the list the live bot appends
+    # them to. The feed hides them by their text, not by a type.
+    check("...the overall footer is a SKILL row, as live stores it",
+          classify(*units[1]) == ("hiscores", "SKILL"))
 
     units, leftover, owner = parse(
         "**Hey Jase levelled up Fletching to 55**```c\n109,350 XP gained | "
@@ -123,7 +126,8 @@ def main():
         "**Zezima Alt levelled up Mining to 70**```c\n5,000 XP gained | Total "
         "Mining XP: 737,627``````c\nSkill of the Week - Current Mining XP: 12,345```")
     check("a SOTW footer is its own unit", len(units) == 2)
-    check("...classified SOTW", classify(*units[1]) == ("hiscores", "SOTW"))
+    check("...the SOTW footer is a SKILL row too",
+          classify(*units[1]) == ("hiscores", "SKILL"))
 
     print("\nrobustness: shapes the parser has not been taught")
 

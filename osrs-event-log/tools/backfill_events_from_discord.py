@@ -295,10 +295,18 @@ def classify(title, text):
     # Footers are exactly the units that carry no bold title, so requiring an
     # absent title stops the "2,200 total level" milestone, whose body also
     # starts "Total level:", from being mistaken for one.
+    #
+    # They get SKILL, not a type of their own, because that is what the live
+    # bot stores: check_sotw_update() appends the footer to self.skills (or
+    # self.milestones, which the caller promotes), so record_events() files it
+    # under the list it landed in. Giving backfilled footers OVERALL/SOTW/BOTW
+    # would put the same thing under two different types depending on how old
+    # it is. The feed identifies them by their text instead, which works for
+    # both.
     if not title:
-        for needle, kind in FOOTERS:
+        for needle, _ in FOOTERS:
             if inner.startswith(needle):
-                return "hiscores", kind
+                return "hiscores", "SKILL"
 
     source = source_of(haystack)
     if source == "dink":
