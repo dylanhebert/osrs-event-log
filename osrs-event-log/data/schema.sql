@@ -297,7 +297,16 @@ CREATE TABLE player_skill_history (
     level       INTEGER NOT NULL,
     xp          INTEGER NOT NULL,
     rank        INTEGER,
-    recorded_at TEXT NOT NULL
+    recorded_at TEXT NOT NULL,
+    -- 0 for a value the looper polled, 1 for one reconstructed from
+    -- the text of an old Discord post by
+    -- tools/backfill_history_from_events.py (schema version 7).
+    -- Recovered points are exact but SPARSE: one exists only where a
+    -- message was posted, so between two of them the value was
+    -- climbing rather than flat. The chart joins them with a straight
+    -- line for that reason and steps the polled ones, which really
+    -- were constant between writes.
+    recovered   INTEGER NOT NULL DEFAULT 0
 );
 
 CREATE INDEX idx_psh_series ON player_skill_history(player_id, skill_id, recorded_at);
@@ -310,7 +319,16 @@ CREATE TABLE player_activity_history (
     activity_id INTEGER NOT NULL REFERENCES activities(id),
     score       INTEGER NOT NULL,
     rank        INTEGER,
-    recorded_at TEXT NOT NULL
+    recorded_at TEXT NOT NULL,
+    -- 0 for a value the looper polled, 1 for one reconstructed from
+    -- the text of an old Discord post by
+    -- tools/backfill_history_from_events.py (schema version 7).
+    -- Recovered points are exact but SPARSE: one exists only where a
+    -- message was posted, so between two of them the value was
+    -- climbing rather than flat. The chart joins them with a straight
+    -- line for that reason and steps the polled ones, which really
+    -- were constant between writes.
+    recovered   INTEGER NOT NULL DEFAULT 0
 );
 
 CREATE INDEX idx_pah_series ON player_activity_history(player_id, activity_id, recorded_at);

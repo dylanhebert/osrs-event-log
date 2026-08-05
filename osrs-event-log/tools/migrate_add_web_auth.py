@@ -10,6 +10,8 @@ other half.
     v4  discord_members       who owns an account: name and avatar hash
     v5  events.discord_message_id  so a Discord backfill can re-run safely
     v6  events.is_milestone       did this event ping the role
+    v7  *_history.recovered       was this point reconstructed from old
+                                  Discord text rather than polled live
 
 It is idempotent and additive: it creates tables, an index and nullable columns,
 rewrites no existing row, and drops nothing. Safe to run more than once and safe
@@ -26,7 +28,7 @@ import sqlite3
 import sys
 from datetime import datetime, timezone
 
-SCHEMA_VERSION = 6
+SCHEMA_VERSION = 7
 
 NEW_TABLES = ["web_credentials", "discord_members"]
 
@@ -62,6 +64,8 @@ NEW_COLUMNS = [
     ("servers", "icon_hash", "TEXT"),
     ("events", "discord_message_id", "INTEGER"),
     ("events", "is_milestone", "INTEGER NOT NULL DEFAULT 0"),
+    ("player_skill_history", "recovered", "INTEGER NOT NULL DEFAULT 0"),
+    ("player_activity_history", "recovered", "INTEGER NOT NULL DEFAULT 0"),
 ]
 
 # Partial indexes on the new columns, created after the columns exist.

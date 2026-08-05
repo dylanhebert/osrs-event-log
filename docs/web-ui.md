@@ -247,21 +247,74 @@ Queries enumerate columns for this reason. `SELECT *` is banned in
 
 ## Charts
 
-Chart.js 4.4.7, vendored (see `web/static/js/VENDOR.md`). Two deliberate
+Chart.js 4.4.7, vendored (see `web/static/js/VENDOR.md`). Three deliberate
 choices:
 
-- **`stepped: true`, `tension: 0`.** A history row is written only when a value
-  actually changes, so between two recorded points the value was *constant*. A
-  smooth or straight-line join would draw XP the player never had, at times they
-  never had it.
+- **Polled points are stepped, `tension: 0`.** A history row is written only
+  when a value actually changes, so between two recorded points the value was
+  *constant*. A smooth or straight-line join would draw XP the player never
+  had, at times they never had it.
+- **Recovered points are not stepped.** See below.
 - **A linear x axis over epoch milliseconds**, not a category axis and not a
   time scale. A time scale needs a date adapter, which is a second library to
   vendor; a category axis would space a year of silence and twenty minutes
   identically.
 
 Where a player has fewer than two distinct recorded timestamps, the page says so
-instead of drawing a chart. History only began at the storage migration and
-grows at roughly 400k rows/year, so this is the normal case for a while.
+instead of drawing a chart.
+
+### History recovered from Discord
+
+Nothing recorded a player's numbers before the storage migration: the looper
+compared them, posted a message and threw them away. So the charts began with
+one day of data and drew nothing for 66 of 69 players.
+
+The numbers survived in the messages, though, and the Discord backfill has
+since pulled six years of those into `events`.
+`tools/backfill_history_from_events.py` reads the totals back out of that text
+and writes them as history with `recovered = 1` (schema version 7).
+
+Only two shapes count as a lifetime total, both written by `PlayerUpdate` from
+the hiscores payload itself:
+
+```
+Total <Skill> XP: 217,223                       -> that skill
+Total level: 977 | Total Overall XP: 3,358,189  -> Overall, with its level
+```
+
+> **`Skill of the Week - Current <Skill> XP: N` is not one of them.** It has the
+> same shape and is a *weekly accumulator*: `PlayerUpdate` builds it from
+> `new_sotw_xp`, which `add_to_player_entry_global` adds to across the week and
+> resets when the week rolls over. Read as a lifetime total it would draw a
+> sawtooth of weekly gains under every curve, with nothing to suggest anything
+> was wrong. `tools/test_history_backfill.py` guards this first.
+
+The tool filters as well as parses, because a single wrong point rescales a
+chart's whole y axis. A point is dropped when the message's bold title names a
+different player, when it would make the series go *backwards* (XP never
+decreases, so a value below the running maximum cannot belong here), or when it
+exceeds what the player had at the time. Everything dropped is counted and
+sampled in the report. On the live data that was 900 points in 29,000.
+
+**Why the two halves are drawn differently.** A polled value was written only
+when it changed, so a step is honest. A recovered one exists only where a
+message happened to be posted — every level below 99, but only the occasional
+threshold above it — so between two of them the player was climbing, often for
+months. Stepping those would draw a flat year followed by a cliff, which is a
+bigger lie than the straight line. The series is split at the boundary, the
+recovered half is dashed to say outright that it is reconstructed, and the
+boundary point belongs to both halves so the line does not break.
+
+Safe to run, and safe to undo:
+
+```sql
+DELETE FROM player_skill_history WHERE recovered = 1;
+```
+
+Nothing in the bot's change-detection path reads these tables — `repo.stats`
+only inserts into them, and the looper compares against
+`player_skill_current` — so writing here cannot make a poll see a change, and
+cannot cause a Discord post.
 
 ---
 

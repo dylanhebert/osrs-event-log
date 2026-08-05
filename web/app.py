@@ -269,7 +269,11 @@ def create_app(env=None):
             abort(400)
         rows = queries.skill_history(row["id"], skill)
         series = [{"t": fmt.parse_ts(r["recorded_at"]).timestamp() * 1000,
-                   "y": r["xp"], "level": r["level"], "at": r["recorded_at"]}
+                   "y": r["xp"], "level": r["level"], "at": r["recorded_at"],
+                   # 1 where the value was read back out of an old Discord
+                   # post rather than polled. The chart joins those with a
+                   # straight line and steps the polled ones.
+                   "r": r["recovered"]}
                   for r in rows if fmt.parse_ts(r["recorded_at"])]
         return jsonify({"label": skill, "unit": "XP", "points": series})
 

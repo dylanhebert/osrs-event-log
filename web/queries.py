@@ -459,9 +459,17 @@ def credential_info(member_id):
 # History
 # --------------------------------------------------------------------------- #
 
-def skill_history(player_id, skill_name, limit=2000):
+def skill_history(player_id, skill_name, limit=4000):
+    """One skill's recorded values, oldest first.
+
+    `recovered` says where the point came from, and the chart needs it: a
+    polled value was written only when it changed, so between two of them it
+    really was constant and a step is honest. A recovered one exists only where
+    a Discord message happened to be posted, so between two of them the player
+    was climbing and a step would draw XP they never had for months at a time.
+    """
     return repo.db.query(
-        "SELECT h.level, h.xp, h.rank, h.recorded_at"
+        "SELECT h.level, h.xp, h.rank, h.recorded_at, h.recovered"
         " FROM player_skill_history h JOIN skills sk ON sk.id = h.skill_id"
         " WHERE h.player_id = ? AND sk.name = ?"
         " ORDER BY h.recorded_at LIMIT ?", (player_id, skill_name, limit))

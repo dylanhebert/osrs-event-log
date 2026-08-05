@@ -1,14 +1,22 @@
-/* Stepped history chart.
+/* History chart.
  *
- * TWO DELIBERATE CHOICES, both about not lying with the picture:
+ * THREE DELIBERATE CHOICES, all about not lying with the picture:
  *
- * 1. stepped: true, tension: 0.
- *    A history row is written only when a value actually changes. Between two
- *    recorded points the value was CONSTANT, not sliding linearly. A smooth or
- *    straight-line join would draw XP the player never had, at times they never
- *    had it. A step is what the data actually says.
+ * 1. POLLED POINTS ARE STEPPED. A history row is written only when a value
+ *    actually changes, so between two of them the value was CONSTANT, not
+ *    sliding. A smooth or straight join would draw XP the player never had.
  *
- * 2. A LINEAR x axis over epoch milliseconds, not a category axis.
+ * 2. RECOVERED POINTS ARE NOT. Everything before the storage migration was
+ *    reconstructed from the text of old Discord posts, so a point exists only
+ *    where a message happened to be posted: every level below 99, but only the
+ *    occasional threshold above it. Between two of those the player was
+ *    climbing, often for months. Stepping them would draw a flat year followed
+ *    by a cliff, which is a bigger lie than the straight line.
+ *
+ *    So the series is split in two and each half is drawn the way its own data
+ *    warrants. They meet at the boundary point, which belongs to both.
+ *
+ * 3. A LINEAR x axis over epoch milliseconds, not a category axis.
  *    Chart.js time scales need a date adapter, which is a second library to
  *    vendor. A category axis would avoid that but would space unequal gaps
  *    equally, so a year of silence and twenty minutes would look identical.
@@ -47,7 +55,18 @@ function initHistoryChart(options) {
   let chart = null;
 
   function render(data) {
-    const points = data.points.map(p => ({ x: p.t, y: p.y }));
+    const points = data.points.map(p => ({ x: p.t, y: p.y, r: !!p.r }));
+
+    // Recovered points all predate the migration and polled ones all follow
+    // it, so the split is a single boundary rather than an interleaving. The
+    // boundary point is included in BOTH halves, otherwise the line has a
+    // visible gap exactly where the two meet.
+    const lastRecovered = points.reduce(
+      (found, p, i) => (p.r ? i : found), -1);
+    const recovered = lastRecovered >= 0
+      ? points.slice(0, lastRecovered + 2) : [];
+    const polled = lastRecovered >= 0
+      ? points.slice(lastRecovered + 1) : points;
 
     if (note) {
       if (points.length < 2) {
@@ -55,30 +74,55 @@ function initHistoryChart(options) {
       } else {
         const first = points[0].y, last = points[points.length - 1].y;
         const gained = last - first;
+        const recoveredCount = points.filter(p => p.r).length;
         note.textContent =
           points.length + ' recorded values, ' + fmtDate(points[0].x) +
           ' to ' + fmtDate(points[points.length - 1].x) + '. ' +
           (gained > 0 ? '+' + fmtNum(gained) + ' ' + data.unit + ' over that span.'
-                      : 'No net change over that span.');
+                      : 'No net change over that span.') +
+          (recoveredCount
+            ? ' ' + fmtNum(recoveredCount) + ' of them recovered from old ' +
+              'Discord posts, so they are sparser than the polled ones.'
+            : '');
       }
+    }
+
+    const datasets = [];
+    if (recovered.length > 1) {
+      datasets.push({
+        label: data.label + ' ' + data.unit + ' (recovered)',
+        data: recovered,
+        stepped: false,
+        tension: 0,
+        borderColor: line,
+        backgroundColor: line,
+        borderWidth: 2,
+        // Dashed, so the picture says outright that this half is
+        // reconstructed rather than measured.
+        borderDash: [5, 4],
+        pointRadius: recovered.length > 200 ? 0 : 2,
+        pointHoverRadius: 5,
+        fill: false
+      });
+    }
+    if (polled.length) {
+      datasets.push({
+        label: data.label + ' ' + data.unit,
+        data: polled,
+        stepped: true,
+        tension: 0,
+        borderColor: line,
+        backgroundColor: line,
+        borderWidth: 2,
+        pointRadius: polled.length > 200 ? 0 : 3,
+        pointHoverRadius: 5,
+        fill: false
+      });
     }
 
     const config = {
       type: 'line',
-      data: {
-        datasets: [{
-          label: data.label + ' ' + data.unit,
-          data: points,
-          stepped: true,
-          tension: 0,
-          borderColor: line,
-          backgroundColor: line,
-          borderWidth: 2,
-          pointRadius: points.length > 200 ? 0 : 3,
-          pointHoverRadius: 5,
-          fill: false
-        }]
-      },
+      data: { datasets },
       options: {
         responsive: true,
         maintainAspectRatio: false,
