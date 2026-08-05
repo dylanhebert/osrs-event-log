@@ -82,6 +82,15 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from data import repo  # noqa: E402
 
+# Reports print real message text, which is full of emoji, and the Windows
+# console is cp1252. Losing a whole run to an encode error while printing a
+# sample would be a poor trade.
+for _stream in (sys.stdout, sys.stderr):
+    try:
+        _stream.reconfigure(errors="replace")
+    except (AttributeError, ValueError):
+        pass
+
 API = "https://discord.com/api/v10"
 PAGE = 100
 
@@ -146,30 +155,55 @@ HISCORES_MARKERS = (
     "on the Hiscores", "Overall rank:", "logged:",
 )
 
-# BOTH sides are matched positively, and a unit matching neither is reported as
-# 'unknown' rather than being assumed. Treating "not hiscores" as "therefore
-# dink" would silently misfile any older hiscores wording that predates every
-# marker above, and the whole reason this parser is structural is that the
-# formats have changed over the years.
-DINK_MARKERS = (
-    "Entries:", "QP:", "Quests:", "Value:", "Price:", "Collection Log",
-    "Combat achievement", "funny feeling", "Killed by", "KC:",
-    "Total value:", "Personal best", "has died",
+# Dink types, taken from dink_messages/ rather than guessed from output. The
+# header phrase is the reliable half: the stat lines are all conditional on the
+# payload carrying that field, so a message may have none of them.
+#
+# Order matters, most specific first. "completed a Slayer task" has to beat the
+# bare "completed", and the clue and combat-achievement headers both contain
+# words the others use.
+DINK_HINTS = (
+    ("Achievement Diary", "ACHIEVEMENT_DIARY"),      # achievement_diary.py
+    ("completed a Slayer task", "SLAYER"),           # slayer.py
+    ("combat task", "COMBAT_ACHIEVEMENT"),           # combat_achievement.py
+    ("Task points:", "COMBAT_ACHIEVEMENT"),
+    ("Total points:", "COMBAT_ACHIEVEMENT"),
+    ("Collection Log", "COLLECTION"),                # collection.py
+    ("on the Grand Exchange", "GRAND_EXCHANGE"),     # grand_exchange.py
+    ("Personal Best", "KILL_COUNT"),                 # kill_count.py
+    ("purple drop from Tombs of Amascut", "TOA_UNIQUE"),   # toa_unique.py
+    ("just received", "PET"),                        # pet.py
+    ("was PK'd by", "DEATH"),                        # death.py
+    ("has PK'd", "PLAYER_KILL"),                     # player_kill.py
+    (" clue**", "CLUE"),                             # clue.py
+    ("completed a ", "CLUE"),
+    ("QP:", "QUEST"),                                # quest.py
+    ("Quests:", "QUEST"),
+    ("from ", "LOOT"),                               # loot.py
+    ("Value:", "LOOT"),
 )
 
-# Dink types, checked only once a unit is known not to be from the hiscores.
-DINK_HINTS = (
-    ("Collection Log", "COLLECTION"),
-    ("Entries:", "COLLECTION"),
-    ("QP:", "QUEST"),
-    ("Quests:", "QUEST"),
-    ("Combat achievement", "COMBAT_ACHIEVEMENT"),
-    ("has a funny feeling", "PET"),
-    ("pet", "PET"),
-    ("Value:", "LOOT"),
-    ("Price:", "LOOT"),
-    ("died", "DEATH"),
-    ("defeated", "PVP"),
+# BOTH sides are matched positively, and a unit matching neither is reported as
+# 'unknown' rather than assumed. Treating "not hiscores" as "therefore dink"
+# would silently misfile any older hiscores wording that predates every marker
+# above, and the whole reason this parser is structural is that the formats
+# have changed over the years.
+#
+# Every stat line each formatter can emit, so a message is recognised even when
+# its header wording has drifted.
+DINK_MARKERS = tuple(phrase for phrase, _ in DINK_HINTS) + (
+    "Diaries:", "Tasks:",                            # achievement_diary
+    "Completed:", "Loot:", "High value:",            # clue
+    "Entries:", "Price:", "From:",                   # collection
+    "Tier (", "Final task:", "Next tier:",           # combat_achievement
+    "Lost:",                                         # death
+    "Each:", "Tax:",                                 # grand_exchange
+    "KC:", "Time:",                                  # kill_count
+    "Chance:",                                       # loot
+    "Milestone:",                                    # pet
+    "Combat Lvl:", "Last hit:", "Loot Value:",       # player_kill
+    "Tasks completed:", "Points gained:", "Monster:", "Kill count:",  # slayer
+    "Points:", "Raid Level:",                        # toa_unique
 )
 
 
@@ -225,29 +259,60 @@ def classify(title, text):
     return "hiscores", "UPDATE"
 
 
-def split_units(content):
+def split_units(content, accept_bare_bold=None):
     """Cut one Discord message into its constituent event texts.
 
     Returns (units, leftover). `units` are (title, text) in order, where text
     is reassembled to match what record_events() would have stored. `leftover`
-    is anything the pattern could not claim, which the caller reports rather
+    is anything neither pattern could claim, which the caller reports rather
     than discards.
+
+    TWO SHAPES, and the second is easy to miss. Every hiscores unit ends in a
+    code block, but TEN of the thirteen Dink formatters `return header` with no
+    block at all when the payload carried no stats to show, e.g. a pet with no
+    milestone or a quest with no completion counts. Matching only the
+    block-terminated shape drops those on the floor.
     """
     trimmed = TRAILING.sub("", content)
-    units, consumed, last_end = [], [], 0
-    for match in UNIT.finditer(trimmed):
-        if match.start() > last_end:
-            consumed.append(trimmed[last_end:match.start()])
-        title = (match.group("title") or "").strip()
-        units.append((title, trimmed[match.start():match.end()]))
-        last_end = match.end()
-    if last_end < len(trimmed):
-        consumed.append(trimmed[last_end:])
 
-    leftover = "".join(consumed).strip()
-    # A bold run in the leftover means a unit shape this pattern does not know,
-    # which is exactly what an old message format would look like.
-    return units, leftover
+    units, spans = [], []
+    for match in UNIT.finditer(trimmed):
+        title = (match.group("title") or "").strip()
+        units.append((match.start(), title, trimmed[match.start():match.end()]))
+        spans.append((match.start(), match.end()))
+
+    # Bold runs that no code-block unit already covers may be units in their
+    # own right, but bold is also used for ordinary emphasis: the weekly
+    # announcement is "Skill of the Week: **Sailing** | Deadline: **...**", and
+    # people bold each other's names in chat. Taking every bold run turns all
+    # of that into events.
+    #
+    # accept_bare_bold is the discriminator. Every Dink formatter builds its
+    # header as f"**{user_tag} ...**", so a bare bold run is only an event if
+    # it begins with a known player's name, which is exactly what the caller
+    # checks. Without a predicate, bare bold is ignored rather than guessed at.
+    for match in BOLD.finditer(trimmed):
+        if any(start <= match.start() < end for start, end in spans):
+            continue
+        title = match.group(1).strip()
+        if accept_bare_bold is None or not accept_bare_bold(title):
+            continue
+        units.append((match.start(), title,
+                      trimmed[match.start():match.end()]))
+        spans.append((match.start(), match.end()))
+
+    units.sort(key=lambda item: item[0])
+
+    # Whatever sits outside every claimed span.
+    leftover, cursor = [], 0
+    for start, end in sorted(spans):
+        if start > cursor:
+            leftover.append(trimmed[cursor:start])
+        cursor = max(cursor, end)
+    if cursor < len(trimmed):
+        leftover.append(trimmed[cursor:])
+
+    return [(title, text) for _, title, text in units], "".join(leftover).strip()
 
 
 # --------------------------------------------------------------------------- #
@@ -270,10 +335,10 @@ def build_name_index():
     return index, sorted(index, key=len, reverse=True)
 
 
-def attribute(title, names_by_length, index):
-    """The player a bold title refers to, or None."""
+def _match_name(title, names_by_length):
+    """(player_name, remainder) for a title that starts with a known name."""
     if not title:
-        return None
+        return None, ""
     lowered = title.lower()
     for name in names_by_length:
         if lowered.startswith(name):
@@ -281,8 +346,27 @@ def attribute(title, names_by_length, index):
             # must be a boundary.
             rest = lowered[len(name):]
             if not rest or not (rest[0].isalnum() or rest[0] in "_-+"):
-                return index[name]
-    return None
+                return name, rest.strip()
+    return None, ""
+
+
+def attribute(title, names_by_length, index):
+    """The player a bold title refers to, or None."""
+    name, _ = _match_name(title, names_by_length)
+    return index[name] if name else None
+
+
+def looks_like_event_header(title, names_by_length):
+    """Whether a bare bold run is a Dink header rather than emphasis.
+
+    Every Dink formatter builds `f"**{user_tag} <something happened>**"`, so a
+    header is a player name FOLLOWED BY a verb phrase. A bold run that is only
+    the name is something else: the weekly results announcement bolds each
+    podium player, and people bold each other in chat. Both attribute
+    perfectly well, which is why attribution alone is not enough of a test.
+    """
+    name, rest = _match_name(title, names_by_length)
+    return bool(name) and len(rest) > 3 and " " in rest
 
 
 # --------------------------------------------------------------------------- #
@@ -326,8 +410,12 @@ def api_get(url, token, attempt=0):
         raise
 
 
-def iter_messages(channel_id, token, limit=None):
-    """Every message in the channel, newest first, paginated."""
+def iter_messages(channel_id, token, limit=None, since=None, on_page=None):
+    """Every message in the channel, newest first, paginated.
+
+    `since` is a UTC cutoff. Discord returns newest first, so the first message
+    older than it ends this channel: there is nothing newer further back.
+    """
     before, seen = None, 0
     while True:
         params = {"limit": PAGE}
@@ -338,10 +426,15 @@ def iter_messages(channel_id, token, limit=None):
         if not page:
             return
         for message in page:
+            stamp = to_utc(message["timestamp"])
+            if since and stamp < since:
+                return
             yield message
             seen += 1
             if limit and seen >= limit:
                 return
+        if on_page:
+            on_page(to_utc(page[-1]["timestamp"]), seen)
         before = page[-1]["id"]
         # Courtesy pacing. The REST limit is generous but this walks years.
         time.sleep(0.25)
@@ -425,6 +518,12 @@ def main(argv=None):
                              "servers (default 15)")
     parser.add_argument("--limit", type=int, default=None,
                         help="stop after N messages PER CHANNEL, for a quick look")
+    parser.add_argument("--since", metavar="YYYY-MM-DD", default=None,
+                        help="stop walking back at this date. Without it the "
+                             "sweep runs to the first message in the channel, "
+                             "which for these channels is years.")
+    parser.add_argument("--months", type=int, default=None, metavar="N",
+                        help="shorthand for --since N months ago")
     parser.add_argument("--include-dink", action="store_true",
                         help="also import Dink events (drops, pets, quests, "
                              "collection log). Off by default: the hiscores "
@@ -476,7 +575,16 @@ def main(argv=None):
             print(f"  ({skipped} active server(s) have no channel set, skipped)")
         print()
 
+    cutoff = None
+    if args.months:
+        from datetime import timedelta
+        cutoff = (datetime.now(timezone.utc)
+                  - timedelta(days=30 * args.months)).strftime("%Y-%m-%dT%H:%M:%SZ")
+    elif args.since:
+        cutoff = f"{args.since}T00:00:00Z"
+
     print(f"database  {args.db}")
+    print(f"range     {'from ' + cutoff[:10] if cutoff else 'the entire channel history'}")
     print(f"mode      {'APPLY (will write)' if args.apply else 'dry run, writes nothing'}")
     print(f"dedupe    identical text for one player within "
           f"{args.dedupe_window} min counts once")
@@ -507,11 +615,14 @@ def main(argv=None):
         channel = api_get(f"{API}/channels/{channel_id}", token)
         print(f"reading #{channel.get('name')}")
 
-        for message in iter_messages(channel_id, token, args.limit):
+        def progress(oldest, seen, _name=channel.get("name")):
+            print(f"    #{_name}: back to {oldest[:10]}, "
+                  f"{stats['messages']} read, {stats['rows']} rows kept",
+                  flush=True)
+
+        for message in iter_messages(channel_id, token, args.limit,
+                                     since=cutoff, on_page=progress):
             stats["messages"] += 1
-            if stats["messages"] % 500 == 0:
-                print(f"  ...{stats['messages']} messages read, "
-                      f"{stats['rows']} rows kept, {deduper.dropped} duplicates")
 
             message_id = int(message["id"])
             if message_id in already:
@@ -523,7 +634,10 @@ def main(argv=None):
                 stats["empty"] += 1
                 continue
 
-            units, leftover = split_units(content)
+            units, leftover = split_units(
+                content,
+                accept_bare_bold=lambda t: looks_like_event_header(
+                    t, names_by_length))
             if leftover:
                 stats["messages_with_leftover"] += 1
                 if len(leftovers) < args.samples:
@@ -542,10 +656,16 @@ def main(argv=None):
                 if owner:
                     break
             if owner is None:
+                # Over a long sweep this bucket is mostly players who have
+                # since been removed from the log: their messages are real
+                # events with nobody left to attach them to. Always sample it,
+                # including units with no bold title at all, or the reason for
+                # the drop is invisible.
                 stats["messages_no_player"] += 1
-                titled = [t for t, _ in units if t]
-                if titled and len(unmatched_titles) < args.samples:
-                    unmatched_titles.append(titled[0][:120])
+                if len(unmatched_titles) < args.samples:
+                    titled = [t for t, _ in units if t]
+                    sample = titled[0] if titled else content
+                    unmatched_titles.append(sample[:120].replace(chr(10), " "))
                 continue
 
             occurred = to_utc(message["timestamp"])
