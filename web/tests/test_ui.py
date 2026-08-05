@@ -174,6 +174,23 @@ def test_rendered(db_path, password):
     check("the signed-out page still renders its week",
           "Skill of the Week" in signed_out)
 
+    # Static files are cached for a day, so a changed one has to arrive under a
+    # changed URL or nobody sees it. This is not hypothetical: the CDN served a
+    # whole stylesheet rewrite from cache after the deploy that shipped it.
+    print("\nstatic cache busting")
+    css_url = re.search(r'href="(/static/css/app\.css[^"]*)"', signed_out)
+    check("the stylesheet URL carries a version",
+          bool(css_url) and "?v=" in css_url.group(1),
+          css_url.group(1) if css_url else "no stylesheet link found")
+    sprite = client.get(css_url.group(1)) if css_url else None
+    check("the versioned URL still serves the file",
+          sprite is not None and sprite.status_code == 200,
+          str(sprite.status_code) if sprite else "not requested")
+    check("static responses are cacheable",
+          sprite is not None and "max-age" in (
+              sprite.headers.get("Cache-Control") or ""),
+          sprite.headers.get("Cache-Control") if sprite else "")
+
 
 def main():
     scratch, _, password = build_scratch_db()

@@ -77,6 +77,42 @@ def create_app(env=None):
         response.headers.setdefault("Referrer-Policy", "same-origin")
         return response
 
+    # A day of caching is only safe if changing the file changes its URL.
+    #
+    # It was not, and the first deploy after a stylesheet change proved it: the
+    # CDN kept serving the previous app.css on a HIT with an age of nearly an
+    # hour while the origin had the new one, so a whole rewrite of the mobile
+    # layout was invisible to anybody who had loaded the site that day. The
+    # sprite has the same problem and is worse, because a stale sprite lines
+    # every icon up against the wrong cell.
+    #
+    # Appending the file's mtime gives each version its own URL. The old one
+    # stays cached and unreferenced, the new one is a miss, and neither the CDN
+    # nor a browser has to be told anything.
+    _asset_versions = {}
+
+    @app.url_defaults
+    def stamp_static_url(endpoint, values):
+        if endpoint != "static" or "filename" not in values:
+            return
+        filename = values["filename"]
+        # Memoised, because this runs for every icon on every page render and
+        # a stat() each time would be thousands of syscalls a page. A deploy
+        # restarts the process, which is what clears it. Not memoised under the
+        # dev server, where the point is to see an edit without restarting.
+        version = _asset_versions.get(filename) if not app.debug else None
+        if version is None:
+            try:
+                version = int(os.stat(
+                    os.path.join(app.static_folder, filename)).st_mtime)
+            except OSError:
+                # A missing file is the 404's problem, not this hook's.
+                version = 0
+            if not app.debug:
+                _asset_versions[filename] = version
+        if version:
+            values["v"] = version
+
     @app.context_processor
     def template_globals():
         return {
